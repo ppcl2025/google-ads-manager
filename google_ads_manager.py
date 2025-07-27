@@ -995,6 +995,8 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
               campaign.id,
               campaign.name,
               search_term_view.search_term,
+              ad_group_criterion.keyword.text,
+              ad_group_criterion.keyword.match_type,
               metrics.impressions,
               metrics.clicks,
               metrics.cost_micros,
@@ -1114,6 +1116,8 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                 for row in search_terms_response:
                     campaign_id = row.campaign.id
                     search_term = row.search_term_view.search_term
+                    triggering_keyword = row.ad_group_criterion.keyword.text
+                    triggering_match_type = row.ad_group_criterion.keyword.match_type.name
                     impressions = row.metrics.impressions
                     clicks = row.metrics.clicks
                     cost_micros = row.metrics.cost_micros
@@ -1134,6 +1138,8 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                         # Add search term to campaign
                         search_term_data = {
                             'search_term': search_term,
+                            'triggering_keyword': triggering_keyword,
+                            'triggering_match_type': triggering_match_type,
                             'impressions': impressions,
                             'clicks': clicks,
                             'ctr': ctr,
@@ -1379,7 +1385,7 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
                     search_terms_df = search_terms_df.sort_values('cost_per_conversion', ascending=True)  # Lower is better
                 
                 # Format display columns
-                search_display_df = search_terms_df[['search_term', 'impressions', 'clicks', 'ctr', 'conversions', 'cost_per_conversion', 'conversion_rate', 'cost']].copy()
+                search_display_df = search_terms_df[['search_term', 'triggering_keyword', 'triggering_match_type', 'impressions', 'clicks', 'ctr', 'conversions', 'cost_per_conversion', 'conversion_rate', 'cost']].copy()
                 search_display_df['CTR'] = search_display_df['ctr'].apply(lambda x: f"{x:.2%}")
                 search_display_df['Conv. Rate'] = search_display_df['conversion_rate'].apply(lambda x: f"{x:.2%}")
                 search_display_df['Cost/Conv.'] = search_display_df['cost_per_conversion'].apply(lambda x: f"${x:.2f}")
@@ -1388,13 +1394,15 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
                 # Rename columns to match requested format
                 search_display_df = search_display_df.rename(columns={
                     'search_term': 'Search Term',
+                    'triggering_keyword': 'Triggering Keyword',
+                    'triggering_match_type': 'Triggering Match Type',
                     'impressions': 'Impressions',
                     'clicks': 'Clicks',
                     'conversions': 'Conversions'
                 })
                 
                 # Select and order columns in the requested format
-                search_display_df = search_display_df[['Search Term', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost']]
+                search_display_df = search_display_df[['Search Term', 'Triggering Keyword', 'Triggering Match Type', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost']]
                 
                 st.dataframe(search_display_df, use_container_width=True)
             else:
