@@ -234,7 +234,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         try:
             # Try different possible response structures
             if hasattr(response, 'customer_client') and hasattr(response.customer_client, 'id'):
-        new_customer_id = response.customer_client.id
+                new_customer_id = response.customer_client.id
             elif hasattr(response, 'resource_name'):
                 # Extract ID from resource name format: customers/{customer_id}
                 new_customer_id = response.resource_name.split('/')[-1]
@@ -289,7 +289,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 - This enables MSL-MaxCon bidding strategy for campaigns
                 """)
                 
-        return new_customer_id
+                return new_customer_id
                 
             except Exception as conversion_error:
                 # If setting conversion tracking fails, still return the account ID
@@ -420,10 +420,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
 
         # Try to mutate campaign with bidding strategy first
         try:
-        response = campaign_service.mutate_campaigns(
-            customer_id=customer_id, operations=[campaign_operation]
-        )
-        campaign_id = response.results[0].resource_name.split("/")[-1]
+            response = campaign_service.mutate_campaigns(
+                customer_id=customer_id, operations=[campaign_operation]
+            )
+            campaign_id = response.results[0].resource_name.split("/")[-1]
             
             # Apply shared negative keywords list to the campaign
             try:
@@ -446,7 +446,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
             
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
-        return campaign_id
+            return campaign_id
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
             error_message = str(ex)
@@ -521,8 +521,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     return campaign_id
                 except Exception as fallback_ex:
                     handle_api_exception(fallback_ex, "create campaign with Manual CPC")
-        return None
-            else:
+                    return None
                 handle_api_exception(ex, "create campaign")
                 return None
         
@@ -790,11 +789,11 @@ def main():
             customer_display = st.selectbox("Select Customer Account", [acc['display'] for acc in sub_accounts_list])
             customer_id = next(acc['id'] for acc in sub_accounts_list if acc['display'] == customer_display)
         else:
-        customer_id = st.text_input("Customer ID for Campaign (format: XXX-XXX-XXXX)", "")
+            customer_id = st.text_input("Customer ID for Campaign (format: XXX-XXX-XXXX)", "")
             if customer_id:
-            if not validate_customer_id(customer_id):
-                st.warning("Please enter a valid Customer ID (e.g., 123-456-7890)")
-                return
+                if not validate_customer_id(customer_id):
+                    st.warning("Please enter a valid Customer ID (e.g., 123-456-7890)")
+                    return
                 customer_id = format_customer_id(customer_id)
         
         campaign_name = st.text_input("Campaign Name")
@@ -824,11 +823,11 @@ def main():
             customer_bulk_display = st.selectbox("Select Customer Account for Bulk Upload", [acc['display'] for acc in sub_accounts_list])
             customer_id_bulk = next(acc['id'] for acc in sub_accounts_list if acc['display'] == customer_bulk_display)
         else:
-        customer_id_bulk = st.text_input("Customer ID for Bulk Upload (format: XXX-XXX-XXXX)", "")
+            customer_id_bulk = st.text_input("Customer ID for Bulk Upload (format: XXX-XXX-XXXX)", "")
             if customer_id_bulk:
-            if not validate_customer_id(customer_id_bulk):
-                st.warning("Please enter a valid Customer ID (e.g., 123-456-7890)")
-                return
+                if not validate_customer_id(customer_id_bulk):
+                    st.warning("Please enter a valid Customer ID (e.g., 123-456-7890)")
+                    return
                 customer_id_bulk = format_customer_id(customer_id_bulk)
         
         campaign_name = st.text_input("Campaign Name for Bulk Upload")
@@ -858,16 +857,6 @@ def main():
                         show_message("File must contain required columns: ad_group_name, headline1, headline2, headline3, description1, description2, final_url, keywords", False)
                         return
 
-                    # Validate that each ad group has keywords in at least the first row
-                        grouped = df.groupby("ad_group_name")
-                        for ad_group_name, group in grouped:
-                        if pd.isna(group["keywords"].iloc[0]) or str(group["keywords"].iloc[0]).strip() == "":
-                            show_message(f"Ad group '{ad_group_name}' must have keywords specified in the first row.", False)
-                            return
-
-                    # Process the bulk upload
-                    process_bulk_upload(client, customer_id_bulk, campaign_name, df)
-                    
                 except Exception as e:
                     show_message(f"Error processing file: {str(e)}", False)
                     logger.error(f"Bulk upload error: {str(e)}")
@@ -895,7 +884,7 @@ def main():
                 return
                 
             st.info(f"📊 Will analyze performance from {len(selected_keyword_sub_accounts)} selected sub-accounts")
-            else:
+        else:
             st.warning("No sub-accounts found. Please create sub-accounts first.")
             return
         
