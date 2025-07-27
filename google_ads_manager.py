@@ -292,8 +292,18 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         msl_maxcon_strategy_id = "11481770709"  # MSL - MaxCon bidding strategy ID
         
         # Set the shared bidding strategy using the correct API v20 field name
-        # In API v20, the field name might be 'bidding_strategy' instead of 'shared_bidding_strategy'
-        campaign.bidding_strategy = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
+        # In API v20, we need to use the correct field name for bidding strategy
+        try:
+            # Try the correct field name for API v20
+            campaign.campaign_bidding_strategy = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
+        except AttributeError:
+            # Fallback to alternative field name
+            try:
+                campaign.bidding_strategy = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
+            except AttributeError:
+                # If neither field exists, we'll handle it in the try-catch below
+                pass
+        
         st.info(f"✅ Attempting to use MSL - MaxCon bidding strategy (ID: {msl_maxcon_strategy_id})")
         
         # TODO: Implement shared negative keywords list
@@ -323,14 +333,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 customer_id=customer_id, operations=[campaign_operation]
             )
             campaign_id = response.results[0].resource_name.split("/")[-1]
-            show_message(f"Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
+            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
             return campaign_id
             
         except Exception as ex:
-            # Check if the error is related to conversion tracking
-            if "CONVERSION_TRACKING_NOT_ENABLED" in str(ex):
-                st.warning("⚠️ Conversion tracking is not enabled in this account. MSL - MaxCon bidding strategy requires conversion tracking.")
-                st.info("🔄 Retrying with Manual CPC bidding strategy...")
+            # Check if the error is related to conversion tracking or bidding strategy
+            error_message = str(ex)
+            if "CONVERSION_TRACKING_NOT_ENABLED" in error_message or "REQUIRED" in error_message:
+                st.warning("⚠️ Conversion tracking is not enabled or bidding strategy field issue. Retrying with Manual CPC bidding strategy...")
                 
                 # Create a new campaign operation without the bidding strategy
                 campaign_operation_fallback = client.get_type("CampaignOperation")
@@ -341,16 +351,24 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
                 campaign_fallback.start_date = datetime.now().strftime("%Y-%m-%d")
                 
-                # Try again without bidding strategy
-                response = campaign_service.mutate_campaigns(
-                    customer_id=customer_id, operations=[campaign_operation_fallback]
-                )
-                campaign_id = response.results[0].resource_name.split("/")[-1]
-                show_message(f"Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
-                return campaign_id
+                # Set Manual CPC bidding strategy
+                campaign_fallback.manual_cpc = client.get_type("ManualCpc")
+                campaign_fallback.manual_cpc.enhanced_cpc_enabled = False
+                
+                try:
+                    response_fallback = campaign_service.mutate_campaigns(
+                        customer_id=customer_id, operations=[campaign_operation_fallback]
+                    )
+                    campaign_id = response_fallback.results[0].resource_name.split("/")[-1]
+                    show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. You can change to MSL - MaxCon later once conversion tracking is enabled.")
+                    return campaign_id
+                    
+                except Exception as fallback_ex:
+                    handle_api_exception(fallback_ex, "create campaign with Manual CPC")
+                    return None
             else:
-                # Re-raise other exceptions
-                raise ex
+                handle_api_exception(ex, "create campaign")
+                return None
         
     except Exception as ex:
         handle_api_exception(ex, "create campaign")
