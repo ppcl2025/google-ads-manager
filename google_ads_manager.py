@@ -512,8 +512,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                         logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
                     
                     show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. You can change to MSL - MaxCon later once conversion tracking is enabled.")
-        return campaign_id
-                    
+                    return campaign_id
                 except Exception as fallback_ex:
                     handle_api_exception(fallback_ex, "create campaign with Manual CPC")
                     return None
