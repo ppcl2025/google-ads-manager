@@ -917,29 +917,23 @@ def main():
         elif date_range_option == "Last Month":
             # Last month: from 1st to last day of previous month
             if today.month == 1:
-                # January: go to December of previous year
                 start_date = today.replace(year=today.year-1, month=12, day=1)
                 end_date = today.replace(year=today.year-1, month=12, day=31)
             else:
-                # Other months: go to previous month
                 start_date = today.replace(month=today.month-1, day=1)
-                
-                # Calculate the last day of the previous month
-                if today.month == 2:  # Current month is February, so previous month is January
+                # Get last day of previous month
+                if today.month == 1:
                     last_day = 31
-                elif today.month == 3:  # Current month is March, so previous month is February
-                    # Check if it was a leap year
+                elif today.month in [3, 5, 7, 8, 10, 12]:
+                    last_day = 31
+                elif today.month == 2:
+                    # Check if leap year
                     if today.year % 4 == 0 and (today.year % 100 != 0 or today.year % 400 == 0):
                         last_day = 29
                     else:
                         last_day = 28
-                elif today.month in [5, 7, 10, 12]:  # Current month ends in 31, so previous month ends in 30
-                    last_day = 30
-                elif today.month in [4, 6, 8, 9, 11]:  # Current month ends in 30, so previous month ends in 31
-                    last_day = 31
                 else:
-                    last_day = 31  # Default fallback
-                
+                    last_day = 30
                 end_date = today.replace(month=today.month-1, day=last_day)
         elif date_range_option == "Last 2 Weeks":
             # Last 2 weeks: 14 days ago to today
