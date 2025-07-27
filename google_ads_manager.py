@@ -566,13 +566,18 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
 def _validate_ad_customizer_tags(text: str) -> str:
     """Validate and fix malformed ad customizer tags."""
     import re
-    # Find malformed tags (tags that don't end with })
-    malformed_pattern = r'\{[^}]*$'
-    if re.search(malformed_pattern, text):
-        # Remove the incomplete tag
-        text = re.sub(malformed_pattern, '', text)
-        # Clean up extra spaces
-        text = re.sub(r'\s+', ' ', text).strip()
+    
+    # Remove incomplete ad customizer tags
+    # This removes any { that doesn't have a matching }
+    while re.search(r'\{[^}]*$', text):
+        text = re.sub(r'\{[^}]*$', '', text)
+    
+    # Also remove any {LOCATION( that doesn't have a closing )
+    while re.search(r'\{LOCATION\([^)]*$', text):
+        text = re.sub(r'\{LOCATION\([^)]*$', '', text)
+    
+    # Clean up extra spaces
+    text = re.sub(r'\s+', ' ', text).strip()
     return text
 
 # Create a responsive search ad with up to 15 headlines and 4 descriptions
