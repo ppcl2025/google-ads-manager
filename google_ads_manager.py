@@ -354,10 +354,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Exclude search partners and Display Network
         try:
             campaign.network_settings = client.get_type("NetworkSettings")
+            campaign.network_settings.target_google_search = True  # Enable core Google Search Network
             campaign.network_settings.target_search_network = False  # Exclude search partners
             campaign.network_settings.target_content_network = False  # Exclude Display Network
             campaign.network_settings.target_partner_search_network = False  # Exclude partner search network
-            campaign.network_settings.target_youtube = False  # Exclude YouTube
             st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
         except Exception as network_error:
             st.warning(f"⚠️ Could not configure network settings: {network_error}")
@@ -426,10 +426,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 # Configure NetworkSettings for fallback case too
                 try:
                     campaign_fallback.network_settings = client.get_type("NetworkSettings")
+                    campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search Network
                     campaign_fallback.network_settings.target_search_network = False  # Exclude search partners
                     campaign_fallback.network_settings.target_content_network = False  # Exclude Display Network
                     campaign_fallback.network_settings.target_partner_search_network = False  # Exclude partner search network
-                    campaign_fallback.network_settings.target_youtube = False  # Exclude YouTube
                     st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
                 except Exception as network_error:
                     st.warning(f"⚠️ Could not configure network settings: {network_error}")
