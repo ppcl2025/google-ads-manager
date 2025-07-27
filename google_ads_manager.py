@@ -243,16 +243,30 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         if new_customer_id and new_customer_id != "UNKNOWN":
             # Now set the conversion tracking to "This Manager" for the new account
             try:
-                # Set conversion tracking to use the MCC account
-                customer_update = client.get_type("Customer")
+                # Try to set conversion tracking using the correct API v20 approach
+                # First, let's try to link the account to the MCC's conversion tracking
+                
+                # Use the CustomerService to update the customer settings
+                customer_service = client.get_service("CustomerService")
+                
+                # Create a customer update operation
+                customer_operation = client.get_type("CustomerOperation")
+                customer_update = customer_operation.update
+                customer_update.resource_name = f"customers/{new_customer_id}"
+                
+                # Set the conversion tracking to use the MCC account
                 customer_update.conversion_tracking_setting = client.get_type("ConversionTrackingSetting")
                 customer_update.conversion_tracking_setting.conversion_tracking_id = mcc_customer_id
                 customer_update.conversion_tracking_setting.cross_account_conversion_tracking_id = mcc_customer_id
                 
+                # Also set the manager link to ensure proper MCC relationship
+                customer_update.manager = True
+                customer_update.test_account = False
+                
                 # Update the customer with conversion tracking settings
-                customer_service.update_customer(
+                update_response = customer_service.mutate_customers(
                     customer_id=new_customer_id,
-                    customer=customer_update
+                    operations=[customer_operation]
                 )
                 
                 show_message(f"✅ Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
