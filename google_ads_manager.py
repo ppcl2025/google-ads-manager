@@ -291,13 +291,10 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 - This enables MSL-MaxCon bidding strategy for campaigns
                 """)
                 
-        return new_customer_id
-                
             except Exception as conversion_error:
                 # If setting conversion tracking fails, still return the account ID
                 logger.warning(f"Could not set conversion tracking: {conversion_error}")
                 show_message(f"✅ Created sub-account with ID: {new_customer_id}. Conversion tracking may need to be set manually.")
-                return new_customer_id
         
         return new_customer_id
         
