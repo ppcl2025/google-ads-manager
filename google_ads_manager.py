@@ -1058,7 +1058,7 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                     # Calculate metrics for this keyword
                     cost = cost_micros / 1000000
                     ctr = clicks / impressions if impressions > 0 else 0
-                    cost_per_conversion = conversions_value / conversions if conversions > 0 else 0
+                    cost_per_conversion = cost / conversions if conversions > 0 else 0
                     conversion_rate = conversions / clicks if clicks > 0 else 0
                     
                     # Add keyword to campaign
