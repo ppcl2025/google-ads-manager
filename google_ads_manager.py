@@ -271,6 +271,15 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 
                 show_message(f"✅ Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
                 logger.info(f"Created sub-account: {new_customer_id} with conversion tracking enabled")
+                
+                # Add helpful instructions
+                st.info("""
+                **Next Steps:**
+                - Verify conversion tracking is set to 'This Manager' in Google Ads UI
+                - If not, go to Account Settings → Conversion tracking → Select 'This manager (USD)'
+                - This enables MSL-MaxCon bidding strategy for campaigns
+                """)
+                
                 return new_customer_id
                 
             except Exception as conversion_error:
@@ -629,6 +638,20 @@ def main():
     with tab1:
         st.subheader("Create New Sub-Account")
         st.info("ℹ️ New sub-accounts will automatically have conversion tracking set to 'This Manager' for bidding strategy compatibility")
+        
+        # Add manual setup instructions
+        with st.expander("📋 Manual Conversion Tracking Setup (if needed)"):
+            st.markdown("""
+            **If conversion tracking is not automatically set to 'This Manager', follow these steps:**
+            
+            1. **Go to Google Ads** → Account Settings → Conversion tracking
+            2. **Click on 'Google Ads conversion account'**
+            3. **Select 'This manager (USD)'** from the dropdown
+            4. **Save the changes**
+            
+            This will enable the MSL-MaxCon bidding strategy for campaigns.
+            """)
+        
         account_name = st.text_input("Account Name")
         currency_code = st.selectbox("Currency Code", DEFAULT_CURRENCIES)
         time_zone = st.selectbox("Time Zone", US_TIMEZONES)
