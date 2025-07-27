@@ -698,10 +698,8 @@ def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name
         # Group by ad_group_name
         grouped = df.groupby("ad_group_name")
         for ad_group_name, group in grouped:
-            # Create ad group with unique name to avoid duplicates
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            unique_ad_group_name = f"{ad_group_name}_{timestamp}"
-            ad_group_id = create_ad_group(client, customer_id, campaign_id, unique_ad_group_name)
+            # Create ad group
+            ad_group_id = create_ad_group(client, customer_id, campaign_id, ad_group_name)
             if not ad_group_id:
                 continue
                 
