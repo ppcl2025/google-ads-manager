@@ -653,13 +653,18 @@ def upload_keywords(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
 
 # Process bulk upload data
 def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
-                       df: pd.DataFrame) -> bool:
+                       df: pd.DataFrame, existing_campaign_id: str = None, budget_amount: float = 1.0) -> bool:
     """Process bulk upload of ad groups, ads, and keywords."""
     try:
-        # Create the single campaign
-        campaign_id = create_campaign(client, customer_id, campaign_name, 1.0) # Default budget to 1.0 for bulk upload
-        if not campaign_id:
-            return False
+        # Use existing campaign or create new one
+        if existing_campaign_id:
+            campaign_id = existing_campaign_id
+            st.info(f"📋 Using existing campaign: {campaign_name}")
+        else:
+            # Create the single campaign
+            campaign_id = create_campaign(client, customer_id, campaign_name, budget_amount)
+            if not campaign_id:
+                return False
 
         # Group by ad_group_name
         grouped = df.groupby("ad_group_name")
@@ -842,7 +847,51 @@ def main():
                     return
                 customer_id_bulk = format_customer_id(customer_id_bulk)
         
-        campaign_name = st.text_input("Campaign Name for Bulk Upload")
+        # Campaign selection - dropdown with existing campaigns or option to create new
+        if customer_id_bulk:
+            # Get existing campaigns for the selected sub-account
+            existing_campaigns = get_campaigns_for_account(client, customer_id_bulk)
+            
+            if existing_campaigns:
+                # Show dropdown with existing campaigns
+                campaign_options = [f"{camp['name']} ({camp['status']})" for camp in existing_campaigns]
+                campaign_options.insert(0, "Create New Campaign")  # Add option to create new
+                
+                selected_campaign_option = st.selectbox(
+                    "Select Campaign for Bulk Upload",
+                    options=campaign_options,
+                    help="Choose an existing campaign or 'Create New Campaign' to create a new one"
+                )
+                
+                if selected_campaign_option == "Create New Campaign":
+                    # Show text input for new campaign name
+                    campaign_name = st.text_input("New Campaign Name")
+                    campaign_id = None
+                    # Show budget input for new campaign
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        budget_amount = st.number_input("Daily Budget Amount (USD)", min_value=1.0, value=10.0, step=1.0, help="Daily budget for the new campaign")
+                    with col2:
+                        st.write("")  # Spacer
+                        st.write("💡 Budget will be set at campaign level")
+                else:
+                    # Extract campaign name from selected option (remove status part)
+                    campaign_name = selected_campaign_option.split(" (")[0]
+                    # Get the campaign ID for the selected campaign
+                    selected_campaign = next(camp for camp in existing_campaigns if camp['name'] == campaign_name)
+                    campaign_id = selected_campaign['id']
+                    budget_amount = 1.0  # Not used for existing campaigns
+                    st.info(f"📋 Will add content to existing campaign: {campaign_name}")
+            else:
+                # No existing campaigns, show text input for new campaign
+                campaign_name = st.text_input("Campaign Name for Bulk Upload (will create new campaign)")
+                campaign_id = None
+                budget_amount = 10.0  # Default budget for new campaign
+        else:
+            # No customer selected yet
+            campaign_name = st.text_input("Campaign Name for Bulk Upload")
+            campaign_id = None
+            budget_amount = 10.0  # Default budget for new campaign
         uploaded_file = st.file_uploader("Upload CSV or Excel file", type=["csv", "xlsx"])
         
         if st.button("Process Bulk Upload"):
@@ -853,25 +902,31 @@ def main():
                 show_message("Please upload a CSV or Excel file.", False)
                 return
                 
-                try:
-                    # Determine file type and read accordingly
-                    file_extension = uploaded_file.name.split(".")[-1].lower()
-                    if file_extension == "csv":
-                        df = pd.read_csv(uploaded_file)
-                    elif file_extension == "xlsx":
-                        df = pd.read_excel(uploaded_file, engine="openpyxl")
-                    else:
-                        show_message("Unsupported file format. Please upload a .csv or .xlsx file.", False)
-                        return
+            try:
+                # Determine file type and read accordingly
+                file_extension = uploaded_file.name.split(".")[-1].lower()
+                if file_extension == "csv":
+                    df = pd.read_csv(uploaded_file)
+                elif file_extension == "xlsx":
+                    df = pd.read_excel(uploaded_file, engine="openpyxl")
+                else:
+                    show_message("Unsupported file format. Please upload a .csv or .xlsx file.", False)
+                    return
 
-                    # Validate required columns
-                    if not all(col in df.columns for col in REQUIRED_COLUMNS):
-                        show_message("File must contain required columns: ad_group_name, headline1, headline2, headline3, description1, description2, final_url, final_url_path, keywords", False)
-                        return
+                # Validate required columns
+                if not all(col in df.columns for col in REQUIRED_COLUMNS):
+                    show_message("File must contain required columns: ad_group_name, headline1, headline2, headline3, description1, description2, final_url, final_url_path, keywords", False)
+                    return
 
-                except Exception as e:
-                    show_message(f"Error processing file: {str(e)}", False)
-                    logger.error(f"Bulk upload error: {str(e)}")
+                # Process the bulk upload
+                if process_bulk_upload(client, customer_id_bulk, campaign_name, df, campaign_id, budget_amount):
+                    show_message("✅ Bulk upload completed successfully!")
+                else:
+                    show_message("❌ Bulk upload failed. Please check the file format and try again.", False)
+
+            except Exception as e:
+                show_message(f"Error processing file: {str(e)}", False)
+                logger.error(f"Bulk upload error: {str(e)}")
 
     # Tab 4: Performance Analysis (formerly Keywords Analysis)
     with tab4:
@@ -1831,6 +1886,45 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
     except Exception as e:
         st.error(f"Error generating PDF: {str(e)}")
         return None
+
+# Get campaigns for a specific sub-account
+@st.cache_data(ttl=1800)  # Cache for 30 minutes
+def get_campaigns_for_account(_client: GoogleAdsClient, customer_id: str) -> list[dict]:
+    """Fetch all campaigns for a specific sub-account."""
+    try:
+        # Track API usage
+        st.session_state.api_tracker.increment(1)
+        
+        campaigns = []
+        google_ads_service = _client.get_service("GoogleAdsService")
+        query = """
+            SELECT
+              campaign.id,
+              campaign.name,
+              campaign.status,
+              campaign.advertising_channel_type
+            FROM campaign
+            WHERE campaign.status IN ('ENABLED', 'PAUSED')
+            ORDER BY campaign.name
+        """
+        # Format customer ID for API call
+        formatted_customer_id = f"customers/{customer_id}"
+        response = google_ads_service.search(
+            customer_id=formatted_customer_id,
+            query=query
+        )
+        for row in response:
+            campaigns.append({
+                'id': row.campaign.id,
+                'name': row.campaign.name,
+                'status': row.campaign.status.name,
+                'channel_type': row.campaign.advertising_channel_type.name
+            })
+        return campaigns
+    except Exception as ex:
+        st.error(f"💥 Error fetching campaigns: {str(ex)}")
+        handle_api_exception(ex, "fetch campaigns")
+        return []
 
 if __name__ == "__main__":
     main()
