@@ -852,7 +852,7 @@ def main():
             # Get existing campaigns for the selected sub-account
             existing_campaigns = get_campaigns_for_account(client, customer_id_bulk)
             
-            if existing_campaigns:
+            if existing_campaigns and len(existing_campaigns) > 0:
                 # Show dropdown with existing campaigns
                 campaign_options = [f"{camp['name']} ({camp['status']})" for camp in existing_campaigns]
                 campaign_options.insert(0, "Create New Campaign")  # Add option to create new
@@ -883,7 +883,8 @@ def main():
                     budget_amount = 1.0  # Not used for existing campaigns
                     st.info(f"📋 Will add content to existing campaign: {campaign_name}")
             else:
-                # No existing campaigns, show text input for new campaign
+                # No existing campaigns or couldn't fetch them, show text input for new campaign
+                st.info("📝 No existing campaigns found or unable to access campaigns. Will create a new campaign.")
                 campaign_name = st.text_input("Campaign Name for Bulk Upload (will create new campaign)")
                 campaign_id = None
                 budget_amount = 10.0  # Default budget for new campaign
@@ -1895,8 +1896,13 @@ def get_campaigns_for_account(_client: GoogleAdsClient, customer_id: str) -> lis
         # Track API usage
         st.session_state.api_tracker.increment(1)
         
+        # Debug: Log the customer ID being used
+        st.info(f"🔍 Attempting to fetch campaigns for customer ID: {customer_id}")
+        
         campaigns = []
         google_ads_service = _client.get_service("GoogleAdsService")
+        
+        # Try to query campaigns for this specific customer
         query = """
             SELECT
               campaign.id,
@@ -1907,19 +1913,24 @@ def get_campaigns_for_account(_client: GoogleAdsClient, customer_id: str) -> lis
             WHERE campaign.status IN ('ENABLED', 'PAUSED')
             ORDER BY campaign.name
         """
-        # Format customer ID for API call
-        formatted_customer_id = f"customers/{customer_id}"
-        response = google_ads_service.search(
-            customer_id=formatted_customer_id,
-            query=query
-        )
-        for row in response:
-            campaigns.append({
-                'id': row.campaign.id,
-                'name': row.campaign.name,
-                'status': row.campaign.status.name,
-                'channel_type': row.campaign.advertising_channel_type.name
-            })
+        
+        try:
+            response = google_ads_service.search(
+                customer_id=customer_id,
+                query=query
+            )
+            for row in response:
+                campaigns.append({
+                    'id': row.campaign.id,
+                    'name': row.campaign.name,
+                    'status': row.campaign.status.name,
+                    'channel_type': row.campaign.advertising_channel_type.name
+                })
+        except Exception as search_error:
+            st.warning(f"⚠️ Could not fetch campaigns for customer {customer_id}: {str(search_error)}")
+            # Return empty list if we can't access this customer's campaigns
+            return []
+            
         return campaigns
     except Exception as ex:
         st.error(f"💥 Error fetching campaigns: {str(ex)}")
