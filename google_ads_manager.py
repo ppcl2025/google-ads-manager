@@ -960,7 +960,7 @@ def main():
 # Get keywords analysis across all sub-accounts
 @st.cache_data(ttl=3600)  # Cache for 1 hour to reduce API calls
 def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -> dict:
-    """Get keywords performance data from all sub-accounts, grouped by account."""
+    """Get keywords and search terms performance data from all sub-accounts, grouped by account."""
     try:
         # Track API usage for the overall function call
         st.session_state.api_tracker.increment(1)
@@ -969,7 +969,7 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
         google_ads_service = _client.get_service("GoogleAdsService")
         
         # Query for keywords with performance metrics
-        query = f"""
+        keywords_query = f"""
             SELECT
               campaign.id,
               campaign.name,
@@ -989,6 +989,25 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
             LIMIT 1000
         """
         
+        # Query for search terms with performance metrics
+        search_terms_query = f"""
+            SELECT
+              campaign.id,
+              campaign.name,
+              search_term_view.search_term,
+              metrics.impressions,
+              metrics.clicks,
+              metrics.cost_micros,
+              metrics.conversions,
+              metrics.conversions_value,
+              segments.date
+            FROM search_term_view
+            WHERE segments.date BETWEEN '{date_range[0]}' AND '{date_range[1]}'
+            AND campaign.status = 'ENABLED'
+            ORDER BY metrics.cost_micros DESC
+            LIMIT 1000
+        """
+        
         for sub_account in sub_accounts_list:
             try:
                 # Track API usage for each sub-account
@@ -999,7 +1018,7 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                 
                 response = google_ads_service.search(
                     customer_id=sub_customer_id,
-                    query=query
+                    query=keywords_query
                 )
                 
                 # Initialize account data structure
@@ -1041,6 +1060,7 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                             'campaign_name': campaign_name,
                             'campaign_id': campaign_id,
                             'keywords': [],
+                            'search_terms': [],
                             'summary': {
                                 'total_impressions': 0,
                                 'total_clicks': 0,
@@ -1082,6 +1102,50 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                     campaign_data['summary']['total_cost'] += cost
                     campaign_data['summary']['total_conversions'] += conversions
                 
+                # Now fetch and process search terms data
+                st.write(f"🔍 Processing search terms for {sub_account['name']}...")
+                
+                search_terms_response = google_ads_service.search(
+                    customer_id=sub_customer_id,
+                    query=search_terms_query
+                )
+                
+                # Process search terms data by campaign
+                for row in search_terms_response:
+                    campaign_id = row.campaign.id
+                    search_term = row.search_term_view.search_term
+                    impressions = row.metrics.impressions
+                    clicks = row.metrics.clicks
+                    cost_micros = row.metrics.cost_micros
+                    conversions = row.metrics.conversions
+                    conversions_value = row.metrics.conversions_value
+                    date = row.segments.date
+                    
+                    # Only process if campaign exists (from keywords data)
+                    if campaign_id in account_data['campaigns']:
+                        campaign_data = account_data['campaigns'][campaign_id]
+                        
+                        # Calculate metrics for this search term
+                        cost = cost_micros / 1000000
+                        ctr = clicks / impressions if impressions > 0 else 0
+                        cost_per_conversion = cost / conversions if conversions > 0 else 0
+                        conversion_rate = conversions / clicks if clicks > 0 else 0
+                        
+                        # Add search term to campaign
+                        search_term_data = {
+                            'search_term': search_term,
+                            'impressions': impressions,
+                            'clicks': clicks,
+                            'ctr': ctr,
+                            'conversions': conversions,
+                            'cost_per_conversion': cost_per_conversion,
+                            'conversion_rate': conversion_rate,
+                            'cost': cost,
+                            'date': date
+                        }
+                        
+                        campaign_data['search_terms'].append(search_term_data)
+                
             except Exception as sub_error:
                 st.warning(f"⚠️ Could not fetch keywords for {sub_account['name']}: {str(sub_error)}")
                 continue
@@ -1103,10 +1167,15 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
             for campaign_id, campaign_data in account_data['campaigns'].items():
                 # Store total keyword count before limiting
                 total_keywords_in_campaign = len(campaign_data['keywords'])
+                total_search_terms_in_campaign = len(campaign_data['search_terms'])
                 
                 # Sort keywords by cost (highest first) and take top 10
                 campaign_data['keywords'].sort(key=lambda x: x['cost'], reverse=True)
                 top_keywords = campaign_data['keywords'][:10]
+                
+                # Sort search terms by cost (highest first) and take top 20
+                campaign_data['search_terms'].sort(key=lambda x: x['cost'], reverse=True)
+                top_search_terms = campaign_data['search_terms'][:20]
                 
                 # Calculate campaign summary metrics from ALL KEYWORDS in the campaign
                 if campaign_data['keywords']:
@@ -1128,8 +1197,10 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                     'campaign_name': campaign_data['campaign_name'],
                     'campaign_id': campaign_data['campaign_id'],
                     'keywords': top_keywords,
+                    'search_terms': top_search_terms,
                     'summary': campaign_data['summary'],
-                    'total_keywords_in_campaign': total_keywords_in_campaign  # Store the total count
+                    'total_keywords_in_campaign': total_keywords_in_campaign,  # Store the total count
+                    'total_search_terms_in_campaign': total_search_terms_in_campaign  # Store the total count
                 })
             
             # Calculate account-level averages
@@ -1282,6 +1353,52 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
                 st.dataframe(display_df, use_container_width=True)
             else:
                 st.info("No keyword data available for this campaign.")
+            
+            # Search Terms table for this campaign
+            if campaign.get('search_terms'):
+                st.write("**🔍 Top Search Terms by Spend**")
+                
+                # Add note about top 20 search terms
+                total_search_terms_in_campaign = campaign.get('total_search_terms_in_campaign', len(campaign['search_terms']))
+                st.info(f"📊 Showing top 20 search terms by spend (out of {total_search_terms_in_campaign} total search terms in campaign)")
+                
+                search_terms_df = pd.DataFrame(campaign['search_terms'])
+                
+                # Sort based on selected metric (same as keywords)
+                if sort_column == "cost":
+                    search_terms_df = search_terms_df.sort_values('cost', ascending=False)
+                elif sort_column == "impressions":
+                    search_terms_df = search_terms_df.sort_values('impressions', ascending=False)
+                elif sort_column == "ctr":
+                    search_terms_df = search_terms_df.sort_values('ctr', ascending=False)
+                elif sort_column == "conversions":
+                    search_terms_df = search_terms_df.sort_values('conversions', ascending=False)
+                elif sort_column == "conversion_rate":
+                    search_terms_df = search_terms_df.sort_values('conversion_rate', ascending=False)
+                elif sort_column == "cost_per_conversion":
+                    search_terms_df = search_terms_df.sort_values('cost_per_conversion', ascending=True)  # Lower is better
+                
+                # Format display columns
+                search_display_df = search_terms_df[['search_term', 'impressions', 'clicks', 'ctr', 'conversions', 'cost_per_conversion', 'conversion_rate', 'cost']].copy()
+                search_display_df['CTR'] = search_display_df['ctr'].apply(lambda x: f"{x:.2%}")
+                search_display_df['Conv. Rate'] = search_display_df['conversion_rate'].apply(lambda x: f"{x:.2%}")
+                search_display_df['Cost/Conv.'] = search_display_df['cost_per_conversion'].apply(lambda x: f"${x:.2f}")
+                search_display_df['Cost'] = search_display_df['cost'].apply(lambda x: f"${x:.2f}")
+                
+                # Rename columns to match requested format
+                search_display_df = search_display_df.rename(columns={
+                    'search_term': 'Search Term',
+                    'impressions': 'Impressions',
+                    'clicks': 'Clicks',
+                    'conversions': 'Conversions'
+                })
+                
+                # Select and order columns in the requested format
+                search_display_df = search_display_df[['Search Term', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost']]
+                
+                st.dataframe(search_display_df, use_container_width=True)
+            else:
+                st.info("No search terms data available for this campaign.")
             
             st.divider()
 
