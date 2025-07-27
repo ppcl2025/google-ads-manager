@@ -439,28 +439,6 @@ def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name
 # Streamlit UI
 def main():
     st.title("Google Ads Manager AI Agent")
-    
-    # Simple authentication
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-    
-    if not st.session_state.authenticated:
-        st.warning("🔒 Authentication Required")
-        password = st.text_input("Enter password to access the app", type="password")
-        if st.button("Login"):
-            # Replace 'your_secure_password' with your actual password
-            if password == "your_secure_password":
-                st.session_state.authenticated = True
-                st.rerun()
-            else:
-                st.error("❌ Incorrect password")
-        st.stop()
-    
-    # Logout button in sidebar
-    if st.sidebar.button("Logout"):
-        st.session_state.authenticated = False
-        st.rerun()
-    
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
 
     # Load client once and cache it
