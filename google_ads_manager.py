@@ -899,38 +899,86 @@ def main():
             st.warning("No sub-accounts found. Please create sub-accounts first.")
             return
         
-        # Date range selection
-        col1, col2 = st.columns(2)
-        with col1:
-            keyword_start_date = st.date_input("Start Date", value=datetime.now() - timedelta(days=30), key="keyword_start")
-        with col2:
-            keyword_end_date = st.date_input("End Date", value=datetime.now(), key="keyword_end")
+        # Date range selection with predefined options
+        date_range_option = st.selectbox(
+            "Select Date Range:",
+            options=["Current Month", "Last Month", "Last 2 Weeks", "Custom Date Range"],
+            index=0,  # Default to "Current Month"
+            help="Choose a predefined date range or select custom dates"
+        )
         
-        if keyword_start_date > keyword_end_date:
-            st.warning("Start date cannot be after end date. Please select a valid date range.")
-            return
+        # Calculate dates based on selection
+        today = datetime.now().date()
+        
+        if date_range_option == "Current Month":
+            # Current month: from 1st of current month to today
+            start_date = today.replace(day=1)
+            end_date = today
+        elif date_range_option == "Last Month":
+            # Last month: from 1st to last day of previous month
+            if today.month == 1:
+                start_date = today.replace(year=today.year-1, month=12, day=1)
+                end_date = today.replace(year=today.year-1, month=12, day=31)
+            else:
+                start_date = today.replace(month=today.month-1, day=1)
+                # Get last day of previous month
+                if today.month == 1:
+                    last_day = 31
+                elif today.month in [3, 5, 7, 8, 10, 12]:
+                    last_day = 31
+                elif today.month == 2:
+                    # Check if leap year
+                    if today.year % 4 == 0 and (today.year % 100 != 0 or today.year % 400 == 0):
+                        last_day = 29
+                    else:
+                        last_day = 28
+                else:
+                    last_day = 30
+                end_date = today.replace(month=today.month-1, day=last_day)
+        elif date_range_option == "Last 2 Weeks":
+            # Last 2 weeks: 14 days ago to today
+            start_date = today - timedelta(days=14)
+            end_date = today
+        else:  # Custom Date Range
+            # Show date inputs for custom range
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("Start Date", value=today - timedelta(days=30), key="keyword_start")
+            with col2:
+                end_date = st.date_input("End Date", value=today, key="keyword_end")
+            
+            if start_date > end_date:
+                st.warning("Start date cannot be after end date. Please select a valid date range.")
+                return
+        
+        # Display selected date range
+        st.info(f"📅 Analyzing data from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
         # Initialize session state for keywords data and sort
         if 'keywords_data' not in st.session_state:
             st.session_state.keywords_data = None
         if 'keyword_sort_option' not in st.session_state:
             st.session_state.keyword_sort_option = "Cost (Highest)"
+        if 'keyword_date_range' not in st.session_state:
+            st.session_state.keyword_date_range = None
         
         # Get keyword insights
         if st.button("Fetch Performance Analysis"):
-            st.info(f"Fetching performance analysis from {keyword_start_date.strftime('%Y-%m-%d')} to {keyword_end_date.strftime('%Y-%m-%d')}...")
+            st.info(f"Fetching performance analysis from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}...")
             try:
                 # Get keywords data from selected sub-accounts
-                all_keywords_data = get_keywords_analysis(client, selected_keyword_sub_accounts, (keyword_start_date.strftime("%Y-%m-%d"), keyword_end_date.strftime("%Y-%m-%d")))
+                all_keywords_data = get_keywords_analysis(client, selected_keyword_sub_accounts, (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
                 
                 if all_keywords_data:
                     # Store data in session state
                     st.session_state.keywords_data = all_keywords_data
                     st.session_state.keyword_sort_option = "Cost (Highest)"  # Reset sort to default
-                    display_keywords_analysis(all_keywords_data, "Cost (Highest)")
+                    st.session_state.keyword_date_range = (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+                    display_keywords_analysis(all_keywords_data, "Cost (Highest)", st.session_state.keyword_date_range)
                 else:
                     st.warning("No performance data available for the selected date range.")
                     st.session_state.keywords_data = None
+                    st.session_state.keyword_date_range = None
                     
             except Exception as e:
                 show_message(f"Error fetching performance analysis: {str(e)}", False)
@@ -961,7 +1009,7 @@ def main():
                 st.session_state.keyword_sort_option = selected_sort
             
             # Display the data with current sort
-            display_keywords_analysis(st.session_state.keywords_data, selected_sort)
+            display_keywords_analysis(st.session_state.keywords_data, selected_sort, st.session_state.keyword_date_range)
 
 # Get keywords analysis across all sub-accounts
 @st.cache_data(ttl=3600)  # Cache for 1 hour to reduce API calls
@@ -1237,7 +1285,7 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
         st.error(f"Error getting keywords analysis: {str(e)}")
         return {}
 
-def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
+def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_range: tuple = None):
     """Display keywords analysis in a dashboard format, grouped by account and campaign."""
     
     if not keywords_data or not keywords_data['accounts']:
@@ -1277,12 +1325,17 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
     with col2:
         if st.button("📄 Download Performance Report (PDF)", type="primary"):
             try:
-                # Generate PDF with current date range (last 30 days)
-                end_date = datetime.now().strftime("%Y-%m-%d")
-                start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-                date_range = (start_date, end_date)
+                # Use the provided date range or fallback to current month
+                if date_range:
+                    pdf_date_range = date_range
+                else:
+                    # Fallback to current month
+                    today = datetime.now().date()
+                    start_date = today.replace(day=1)
+                    end_date = today
+                    pdf_date_range = (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
                 
-                pdf_content = generate_performance_pdf(keywords_data, sort_by_option, date_range)
+                pdf_content = generate_performance_pdf(keywords_data, sort_by_option, pdf_date_range)
                 if pdf_content:
                     # Create download button
                     st.download_button(
