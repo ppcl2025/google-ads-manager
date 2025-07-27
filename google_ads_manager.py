@@ -140,7 +140,7 @@ GOOGLE_ADS_DEVELOPER_TOKEN = "your_developer_token"
 GOOGLE_ADS_REFRESH_TOKEN = "your_refresh_token"
 GOOGLE_ADS_LOGIN_CUSTOMER_ID = "5022887746"
         """)
-        return None
+            return None
 
 # Helper function to validate Customer ID format (XXX-XXX-XXXX)
 def validate_customer_id(customer_id: str) -> bool:
@@ -300,7 +300,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         
     except Exception as ex:
         handle_api_exception(ex, "create sub-account")
-        return None
+            return None
 
 # Create a campaign with daily budget
 def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
@@ -520,14 +520,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     return campaign_id
                 except Exception as fallback_ex:
                     handle_api_exception(fallback_ex, "create campaign with Manual CPC")
-        return None
+            return None
             else:
                 handle_api_exception(ex, "create campaign")
                 return None
         
     except Exception as ex:
         handle_api_exception(ex, "create campaign")
-        return None
+            return None
 
 # Create an ad group
 def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str, 
@@ -556,7 +556,7 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
     except GoogleAdsException as ex:
         show_message(f"Failed to create ad group: {ex.error.message}", False)
         logger.error(f"Ad group creation error: {ex.error.message}")
-        return None
+            return None
 
 # Create a responsive search ad with up to 15 headlines and 4 descriptions
 def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str, 
@@ -606,7 +606,7 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
     except GoogleAdsException as ex:
         show_message(f"Failed to create ad: {ex.error.message}", False)
         logger.error(f"Ad creation error: {ex.error.message}")
-        return None
+            return None
 
 # Upload keywords with match types
 def upload_keywords(client: GoogleAdsClient, customer_id: str, ad_group_id: str, 
@@ -649,7 +649,7 @@ def upload_keywords(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
     except GoogleAdsException as ex:
         show_message(f"Failed to upload keywords: {ex.error.message}", False)
         logger.error(f"Keyword upload error: {ex.error.message}")
-        return None
+            return None
 
 # Process bulk upload data
 def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
@@ -1792,7 +1792,7 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
         
     except Exception as e:
         st.error(f"Error generating PDF: {str(e)}")
-        return None
+            return None
 
 if __name__ == "__main__":
     main()
