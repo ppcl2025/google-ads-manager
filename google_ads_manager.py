@@ -96,7 +96,7 @@ st.set_page_config(
     page_title="Google Ads Manager",
     page_icon="📊",
     layout="centered",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Clear cache button in sidebar
