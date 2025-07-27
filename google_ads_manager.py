@@ -543,7 +543,7 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
         ad_group.cpc_bid_micros = DEFAULT_CPC_BID_MICROS
 
         ad_group_operation = client.get_type("AdGroupOperation")
-        ad_group_operation.create.CopyFrom(ad_group)
+        ad_group_operation.create = ad_group
         ad_group_response = ad_group_service.mutate_ad_groups(
             customer_id=customer_id,
             operations=[ad_group_operation]
@@ -591,9 +591,9 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
                     description_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"DESCRIPTION_{description_positions[i]}"]
                 rsa.descriptions.append(description_asset)
 
-        ad_group_ad.ad.CopyFrom(ad)
+        ad_group_ad.ad = ad
         ad_group_ad_operation = client.get_type("AdGroupAdOperation")
-        ad_group_ad_operation.create.CopyFrom(ad_group_ad)
+        ad_group_ad_operation.create = ad_group_ad
         ad_response = ad_group_ad_service.mutate_ad_group_ads(
             customer_id=customer_id,
             operations=[ad_group_ad_operation]
@@ -635,7 +635,7 @@ def upload_keywords(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
             criterion.keyword.text = keyword_text
             criterion.keyword.match_type = match_type
             operation = client.get_type("AdGroupCriterionOperation")
-            operation.create.CopyFrom(criterion)
+            operation.create = criterion
             operations.append(operation)
 
         response = ad_group_criterion_service.mutate_ad_group_criteria(
