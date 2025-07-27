@@ -1108,23 +1108,14 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                 campaign_data['keywords'].sort(key=lambda x: x['cost'], reverse=True)
                 top_keywords = campaign_data['keywords'][:10]
                 
-                # Calculate campaign summary metrics from TOP 10 KEYWORDS ONLY
-                if top_keywords:
-                    # Calculate summary metrics from the top 10 keywords that are actually displayed
-                    top_10_total_impressions = sum(kw['impressions'] for kw in top_keywords)
-                    top_10_total_clicks = sum(kw['clicks'] for kw in top_keywords)
-                    top_10_total_cost = sum(kw['cost'] for kw in top_keywords)
-                    top_10_total_conversions = sum(kw['conversions'] for kw in top_keywords)
-                    
-                    campaign_data['summary']['total_impressions'] = top_10_total_impressions
-                    campaign_data['summary']['total_clicks'] = top_10_total_clicks
-                    campaign_data['summary']['total_cost'] = top_10_total_cost
-                    campaign_data['summary']['total_conversions'] = top_10_total_conversions
-                    
-                    # Calculate averages from top 10 keywords
-                    campaign_data['summary']['avg_ctr'] = top_10_total_clicks / top_10_total_impressions if top_10_total_impressions > 0 else 0
-                    campaign_data['summary']['avg_conversion_rate'] = top_10_total_conversions / top_10_total_clicks if top_10_total_clicks > 0 else 0
-                    campaign_data['summary']['avg_cost_per_conversion'] = top_10_total_cost / top_10_total_conversions if top_10_total_conversions > 0 else 0
+                # Calculate campaign summary metrics from ALL KEYWORDS in the campaign
+                if campaign_data['keywords']:
+                    # Campaign summary should reflect ALL keywords, not just top 10
+                    # The summary metrics are already calculated from all keywords during data collection
+                    # Just calculate the averages from the total campaign metrics
+                    campaign_data['summary']['avg_ctr'] = campaign_data['summary']['total_clicks'] / campaign_data['summary']['total_impressions'] if campaign_data['summary']['total_impressions'] > 0 else 0
+                    campaign_data['summary']['avg_conversion_rate'] = campaign_data['summary']['total_conversions'] / campaign_data['summary']['total_clicks'] if campaign_data['summary']['total_clicks'] > 0 else 0
+                    campaign_data['summary']['avg_cost_per_conversion'] = campaign_data['summary']['total_cost'] / campaign_data['summary']['total_conversions'] if campaign_data['summary']['total_conversions'] > 0 else 0
                 
                 # Update account summary
                 account_summary['total_impressions'] += campaign_data['summary']['total_impressions']
@@ -1231,7 +1222,7 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
             
             # Add note about top 10 keywords
             total_keywords_in_campaign = campaign.get('total_keywords_in_campaign', len(campaign['keywords']))
-            st.info(f"📊 Showing top 10 keywords by spend (out of {total_keywords_in_campaign} total keywords in campaign)")
+            st.info(f"📊 Campaign summary shows ALL {total_keywords_in_campaign} keywords. Table shows top 10 keywords by spend.")
             
             # Campaign summary metrics
             camp_col1, camp_col2, camp_col3, camp_col4 = st.columns(4)
