@@ -803,9 +803,6 @@ def main():
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
         
-        campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
-        # No end_date (ongoing)
-
         if st.button("Create Campaign"):
             if customer_id and campaign_name and budget_amount:
                 create_campaign(client, customer_id, campaign_name, budget_amount)
