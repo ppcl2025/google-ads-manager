@@ -99,6 +99,20 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Force sidebar to be collapsed using JavaScript
+st.markdown("""
+<script>
+// Force sidebar to be collapsed on page load
+window.addEventListener('load', function() {
+    const sidebar = document.querySelector('[data-testid="stSidebar"]');
+    if (sidebar) {
+        sidebar.style.transform = 'translateX(-100%)';
+        sidebar.style.transition = 'transform 0.3s ease';
+    }
+});
+</script>
+""", unsafe_allow_html=True)
+
 # Clear cache button in sidebar
 if st.sidebar.button("Clear Cache"):
     st.cache_data.clear()

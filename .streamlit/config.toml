@@ -6,6 +6,9 @@ maxUploadSize = 200
 [browser]
 gatherUsageStats = false
 
+[ui]
+hideSidebarNav = false
+
 [theme]
 primaryColor = "#FF4B4B"
 backgroundColor = "#FFFFFF"
