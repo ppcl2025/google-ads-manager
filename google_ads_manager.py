@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import os
 from typing import Optional, List, Dict, Any
 from google.ads.googleads.v20.common.types import NetworkSettings
+from google.ads.googleads.v20.common.types import GeoTargetTypeSetting
 from google.protobuf.field_mask_pb2 import FieldMask
 
 # API Usage Tracker
@@ -367,6 +368,18 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             st.warning(f"⚠️ Could not configure network settings: {network_error}")
             logger.warning(f"Failed to configure network settings: {network_error}")
         
+        # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
+        try:
+            # Use the correct API v20 approach with GeoTargetTypeSetting constructor
+            campaign.geo_target_type_setting = GeoTargetTypeSetting(
+                positive_geo_target_type="PRESENCE",  # Presence Only
+                negative_geo_target_type="PRESENCE"   # Presence Only for exclusions too
+            )
+            st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
+        except Exception as location_error:
+            st.warning(f"⚠️ Could not configure location targeting: {location_error}")
+            logger.warning(f"Failed to configure location targeting: {location_error}")
+        
         # In API v20, network settings are handled differently
         # For Search campaigns, the network targeting is controlled by the advertising_channel_type
         # and other campaign settings rather than a separate NetworkSettings object
@@ -440,6 +453,18 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 except Exception as network_error:
                     st.warning(f"⚠️ Could not configure network settings: {network_error}")
                     logger.warning(f"Failed to configure network settings: {network_error}")
+                
+                # Configure Location Targeting for fallback case too
+                try:
+                    # Use the correct API v20 approach with GeoTargetTypeSetting constructor
+                    campaign_fallback.geo_target_type_setting = GeoTargetTypeSetting(
+                        positive_geo_target_type="PRESENCE",  # Presence Only
+                        negative_geo_target_type="PRESENCE"   # Presence Only for exclusions too
+                    )
+                    st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
+                except Exception as location_error:
+                    st.warning(f"⚠️ Could not configure location targeting: {location_error}")
+                    logger.warning(f"Failed to configure location targeting: {location_error}")
                 
                 try:
                     response_fallback = campaign_service.mutate_campaigns(
@@ -757,6 +782,7 @@ def main():
         st.info("✅ Conversion tracking is automatically set to 'This Manager' for new sub-accounts, enabling the bidding strategy")
         st.info("✅ All campaigns will use the hardcoded PPCL List shared negative keywords list")
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
+        st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
         
         if st.button("Create Campaign"):
             if customer_id and campaign_name and budget_amount:
