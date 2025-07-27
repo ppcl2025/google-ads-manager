@@ -10,6 +10,8 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from datetime import datetime, timedelta
 import os
 from typing import Optional, List, Dict, Any
+from google.ads.googleads.v20.common.types import NetworkSettings
+from google.protobuf.field_mask_pb2 import FieldMask
 
 # API Usage Tracker
 class APIUsageTracker:
@@ -353,11 +355,13 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Configure NetworkSettings to use only core Google Search Network
         # Exclude search partners and Display Network
         try:
-            campaign.network_settings = client.get_type("NetworkSettings")
-            campaign.network_settings.target_google_search = True  # Enable core Google Search Network
-            campaign.network_settings.target_search_network = False  # Exclude search partners
-            campaign.network_settings.target_content_network = False  # Exclude Display Network
-            campaign.network_settings.target_partner_search_network = False  # Exclude partner search network
+            # Use the correct API v20 approach with NetworkSettings constructor
+            campaign.network_settings = NetworkSettings(
+                target_google_search=True,       # Enable core Google Search
+                target_search_network=False,     # Disable search partners
+                target_content_network=False,    # Disable Display Network
+                target_partner_search_network=False  # Disable partner search network
+            )
             st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
         except Exception as network_error:
             st.warning(f"⚠️ Could not configure network settings: {network_error}")
@@ -425,11 +429,13 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure NetworkSettings for fallback case too
                 try:
-                    campaign_fallback.network_settings = client.get_type("NetworkSettings")
-                    campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search Network
-                    campaign_fallback.network_settings.target_search_network = False  # Exclude search partners
-                    campaign_fallback.network_settings.target_content_network = False  # Exclude Display Network
-                    campaign_fallback.network_settings.target_partner_search_network = False  # Exclude partner search network
+                    # Use the correct API v20 approach with NetworkSettings constructor
+                    campaign_fallback.network_settings = NetworkSettings(
+                        target_google_search=True,       # Enable core Google Search
+                        target_search_network=False,     # Disable search partners
+                        target_content_network=False,    # Disable Display Network
+                        target_partner_search_network=False  # Disable partner search network
+                    )
                     st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
                 except Exception as network_error:
                     st.warning(f"⚠️ Could not configure network settings: {network_error}")
