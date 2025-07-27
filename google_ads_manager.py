@@ -214,18 +214,14 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         customer.time_zone = time_zone
         customer.tracking_url_template = ""
 
-        # Set conversion tracking to "This Manager" for bidding strategy compatibility
-        customer.conversion_tracking_setting = client.get_type("ConversionTrackingSetting")
-        customer.conversion_tracking_setting.conversion_tracking_id = mcc_customer_id
-        customer.conversion_tracking_setting.cross_account_conversion_tracking_id = mcc_customer_id
-
+        # Create the customer client first (without conversion tracking)
         response = customer_service.create_customer_client(
             customer_id=mcc_customer_id,
             customer_client=customer
         )
         
         # Extract the new customer ID from the response
-        # The response structure may vary, so we'll handle it safely
+        new_customer_id = None
         try:
             # Try different possible response structures
             if hasattr(response, 'customer_client') and hasattr(response.customer_client, 'id'):
@@ -239,16 +235,37 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
             else:
                 # Fallback: try to get from the response object directly
                 new_customer_id = str(response).split('customers/')[-1].split('/')[0]
-            
-            show_message(f"✅ Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
-            logger.info(f"Created sub-account: {new_customer_id} with conversion tracking enabled")
-            return new_customer_id
-            
         except Exception as parse_error:
-            # If we can't parse the response but the account was created, show a generic success message
             logger.warning(f"Could not parse response structure: {parse_error}")
             show_message("✅ Sub-account created successfully! (Response structure parsing issue)")
-            return "UNKNOWN"  # Return a placeholder since we can't extract the ID
+            return "UNKNOWN"
+        
+        if new_customer_id and new_customer_id != "UNKNOWN":
+            # Now set the conversion tracking to "This Manager" for the new account
+            try:
+                # Set conversion tracking to use the MCC account
+                customer_update = client.get_type("Customer")
+                customer_update.conversion_tracking_setting = client.get_type("ConversionTrackingSetting")
+                customer_update.conversion_tracking_setting.conversion_tracking_id = mcc_customer_id
+                customer_update.conversion_tracking_setting.cross_account_conversion_tracking_id = mcc_customer_id
+                
+                # Update the customer with conversion tracking settings
+                customer_service.update_customer(
+                    customer_id=new_customer_id,
+                    customer=customer_update
+                )
+                
+                show_message(f"✅ Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
+                logger.info(f"Created sub-account: {new_customer_id} with conversion tracking enabled")
+                return new_customer_id
+                
+            except Exception as conversion_error:
+                # If setting conversion tracking fails, still return the account ID
+                logger.warning(f"Could not set conversion tracking: {conversion_error}")
+                show_message(f"✅ Created sub-account with ID: {new_customer_id}. Conversion tracking may need to be set manually.")
+                return new_customer_id
+        
+        return new_customer_id
         
     except Exception as ex:
         handle_api_exception(ex, "create sub-account")
