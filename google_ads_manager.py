@@ -1,18 +1,16 @@
-import streamlit as st
 import pandas as pd
 import logging
 import re
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import GoogleAPICallError
+from google.protobuf.field_mask_pb2 import FieldMask
+from datetime import datetime, timedelta
+import streamlit as st
+from typing import Optional, List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
-from datetime import datetime, timedelta
 import os
-from typing import Optional, List, Dict, Any
-from google.ads.googleads.v20.common.types import NetworkSettings
-from google.ads.googleads.v20.common.types import GeoTargetTypeSetting
-from google.protobuf.field_mask_pb2 import FieldMask
 
 # API Usage Tracker
 class APIUsageTracker:
@@ -356,13 +354,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Configure NetworkSettings to use only core Google Search Network
         # Exclude search partners and Display Network
         try:
-            # Use the correct API v20 approach with NetworkSettings constructor
-            campaign.network_settings = NetworkSettings(
-                target_google_search=True,       # Enable core Google Search
-                target_search_network=False,     # Disable search partners
-                target_content_network=False,    # Disable Display Network
-                target_partner_search_network=False  # Disable partner search network
-            )
+            # Use the correct API v20 approach with client.get_type()
+            campaign.network_settings = client.get_type("NetworkSettings")
+            campaign.network_settings.target_google_search = True  # Enable core Google Search
+            campaign.network_settings.target_search_network = False  # Disable search partners
+            campaign.network_settings.target_content_network = False  # Disable Display Network
+            campaign.network_settings.target_partner_search_network = False  # Disable partner search network
             st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
         except Exception as network_error:
             st.warning(f"⚠️ Could not configure network settings: {network_error}")
@@ -370,11 +367,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         
         # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
         try:
-            # Use the correct API v20 approach with GeoTargetTypeSetting constructor
-            campaign.geo_target_type_setting = GeoTargetTypeSetting(
-                positive_geo_target_type="PRESENCE",  # Presence Only
-                negative_geo_target_type="PRESENCE"   # Presence Only for exclusions too
-            )
+            # Use the correct API v20 approach with client.get_type()
+            campaign.geo_target_type_setting = client.get_type("GeoTargetTypeSetting")
+            campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+            campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
             st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
         except Exception as location_error:
             st.warning(f"⚠️ Could not configure location targeting: {location_error}")
@@ -442,13 +438,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure NetworkSettings for fallback case too
                 try:
-                    # Use the correct API v20 approach with NetworkSettings constructor
-                    campaign_fallback.network_settings = NetworkSettings(
-                        target_google_search=True,       # Enable core Google Search
-                        target_search_network=False,     # Disable search partners
-                        target_content_network=False,    # Disable Display Network
-                        target_partner_search_network=False  # Disable partner search network
-                    )
+                    # Use the correct API v20 approach with client.get_type()
+                    campaign_fallback.network_settings = client.get_type("NetworkSettings")
+                    campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search
+                    campaign_fallback.network_settings.target_search_network = False  # Disable search partners
+                    campaign_fallback.network_settings.target_content_network = False  # Disable Display Network
+                    campaign_fallback.network_settings.target_partner_search_network = False  # Disable partner search network
                     st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
                 except Exception as network_error:
                     st.warning(f"⚠️ Could not configure network settings: {network_error}")
@@ -456,11 +451,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure Location Targeting for fallback case too
                 try:
-                    # Use the correct API v20 approach with GeoTargetTypeSetting constructor
-                    campaign_fallback.geo_target_type_setting = GeoTargetTypeSetting(
-                        positive_geo_target_type="PRESENCE",  # Presence Only
-                        negative_geo_target_type="PRESENCE"   # Presence Only for exclusions too
-                    )
+                    # Use the correct API v20 approach with client.get_type()
+                    campaign_fallback.geo_target_type_setting = client.get_type("GeoTargetTypeSetting")
+                    campaign_fallback.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                    campaign_fallback.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
                     st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
                 except Exception as location_error:
                     st.warning(f"⚠️ Could not configure location targeting: {location_error}")
