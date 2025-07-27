@@ -11,6 +11,41 @@ from datetime import datetime, timedelta
 import os
 from typing import Optional, List, Dict, Any
 
+# API Usage Tracker
+class APIUsageTracker:
+    def __init__(self, monthly_limit: int = 15000):
+        self.monthly_limit = monthly_limit
+        self.operations_count = 0
+        self.last_reset = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    def increment(self, count: int = 1):
+        """Increment API operation count"""
+        # Reset counter if it's a new month
+        current_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if current_month > self.last_reset:
+            self.operations_count = 0
+            self.last_reset = current_month
+        
+        self.operations_count += count
+    
+    def get_usage_stats(self):
+        """Get current usage statistics"""
+        remaining = max(0, self.monthly_limit - self.operations_count)
+        usage_percentage = (self.operations_count / self.monthly_limit) * 100
+        return {
+            'used': self.operations_count,
+            'remaining': remaining,
+            'percentage': usage_percentage
+        }
+    
+    def is_limit_reached(self):
+        """Check if monthly limit is reached"""
+        return self.operations_count >= self.monthly_limit
+
+# Initialize API tracker
+if 'api_tracker' not in st.session_state:
+    st.session_state.api_tracker = APIUsageTracker()
+
 # Constants
 DEFAULT_MCC_ID = "502-288-7746"
 DEFAULT_CURRENCIES = ["USD", "EUR", "GBP", "INR"]
@@ -36,6 +71,37 @@ st.set_page_config(
 if st.sidebar.button("Clear Cache"):
     st.cache_data.clear()
     st.cache_resource.clear()
+
+# API Usage Monitoring in Sidebar
+st.sidebar.markdown("---")
+st.sidebar.subheader("📊 API Usage Monitor")
+
+# Get current usage stats
+usage_stats = st.session_state.api_tracker.get_usage_stats()
+
+# Display usage metrics
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    st.metric("Used", f"{usage_stats['used']:,}")
+with col2:
+    st.metric("Remaining", f"{usage_stats['remaining']:,}")
+
+# Progress bar
+st.sidebar.progress(usage_stats['percentage'] / 100)
+
+# Warning if approaching limit
+if usage_stats['percentage'] > 80:
+    st.sidebar.warning("⚠️ Approaching monthly limit!")
+elif usage_stats['percentage'] > 60:
+    st.sidebar.info("ℹ️ Moderate API usage")
+
+# Usage percentage
+st.sidebar.caption(f"Usage: {usage_stats['percentage']:.1f}%")
+
+# Reset button for testing
+if st.sidebar.button("Reset Counter (Test)"):
+    st.session_state.api_tracker.operations_count = 0
+    st.rerun()
 
 # Google Ads API credentials from Streamlit secrets
 def get_google_ads_client():
@@ -103,6 +169,9 @@ def handle_api_exception(ex: Exception, operation: str) -> None:
 def get_sub_accounts(_client: GoogleAdsClient, mcc_customer_id: str) -> list[dict]:
     """Fetch all direct, active sub-accounts under the MCC account using GAQL."""
     try:
+        # Track API usage
+        st.session_state.api_tracker.increment(1)
+        
         st.info(f"🔍 Fetching sub-accounts for MCC ID: {mcc_customer_id}")
         sub_accounts = []
         google_ads_service = _client.get_service("GoogleAdsService")
@@ -687,6 +756,9 @@ def main():
 def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -> dict:
     """Get keywords performance data from all sub-accounts, grouped by account."""
     try:
+        # Track API usage for the overall function call
+        st.session_state.api_tracker.increment(1)
+        
         all_accounts_keywords = {}
         google_ads_service = _client.get_service("GoogleAdsService")
         
@@ -713,6 +785,9 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
         
         for sub_account in sub_accounts_list:
             try:
+                # Track API usage for each sub-account
+                st.session_state.api_tracker.increment(1)
+                
                 sub_customer_id = sub_account['id']
                 st.write(f"📊 Processing keywords for {sub_account['name']}...")
                 
