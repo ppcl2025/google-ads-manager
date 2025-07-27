@@ -346,15 +346,22 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         
         st.info(f"✅ Attempting to use MSL - MaxCon bidding strategy (ID: {msl_maxcon_strategy_id})")
         
-        # TODO: Implement shared negative keywords list
-        # Hardcoded shared negative keywords list - temporarily disabled for API v20 compatibility
-        # PPCL List - shared negative keywords list
-        # ppcl_negative_list_id = "11404993599"  # PPCL List negative keywords ID
-        # Apply shared negative keywords list to the campaign using the correct field name
-        # In API v20, shared sets for negative keywords use a different approach
-        # campaign.excluded_parent_asset_group_list = f"customers/{customer_id}/sharedSets/{ppcl_negative_list_id}"
-        # st.info(f"✅ Using hardcoded PPCL List negative keywords (ID: {ppcl_negative_list_id})")
-        st.info("ℹ️ Shared negative keywords list temporarily disabled for API v20 compatibility")
+        # Hardcoded shared negative keywords list - PPCL List
+        ppcl_negative_list_id = "11404993599"  # PPCL List negative keywords ID
+        st.info(f"✅ Will apply PPCL List negative keywords (ID: {ppcl_negative_list_id}) after campaign creation")
+        
+        # Configure NetworkSettings to use only core Google Search Network
+        # Exclude search partners and Display Network
+        try:
+            campaign.network_settings = client.get_type("NetworkSettings")
+            campaign.network_settings.target_search_network = False  # Exclude search partners
+            campaign.network_settings.target_content_network = False  # Exclude Display Network
+            campaign.network_settings.target_partner_search_network = False  # Exclude partner search network
+            campaign.network_settings.target_youtube = False  # Exclude YouTube
+            st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
+        except Exception as network_error:
+            st.warning(f"⚠️ Could not configure network settings: {network_error}")
+            logger.warning(f"Failed to configure network settings: {network_error}")
         
         # In API v20, network settings are handled differently
         # For Search campaigns, the network targeting is controlled by the advertising_channel_type
@@ -373,6 +380,27 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 customer_id=customer_id, operations=[campaign_operation]
             )
             campaign_id = response.results[0].resource_name.split("/")[-1]
+            
+            # Apply shared negative keywords list to the campaign
+            try:
+                campaign_shared_set_service = client.get_service("CampaignSharedSetService")
+                campaign_shared_set_operation = client.get_type("CampaignSharedSetOperation")
+                campaign_shared_set = campaign_shared_set_operation.create
+                campaign_shared_set.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+                campaign_shared_set.shared_set = f"customers/{customer_id}/sharedSets/{ppcl_negative_list_id}"
+                
+                # Apply the shared negative keywords list
+                shared_set_response = campaign_shared_set_service.mutate_campaign_shared_sets(
+                    customer_id=customer_id,
+                    operations=[campaign_shared_set_operation]
+                )
+                st.info(f"✅ Successfully applied PPCL List negative keywords to campaign")
+                logger.info(f"Applied shared negative keywords list {ppcl_negative_list_id} to campaign {campaign_id}")
+                
+            except Exception as shared_set_error:
+                st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
+                logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
+            
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
             return campaign_id
             
@@ -395,11 +423,44 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.manual_cpc = client.get_type("ManualCpc")
                 campaign_fallback.manual_cpc.enhanced_cpc_enabled = False
                 
+                # Configure NetworkSettings for fallback case too
+                try:
+                    campaign_fallback.network_settings = client.get_type("NetworkSettings")
+                    campaign_fallback.network_settings.target_search_network = False  # Exclude search partners
+                    campaign_fallback.network_settings.target_content_network = False  # Exclude Display Network
+                    campaign_fallback.network_settings.target_partner_search_network = False  # Exclude partner search network
+                    campaign_fallback.network_settings.target_youtube = False  # Exclude YouTube
+                    st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
+                except Exception as network_error:
+                    st.warning(f"⚠️ Could not configure network settings: {network_error}")
+                    logger.warning(f"Failed to configure network settings: {network_error}")
+                
                 try:
                     response_fallback = campaign_service.mutate_campaigns(
                         customer_id=customer_id, operations=[campaign_operation_fallback]
                     )
                     campaign_id = response_fallback.results[0].resource_name.split("/")[-1]
+                    
+                    # Apply shared negative keywords list to the campaign (fallback case)
+                    try:
+                        campaign_shared_set_service = client.get_service("CampaignSharedSetService")
+                        campaign_shared_set_operation = client.get_type("CampaignSharedSetOperation")
+                        campaign_shared_set = campaign_shared_set_operation.create
+                        campaign_shared_set.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+                        campaign_shared_set.shared_set = f"customers/{customer_id}/sharedSets/{ppcl_negative_list_id}"
+                        
+                        # Apply the shared negative keywords list
+                        shared_set_response = campaign_shared_set_service.mutate_campaign_shared_sets(
+                            customer_id=customer_id,
+                            operations=[campaign_shared_set_operation]
+                        )
+                        st.info(f"✅ Successfully applied PPCL List negative keywords to campaign")
+                        logger.info(f"Applied shared negative keywords list {ppcl_negative_list_id} to campaign {campaign_id}")
+                        
+                    except Exception as shared_set_error:
+                        st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
+                        logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
+                    
                     show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. You can change to MSL - MaxCon later once conversion tracking is enabled.")
                     return campaign_id
                     
@@ -688,7 +749,8 @@ def main():
         # Hardcoded bidding strategy and negative keywords info
         st.info("🎯 All campaigns will use the hardcoded MSL - MaxCon (Maximize Conversions) bidding strategy")
         st.info("✅ Conversion tracking is automatically set to 'This Manager' for new sub-accounts, enabling the bidding strategy")
-        st.info("ℹ️ Shared negative keywords list temporarily disabled for API v20 compatibility")
+        st.info("✅ All campaigns will use the hardcoded PPCL List shared negative keywords list")
+        st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         
         if st.button("Create Campaign"):
             if customer_id and campaign_name and budget_amount:
