@@ -99,25 +99,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Force sidebar to be collapsed using JavaScript
-st.markdown("""
-<script>
-// Force sidebar to be collapsed on page load
-window.addEventListener('load', function() {
-    const sidebar = document.querySelector('[data-testid="stSidebar"]');
-    if (sidebar) {
-        sidebar.style.transform = 'translateX(-100%)';
-        sidebar.style.transition = 'transform 0.3s ease';
-    }
-});
-</script>
-""", unsafe_allow_html=True)
-
-# Clear cache button in sidebar
-if st.sidebar.button("Clear Cache"):
-    st.cache_data.clear()
-    st.cache_resource.clear()
-
 # Google Ads API credentials from Streamlit secrets
 def get_google_ads_client():
     """Create Google Ads client using Streamlit secrets"""
@@ -549,13 +530,18 @@ def main():
     
     sub_accounts_list = get_sub_accounts(client, mcc_customer_id)
     
-    col1, col2 = st.columns([3, 1])
+    col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
         st.write(f"**Found {len(sub_accounts_list)} sub-account(s) under your MCC**")
     with col2:
         if st.button("🔄 Refresh Sub-Accounts"):
             st.cache_data.clear()
             st.rerun()
+    with col3:
+        if st.button("🗑️ Clear Cache"):
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            st.success("Cache cleared!")
     
     if not sub_accounts_list:
         st.warning("No sub-accounts found under the MCC account. You can still manually enter customer IDs below.")
