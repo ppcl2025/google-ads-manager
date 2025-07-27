@@ -19,8 +19,6 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import io
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.images import Image
 
 # API Usage Tracker
 class APIUsageTracker:
@@ -140,7 +138,7 @@ GOOGLE_ADS_DEVELOPER_TOKEN = "your_developer_token"
 GOOGLE_ADS_REFRESH_TOKEN = "your_refresh_token"
 GOOGLE_ADS_LOGIN_CUSTOMER_ID = "5022887746"
         """)
-            return None
+        return None
 
 # Helper function to validate Customer ID format (XXX-XXX-XXXX)
 def validate_customer_id(customer_id: str) -> bool:
@@ -236,7 +234,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         try:
             # Try different possible response structures
             if hasattr(response, 'customer_client') and hasattr(response.customer_client, 'id'):
-                new_customer_id = response.customer_client.id
+        new_customer_id = response.customer_client.id
             elif hasattr(response, 'resource_name'):
                 # Extract ID from resource name format: customers/{customer_id}
                 new_customer_id = response.resource_name.split('/')[-1]
@@ -291,16 +289,19 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 - This enables MSL-MaxCon bidding strategy for campaigns
                 """)
                 
+        return new_customer_id
+                
             except Exception as conversion_error:
                 # If setting conversion tracking fails, still return the account ID
                 logger.warning(f"Could not set conversion tracking: {conversion_error}")
                 show_message(f"✅ Created sub-account with ID: {new_customer_id}. Conversion tracking may need to be set manually.")
+                return new_customer_id
         
         return new_customer_id
         
     except Exception as ex:
         handle_api_exception(ex, "create sub-account")
-            return None
+        return None
 
 # Create a campaign with daily budget
 def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
@@ -419,10 +420,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
 
         # Try to mutate campaign with bidding strategy first
         try:
-            response = campaign_service.mutate_campaigns(
-                customer_id=customer_id, operations=[campaign_operation]
-            )
-            campaign_id = response.results[0].resource_name.split("/")[-1]
+        response = campaign_service.mutate_campaigns(
+            customer_id=customer_id, operations=[campaign_operation]
+        )
+        campaign_id = response.results[0].resource_name.split("/")[-1]
             
             # Apply shared negative keywords list to the campaign
             try:
@@ -445,7 +446,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
             
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
-            return campaign_id
+        return campaign_id
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
             error_message = str(ex)
@@ -520,14 +521,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     return campaign_id
                 except Exception as fallback_ex:
                     handle_api_exception(fallback_ex, "create campaign with Manual CPC")
-            return None
+        return None
             else:
                 handle_api_exception(ex, "create campaign")
                 return None
         
     except Exception as ex:
         handle_api_exception(ex, "create campaign")
-            return None
+        return None
 
 # Create an ad group
 def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str, 
@@ -556,7 +557,7 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
     except GoogleAdsException as ex:
         show_message(f"Failed to create ad group: {ex.error.message}", False)
         logger.error(f"Ad group creation error: {ex.error.message}")
-            return None
+        return None
 
 # Create a responsive search ad with up to 15 headlines and 4 descriptions
 def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str, 
@@ -606,7 +607,7 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
     except GoogleAdsException as ex:
         show_message(f"Failed to create ad: {ex.error.message}", False)
         logger.error(f"Ad creation error: {ex.error.message}")
-            return None
+        return None
 
 # Upload keywords with match types
 def upload_keywords(client: GoogleAdsClient, customer_id: str, ad_group_id: str, 
@@ -649,7 +650,7 @@ def upload_keywords(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
     except GoogleAdsException as ex:
         show_message(f"Failed to upload keywords: {ex.error.message}", False)
         logger.error(f"Keyword upload error: {ex.error.message}")
-            return None
+        return None
 
 # Process bulk upload data
 def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
@@ -936,7 +937,7 @@ def main():
                     last_day = 30
                 elif today.month in [4, 6, 8, 9, 11]:  # Current month ends in 30, so previous month ends in 31
                     last_day = 31
-            else:
+                else:
                     last_day = 31  # Default fallback
                 
                 end_date = today.replace(month=today.month-1, day=last_day)
@@ -980,7 +981,7 @@ def main():
                     st.session_state.keyword_sort_option = "Cost (Highest)"  # Reset sort to default
                     st.session_state.keyword_date_range = (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
                     display_keywords_analysis(all_keywords_data, "Cost (Highest)", st.session_state.keyword_date_range)
-            else:
+                else:
                     st.warning("No performance data available for the selected date range.")
                     st.session_state.keywords_data = None
                     st.session_state.keyword_date_range = None
@@ -1333,7 +1334,7 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
                 # Use the provided date range or fallback to current month
                 if date_range:
                     pdf_date_range = date_range
-            else:
+                else:
                     # Fallback to current month
                     today = datetime.now().date()
                     start_date = today.replace(day=1)
@@ -1350,7 +1351,7 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
                         mime="application/pdf"
                     )
                     st.success("✅ PDF report generated successfully!")
-            else:
+                else:
                     st.error("❌ Failed to generate PDF report")
             except Exception as e:
                 st.error(f"❌ Error generating PDF: {str(e)}")
@@ -1570,25 +1571,70 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
             fontName='Helvetica'
         )
         
-        # Add company logo to top left
-        try:
-            logo_path = "dark_logo.png"
-            if os.path.exists(logo_path):
-                logo = Image(logo_path, width=1.5*inch, height=0.75*inch)
-                story.append(logo)
-                story.append(Spacer(1, 10))
-        except Exception as e:
-            # If logo fails to load, continue without it
-            pass
-        
         # Header with logo-like design
         story.append(Paragraph("📊 Google Ads Performance Report", title_style))
         story.append(Paragraph(f"Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", subtitle_style))
         story.append(Paragraph(f"📅 Date Range: {date_range[0]} to {date_range[1]}", subtitle_style))
         story.append(Spacer(1, 20))
         
-        # Process each account and campaign (removed Overall Performance Summary)
+        # Overall summary with modern card-like design
         if keywords_data and keywords_data['accounts']:
+            total_accounts = keywords_data['total_accounts']
+            total_cost = sum(acc['summary']['total_cost'] for acc in keywords_data['accounts'])
+            total_impressions = sum(acc['summary']['total_impressions'] for acc in keywords_data['accounts'])
+            total_clicks = sum(acc['summary']['total_clicks'] for acc in keywords_data['accounts'])
+            total_conversions = sum(acc['summary']['total_conversions'] for acc in keywords_data['accounts'])
+            
+            avg_ctr = total_clicks / total_impressions if total_impressions > 0 else 0
+            avg_conversion_rate = total_conversions / total_clicks if total_clicks > 0 else 0
+            
+            # Modern summary table with clean design
+            summary_data = [
+                ['📈 Performance Overview', ''],
+                ['', ''],
+                ['Accounts Analyzed', f"<b>{total_accounts}</b>"],
+                ['Total Impressions', f"<b>{total_impressions:,}</b>"],
+                ['Total Clicks', f"<b>{total_clicks:,}</b>"],
+                ['Total Conversions', f"<b>{total_conversions:.0f}</b>"],
+                ['Total Cost', f"<b>${total_cost:,.2f}</b>"],
+                ['', ''],
+                ['Average CTR', f"<b>{avg_ctr:.2%}</b>"],
+                ['Average Conversion Rate', f"<b>{avg_conversion_rate:.2%}</b>"]
+            ]
+            
+            # Create modern summary table
+            summary_table = Table(summary_data, colWidths=[2.5*inch, 1.5*inch])
+            summary_table.setStyle(TableStyle([
+                # Header styling
+                ('BACKGROUND', (0, 0), (-1, 1), primary_color),
+                ('TEXTCOLOR', (0, 0), (-1, 1), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 1), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 1), 12),
+                ('TOPPADDING', (0, 0), (-1, 1), 12),
+                
+                # Data rows styling
+                ('BACKGROUND', (0, 2), (-1, -1), colors.white),
+                ('TEXTCOLOR', (0, 2), (-1, -1), text_color),
+                ('FONTNAME', (0, 2), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 2), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 2), (-1, -1), 8),
+                ('TOPPADDING', (0, 2), (-1, -1), 8),
+                
+                # Right column alignment for values
+                ('ALIGN', (1, 2), (1, -1), 'RIGHT'),
+                
+                # Subtle borders
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E5E7EB')),
+                ('ROWBACKGROUNDS', (0, 2), (-1, -1), [colors.white, secondary_color])
+            ]))
+            
+            story.append(Paragraph("📊 Overall Performance Summary", section_style))
+            story.append(summary_table)
+            story.append(Spacer(1, 25))
+            
+            # Process each account and campaign
             for account in keywords_data['accounts']:
                 story.append(Paragraph(f"🏢 {account['account_name']} (ID: {account['account_id']})", section_style))
                 
@@ -1641,7 +1687,7 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
                     story.append(campaign_table)
                     story.append(Spacer(1, 15))
                     
-                    # Keywords table with modern design and text wrapping
+                    # Keywords table with modern design
                     if campaign['keywords']:
                         keywords_df = pd.DataFrame(campaign['keywords'])
                         
@@ -1669,9 +1715,9 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
                         elif sort_column == "cost_per_conversion":
                             keywords_df = keywords_df.sort_values('cost_per_conversion', ascending=True)
                         
-                        # Modern keywords table with text wrapping
+                        # Modern keywords table
                         keywords_data_for_pdf = []
-                        keywords_data_for_pdf.append(['🔍 Keyword', 'Match\nType', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/\nConv.', 'Conv.\nRate', 'Cost'])
+                        keywords_data_for_pdf.append(['🔍 Keyword', 'Match Type', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost'])
                         
                         for _, row in keywords_df.head(10).iterrows():
                             keywords_data_for_pdf.append([
@@ -1688,15 +1734,14 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
                         
                         keywords_table = Table(keywords_data_for_pdf, colWidths=[1.3*inch, 0.6*inch, 0.6*inch, 0.5*inch, 0.4*inch, 0.6*inch, 0.6*inch, 0.6*inch, 0.5*inch])
                         keywords_table.setStyle(TableStyle([
-                            # Header styling with text wrapping
+                            # Header styling
                             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#059669')),  # Modern green
                             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                            ('FONTSIZE', (0, 0), (-1, 0), 7),
+                            ('FONTSIZE', (0, 0), (-1, 0), 8),
                             ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
                             ('TOPPADDING', (0, 0), (-1, 0), 8),
-                            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
                             
                             # Data rows styling
                             ('BACKGROUND', (0, 1), (-1, -1), colors.white),
@@ -1715,7 +1760,7 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
                         story.append(keywords_table)
                         story.append(Spacer(1, 12))
                     
-                    # Search terms table with modern design and text wrapping
+                    # Search terms table with modern design
                     if campaign.get('search_terms'):
                         search_terms_df = pd.DataFrame(campaign['search_terms'])
                         
@@ -1733,9 +1778,9 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
                         elif sort_column == "cost_per_conversion":
                             search_terms_df = search_terms_df.sort_values('cost_per_conversion', ascending=True)
                         
-                        # Modern search terms table with text wrapping
+                        # Modern search terms table
                         search_terms_data_for_pdf = []
-                        search_terms_data_for_pdf.append(['🔎 Search Term', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/\nConv.', 'Conv.\nRate', 'Cost'])
+                        search_terms_data_for_pdf.append(['🔎 Search Term', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost'])
                         
                         for _, row in search_terms_df.head(20).iterrows():
                             search_terms_data_for_pdf.append([
@@ -1751,15 +1796,14 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
                         
                         search_terms_table = Table(search_terms_data_for_pdf, colWidths=[1.6*inch, 0.6*inch, 0.5*inch, 0.4*inch, 0.6*inch, 0.6*inch, 0.6*inch, 0.5*inch])
                         search_terms_table.setStyle(TableStyle([
-                            # Header styling with text wrapping
+                            # Header styling
                             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7C3AED')),  # Modern purple
                             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                            ('FONTSIZE', (0, 0), (-1, 0), 7),
+                            ('FONTSIZE', (0, 0), (-1, 0), 8),
                             ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
                             ('TOPPADDING', (0, 0), (-1, 0), 8),
-                            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
                             
                             # Data rows styling
                             ('BACKGROUND', (0, 1), (-1, -1), colors.white),
@@ -1778,7 +1822,6 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
                         story.append(search_terms_table)
                         story.append(Spacer(1, 20))
                 
-                # Add page break after each account (not after each campaign)
                 story.append(PageBreak())
         
         # Build the PDF
@@ -1792,7 +1835,7 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
         
     except Exception as e:
         st.error(f"Error generating PDF: {str(e)}")
-            return None
+        return None
 
 if __name__ == "__main__":
     main()
