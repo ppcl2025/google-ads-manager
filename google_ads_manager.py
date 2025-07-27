@@ -12,6 +12,13 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 import os
 from google.ads.googleads.v20.resources.types import Campaign
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+import io
 
 # API Usage Tracker
 class APIUsageTracker:
@@ -411,7 +418,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
 
-                # Try to mutate campaign with bidding strategy first
+        # Try to mutate campaign with bidding strategy first
         try:
             response = campaign_service.mutate_campaigns(
                 customer_id=customer_id, operations=[campaign_operation]
@@ -440,7 +447,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
             return campaign_id
-            
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
             error_message = str(ex)
@@ -518,7 +524,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     return None
             else:
                 handle_api_exception(ex, "create campaign")
-        return None
+                return None
         
     except Exception as ex:
         handle_api_exception(ex, "create campaign")
@@ -836,35 +842,35 @@ def main():
                 show_message("Please upload a CSV or Excel file.", False)
                 return
                 
-            try:
-                # Determine file type and read accordingly
-                file_extension = uploaded_file.name.split(".")[-1].lower()
-                if file_extension == "csv":
-                    df = pd.read_csv(uploaded_file)
-                elif file_extension == "xlsx":
-                    df = pd.read_excel(uploaded_file, engine="openpyxl")
-                else:
-                    show_message("Unsupported file format. Please upload a .csv or .xlsx file.", False)
-                    return
-
-                # Validate required columns
-                if not all(col in df.columns for col in REQUIRED_COLUMNS):
-                    show_message("File must contain required columns: ad_group_name, headline1, headline2, headline3, description1, description2, final_url, keywords", False)
-                    return
-
-                # Validate that each ad group has keywords in at least the first row
-                grouped = df.groupby("ad_group_name")
-                for ad_group_name, group in grouped:
-                    if pd.isna(group["keywords"].iloc[0]) or str(group["keywords"].iloc[0]).strip() == "":
-                        show_message(f"Ad group '{ad_group_name}' must have keywords specified in the first row.", False)
+                try:
+                    # Determine file type and read accordingly
+                    file_extension = uploaded_file.name.split(".")[-1].lower()
+                    if file_extension == "csv":
+                        df = pd.read_csv(uploaded_file)
+                    elif file_extension == "xlsx":
+                        df = pd.read_excel(uploaded_file, engine="openpyxl")
+                    else:
+                        show_message("Unsupported file format. Please upload a .csv or .xlsx file.", False)
                         return
 
-                # Process the bulk upload
-                process_bulk_upload(client, customer_id_bulk, campaign_name, df)
-                
-            except Exception as e:
-                show_message(f"Error processing file: {str(e)}", False)
-                logger.error(f"Bulk upload error: {str(e)}")
+                    # Validate required columns
+                    if not all(col in df.columns for col in REQUIRED_COLUMNS):
+                        show_message("File must contain required columns: ad_group_name, headline1, headline2, headline3, description1, description2, final_url, keywords", False)
+                        return
+
+                    # Validate that each ad group has keywords in at least the first row
+                    grouped = df.groupby("ad_group_name")
+                    for ad_group_name, group in grouped:
+                        if pd.isna(group["keywords"].iloc[0]) or str(group["keywords"].iloc[0]).strip() == "":
+                            show_message(f"Ad group '{ad_group_name}' must have keywords specified in the first row.", False)
+                            return
+
+                    # Process the bulk upload
+                    process_bulk_upload(client, customer_id_bulk, campaign_name, df)
+                    
+                except Exception as e:
+                    show_message(f"Error processing file: {str(e)}", False)
+                    logger.error(f"Bulk upload error: {str(e)}")
 
     # Tab 4: Performance Analysis (formerly Keywords Analysis)
     with tab4:
@@ -1265,6 +1271,34 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
     with col4:
         st.metric("Total Conversions", f"{total_conversions:.0f}")
     
+    # PDF Download Button
+    st.write("---")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("📄 Download Performance Report (PDF)", type="primary"):
+            try:
+                # Generate PDF with current date range (last 30 days)
+                end_date = datetime.now().strftime("%Y-%m-%d")
+                start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+                date_range = (start_date, end_date)
+                
+                pdf_content = generate_performance_pdf(keywords_data, sort_by_option, date_range)
+                if pdf_content:
+                    # Create download button
+                    st.download_button(
+                        label="💾 Download PDF Report",
+                        data=pdf_content,
+                        file_name=f"google_ads_performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf"
+                    )
+                    st.success("✅ PDF report generated successfully!")
+                else:
+                    st.error("❌ Failed to generate PDF report")
+            except Exception as e:
+                st.error(f"❌ Error generating PDF: {str(e)}")
+    
+    st.write("---")
+    
     # Sort options for keywords tables
     sort_options = {
         "Cost (Highest)": "cost",
@@ -1401,6 +1435,244 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
                 st.info("No search terms data available for this campaign.")
             
             st.divider()
+
+def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_range: tuple) -> bytes:
+    """Generate a PDF report with account campaign summary, keywords, and search terms tables."""
+    try:
+        # Create a buffer to store the PDF
+        buffer = io.BytesIO()
+        
+        # Create the PDF document
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        story = []
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=20,
+            alignment=TA_CENTER
+        )
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceAfter=12
+        )
+        normal_style = styles['Normal']
+        
+        # Title
+        story.append(Paragraph("Google Ads Performance Report", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Date range
+        story.append(Paragraph(f"Date Range: {date_range[0]} to {date_range[1]}", normal_style))
+        story.append(Spacer(1, 12))
+        
+        # Overall summary
+        if keywords_data and keywords_data['accounts']:
+            total_accounts = keywords_data['total_accounts']
+            total_cost = sum(acc['summary']['total_cost'] for acc in keywords_data['accounts'])
+            total_impressions = sum(acc['summary']['total_impressions'] for acc in keywords_data['accounts'])
+            total_clicks = sum(acc['summary']['total_clicks'] for acc in keywords_data['accounts'])
+            total_conversions = sum(acc['summary']['total_conversions'] for acc in keywords_data['accounts'])
+            
+            avg_ctr = total_clicks / total_impressions if total_impressions > 0 else 0
+            avg_conversion_rate = total_conversions / total_clicks if total_clicks > 0 else 0
+            
+            # Overall summary table
+            summary_data = [
+                ['Metric', 'Value'],
+                ['Accounts Analyzed', str(total_accounts)],
+                ['Total Impressions', f"{total_impressions:,}"],
+                ['Total Clicks', f"{total_clicks:,}"],
+                ['Total Conversions', f"{total_conversions:.0f}"],
+                ['Total Cost', f"${total_cost:.2f}"],
+                ['Avg CTR', f"{avg_ctr:.2%}"],
+                ['Avg Conversion Rate', f"{avg_conversion_rate:.2%}"]
+            ]
+            
+            summary_table = Table(summary_data, colWidths=[2*inch, 1.5*inch])
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            story.append(Paragraph("Overall Performance Summary", heading_style))
+            story.append(summary_table)
+            story.append(Spacer(1, 20))
+            
+            # Process each account and campaign
+            for account in keywords_data['accounts']:
+                story.append(Paragraph(f"Account: {account['account_name']} (ID: {account['account_id']})", heading_style))
+                
+                for campaign in account['campaigns']:
+                    if not campaign['keywords']:
+                        continue
+                    
+                    # Campaign summary
+                    campaign_summary_data = [
+                        ['Campaign', campaign['campaign_name']],
+                        ['Impressions', f"{campaign['summary']['total_impressions']:,}"],
+                        ['Clicks', f"{campaign['summary']['total_clicks']:,}"],
+                        ['CTR', f"{campaign['summary']['avg_ctr']:.2%}"],
+                        ['Conversions', f"{campaign['summary']['total_conversions']:.0f}"],
+                        ['Conv. Rate', f"{campaign['summary']['avg_conversion_rate']:.2%}"],
+                        ['Cost', f"${campaign['summary']['total_cost']:.2f}"],
+                        ['Cost/Conv.', f"${campaign['summary']['avg_cost_per_conversion']:.2f}"]
+                    ]
+                    
+                    campaign_table = Table(campaign_summary_data, colWidths=[1.5*inch, 1*inch])
+                    campaign_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 10),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                    ]))
+                    
+                    story.append(Paragraph(f"Campaign: {campaign['campaign_name']}", normal_style))
+                    story.append(campaign_table)
+                    story.append(Spacer(1, 12))
+                    
+                    # Keywords table (top 10)
+                    if campaign['keywords']:
+                        keywords_df = pd.DataFrame(campaign['keywords'])
+                        
+                        # Sort based on selected metric
+                        sort_options = {
+                            "Cost (Highest)": "cost",
+                            "Impressions": "impressions", 
+                            "CTR": "ctr",
+                            "Conversions": "conversions",
+                            "Conversion Rate": "conversion_rate",
+                            "Cost per Conversion": "cost_per_conversion"
+                        }
+                        sort_column = sort_options.get(sort_by_option, "cost")
+                        
+                        if sort_column == "cost":
+                            keywords_df = keywords_df.sort_values('cost', ascending=False)
+                        elif sort_column == "impressions":
+                            keywords_df = keywords_df.sort_values('impressions', ascending=False)
+                        elif sort_column == "ctr":
+                            keywords_df = keywords_df.sort_values('ctr', ascending=False)
+                        elif sort_column == "conversions":
+                            keywords_df = keywords_df.sort_values('conversions', ascending=False)
+                        elif sort_column == "conversion_rate":
+                            keywords_df = keywords_df.sort_values('conversion_rate', ascending=False)
+                        elif sort_column == "cost_per_conversion":
+                            keywords_df = keywords_df.sort_values('cost_per_conversion', ascending=True)
+                        
+                        # Format for PDF
+                        keywords_data_for_pdf = []
+                        keywords_data_for_pdf.append(['Keyword', 'Match Type', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost'])
+                        
+                        for _, row in keywords_df.head(10).iterrows():
+                            keywords_data_for_pdf.append([
+                                row['keyword_text'][:20],  # Truncate long keywords
+                                row['match_type'],
+                                f"{row['impressions']:,}",
+                                f"{row['clicks']:,}",
+                                f"{row['ctr']:.2%}",
+                                f"{row['conversions']:.0f}",
+                                f"${row['cost_per_conversion']:.2f}",
+                                f"{row['conversion_rate']:.2%}",
+                                f"${row['cost']:.2f}"
+                            ])
+                        
+                        keywords_table = Table(keywords_data_for_pdf, colWidths=[1.2*inch, 0.6*inch, 0.6*inch, 0.5*inch, 0.4*inch, 0.6*inch, 0.6*inch, 0.6*inch, 0.5*inch])
+                        keywords_table.setStyle(TableStyle([
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                            ('FONTSIZE', (0, 0), (-1, 0), 8),
+                            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                            ('FONTSIZE', (0, 1), (-1, -1), 7)
+                        ]))
+                        
+                        story.append(Paragraph("Top 10 Keywords by Spend", normal_style))
+                        story.append(keywords_table)
+                        story.append(Spacer(1, 12))
+                    
+                    # Search terms table (top 20)
+                    if campaign.get('search_terms'):
+                        search_terms_df = pd.DataFrame(campaign['search_terms'])
+                        
+                        # Sort based on selected metric (same as keywords)
+                        if sort_column == "cost":
+                            search_terms_df = search_terms_df.sort_values('cost', ascending=False)
+                        elif sort_column == "impressions":
+                            search_terms_df = search_terms_df.sort_values('impressions', ascending=False)
+                        elif sort_column == "ctr":
+                            search_terms_df = search_terms_df.sort_values('ctr', ascending=False)
+                        elif sort_column == "conversions":
+                            search_terms_df = search_terms_df.sort_values('conversions', ascending=False)
+                        elif sort_column == "conversion_rate":
+                            search_terms_df = search_terms_df.sort_values('conversion_rate', ascending=False)
+                        elif sort_column == "cost_per_conversion":
+                            search_terms_df = search_terms_df.sort_values('cost_per_conversion', ascending=True)
+                        
+                        # Format for PDF
+                        search_terms_data_for_pdf = []
+                        search_terms_data_for_pdf.append(['Search Term', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost'])
+                        
+                        for _, row in search_terms_df.head(20).iterrows():
+                            search_terms_data_for_pdf.append([
+                                row['search_term'][:25],  # Truncate long search terms
+                                f"{row['impressions']:,}",
+                                f"{row['clicks']:,}",
+                                f"{row['ctr']:.2%}",
+                                f"{row['conversions']:.0f}",
+                                f"${row['cost_per_conversion']:.2f}",
+                                f"{row['conversion_rate']:.2%}",
+                                f"${row['cost']:.2f}"
+                            ])
+                        
+                        search_terms_table = Table(search_terms_data_for_pdf, colWidths=[1.5*inch, 0.6*inch, 0.5*inch, 0.4*inch, 0.6*inch, 0.6*inch, 0.6*inch, 0.5*inch])
+                        search_terms_table.setStyle(TableStyle([
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.darkgreen),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                            ('FONTSIZE', (0, 0), (-1, 0), 8),
+                            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                            ('FONTSIZE', (0, 1), (-1, -1), 7)
+                        ]))
+                        
+                        story.append(Paragraph("Top 20 Search Terms by Spend", normal_style))
+                        story.append(search_terms_table)
+                        story.append(Spacer(1, 20))
+                
+                story.append(PageBreak())
+        
+        # Build the PDF
+        doc.build(story)
+        
+        # Get the PDF content
+        pdf_content = buffer.getvalue()
+        buffer.close()
+        
+        return pdf_content
+        
+    except Exception as e:
+        st.error(f"Error generating PDF: {str(e)}")
+        return None
 
 if __name__ == "__main__":
     main()
