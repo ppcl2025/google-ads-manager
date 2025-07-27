@@ -86,7 +86,7 @@ DEFAULT_MCC_ID = "502-288-7746"
 DEFAULT_CURRENCIES = ["USD", "EUR", "GBP", "INR"]
 DEFAULT_CAMPAIGN_STATUSES = ["PAUSED", "ENABLED"]
 DEFAULT_CPC_BID_MICROS = 1_000_000  # $1.00 CPC
-REQUIRED_COLUMNS = ["ad_group_name", "headline1", "headline2", "headline3", "description1", "description2", "final_url", "keywords"]
+REQUIRED_COLUMNS = ["ad_group_name", "headline1", "headline2", "headline3", "description1", "description2", "final_url", "final_url_path", "keywords"]
 MAX_HEADLINES = 15
 MAX_DESCRIPTIONS = 4
 
@@ -673,7 +673,19 @@ def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name
             for _, row in group.iterrows():
                 headlines = [row.get(f"headline{i}", "") for i in range(1, MAX_HEADLINES + 1)]
                 descriptions = [row.get(f"description{i}", "") for i in range(1, MAX_DESCRIPTIONS + 1)]
+                
+                # Construct final URL from base URL and path
                 final_url = row["final_url"]
+                final_url_path = row.get("final_url_path", "")
+                
+                # Combine base URL with path if path is provided
+                if pd.notna(final_url_path) and str(final_url_path).strip():
+                    # Ensure proper URL construction
+                    base_url = final_url.rstrip('/')
+                    path = str(final_url_path).strip()
+                    if not path.startswith('/'):
+                        path = '/' + path
+                    final_url = base_url + path
                 
                 headline_positions = (row.get("headline_positions", "").split(";") 
                                     if pd.notna(row.get("headline_positions")) else [""] * MAX_HEADLINES)
@@ -816,7 +828,7 @@ def main():
     # Tab 3: Bulk Upload
     with tab3:
         st.subheader("Bulk Upload Ad Groups, Ads, and Keywords")
-        st.write("Upload a CSV or Excel file with columns: ad_group_name, headline1 to headline15, description1 to description4, final_url, keywords, headline_positions, description_positions. All rows are added to a single campaign specified below. **Keywords only need to be specified in the first row of each ad group.**")
+        st.write("Upload a CSV or Excel file with columns: ad_group_name, headline1 to headline15, description1 to description4, final_url, final_url_path, keywords, headline_positions, description_positions. All rows are added to a single campaign specified below. **Keywords only need to be specified in the first row of each ad group.**")
         
         # Use dropdown for customer selection with fallback
         if sub_accounts_list:
@@ -854,7 +866,7 @@ def main():
 
                     # Validate required columns
                     if not all(col in df.columns for col in REQUIRED_COLUMNS):
-                        show_message("File must contain required columns: ad_group_name, headline1, headline2, headline3, description1, description2, final_url, keywords", False)
+                        show_message("File must contain required columns: ad_group_name, headline1, headline2, headline3, description1, description2, final_url, final_url_path, keywords", False)
                         return
 
                 except Exception as e:
