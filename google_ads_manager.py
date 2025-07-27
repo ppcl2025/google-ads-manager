@@ -554,8 +554,13 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
         return ad_group_id
         
     except GoogleAdsException as ex:
-        show_message(f"Failed to create ad group: {ex.error.message}", False)
-        logger.error(f"Ad group creation error: {ex.error.message}")
+        error_msg = ex.error.message if hasattr(ex.error, 'message') else str(ex)
+        show_message(f"Failed to create ad group: {error_msg}", False)
+        logger.error(f"Ad group creation error: {error_msg}")
+        return None
+    except Exception as ex:
+        show_message(f"Failed to create ad group: {str(ex)}", False)
+        logger.error(f"Ad group creation error: {str(ex)}")
         return None
 
 # Create a responsive search ad with up to 15 headlines and 4 descriptions
@@ -604,8 +609,13 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         return ad_id
         
     except GoogleAdsException as ex:
-        show_message(f"Failed to create ad: {ex.error.message}", False)
-        logger.error(f"Ad creation error: {ex.error.message}")
+        error_msg = ex.error.message if hasattr(ex.error, 'message') else str(ex)
+        show_message(f"Failed to create ad: {error_msg}", False)
+        logger.error(f"Ad creation error: {error_msg}")
+        return None
+    except Exception as ex:
+        show_message(f"Failed to create ad: {str(ex)}", False)
+        logger.error(f"Ad creation error: {str(ex)}")
         return None
 
 # Upload keywords with match types
@@ -647,8 +657,13 @@ def upload_keywords(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         return response.results
         
     except GoogleAdsException as ex:
-        show_message(f"Failed to upload keywords: {ex.error.message}", False)
-        logger.error(f"Keyword upload error: {ex.error.message}")
+        error_msg = ex.error.message if hasattr(ex.error, 'message') else str(ex)
+        show_message(f"Failed to upload keywords: {error_msg}", False)
+        logger.error(f"Keyword upload error: {error_msg}")
+        return None
+    except Exception as ex:
+        show_message(f"Failed to upload keywords: {str(ex)}", False)
+        logger.error(f"Keyword upload error: {str(ex)}")
         return None
 
 # Process bulk upload data
