@@ -36,21 +36,35 @@ if st.sidebar.button("Clear Cache"):
     st.cache_data.clear()
     st.cache_resource.clear()
 
-# Google Ads API credentials from environment variables
+# Google Ads API credentials from Streamlit secrets
 def get_google_ads_client():
-    """Create Google Ads client using environment variables"""
+    """Create Google Ads client using Streamlit secrets"""
     try:
-        client = GoogleAdsClient.load_from_env()
+        # Check if we're running in Streamlit Cloud (has secrets)
+        if hasattr(st, 'secrets'):
+            # Use Streamlit secrets
+            client = GoogleAdsClient.load_from_dict({
+                "client_id": st.secrets["GOOGLE_ADS_CLIENT_ID"],
+                "client_secret": st.secrets["GOOGLE_ADS_CLIENT_SECRET"],
+                "developer_token": st.secrets["GOOGLE_ADS_DEVELOPER_TOKEN"],
+                "refresh_token": st.secrets["GOOGLE_ADS_REFRESH_TOKEN"],
+                "login_customer_id": st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
+                "use_proto_plus": True
+            })
+        else:
+            # Fallback to environment variables for local development
+            client = GoogleAdsClient.load_from_env()
+        
         return client
     except Exception as e:
         st.error(f"Failed to load Google Ads credentials: {e}")
-        st.info("Please ensure the following environment variables are set:")
+        st.info("Please ensure the following secrets are configured in Streamlit Cloud:")
         st.code("""
-GOOGLE_ADS_CLIENT_ID=your_client_id
-GOOGLE_ADS_CLIENT_SECRET=your_client_secret
-GOOGLE_ADS_DEVELOPER_TOKEN=your_developer_token
-GOOGLE_ADS_REFRESH_TOKEN=your_refresh_token
-GOOGLE_ADS_LOGIN_CUSTOMER_ID=your_mcc_customer_id
+GOOGLE_ADS_CLIENT_ID = "your_client_id"
+GOOGLE_ADS_CLIENT_SECRET = "your_client_secret"
+GOOGLE_ADS_DEVELOPER_TOKEN = "your_developer_token"
+GOOGLE_ADS_REFRESH_TOKEN = "your_refresh_token"
+GOOGLE_ADS_LOGIN_CUSTOMER_ID = "5022887746"
         """)
         return None
 
