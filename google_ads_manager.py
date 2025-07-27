@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import logging
+import re
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import GoogleAPICallError
@@ -90,7 +91,7 @@ def show_message(message: str, is_success: bool = True):
 # Helper function to handle API exceptions
 def handle_api_exception(ex: Exception, operation: str) -> None:
     """Centralized exception handling for API operations."""
-    if isinstance(ex, exceptions.GoogleAPICallError):
+    if isinstance(ex, GoogleAPICallError):
         error_details = ex.details() or str(ex)
         show_message(f"Failed to {operation}: {error_details}", False)
         logger.error(f"{operation} error: {error_details}")
