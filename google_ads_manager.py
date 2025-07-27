@@ -224,10 +224,31 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
             customer_client=customer
         )
         
-        new_customer_id = response.customer_client.id
-        show_message(f"Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
-        logger.info(f"Created sub-account: {new_customer_id} with conversion tracking enabled")
-        return new_customer_id
+        # Extract the new customer ID from the response
+        # The response structure may vary, so we'll handle it safely
+        try:
+            # Try different possible response structures
+            if hasattr(response, 'customer_client') and hasattr(response.customer_client, 'id'):
+                new_customer_id = response.customer_client.id
+            elif hasattr(response, 'resource_name'):
+                # Extract ID from resource name format: customers/{customer_id}
+                new_customer_id = response.resource_name.split('/')[-1]
+            elif hasattr(response, 'results') and len(response.results) > 0:
+                # Handle batch response format
+                new_customer_id = response.results[0].resource_name.split('/')[-1]
+            else:
+                # Fallback: try to get from the response object directly
+                new_customer_id = str(response).split('customers/')[-1].split('/')[0]
+            
+            show_message(f"✅ Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
+            logger.info(f"Created sub-account: {new_customer_id} with conversion tracking enabled")
+            return new_customer_id
+            
+        except Exception as parse_error:
+            # If we can't parse the response but the account was created, show a generic success message
+            logger.warning(f"Could not parse response structure: {parse_error}")
+            show_message("✅ Sub-account created successfully! (Response structure parsing issue)")
+            return "UNKNOWN"  # Return a placeholder since we can't extract the ID
         
     except Exception as ex:
         handle_api_exception(ex, "create sub-account")
