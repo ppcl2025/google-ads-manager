@@ -563,22 +563,7 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
         logger.error(f"Ad group creation error: {str(ex)}")
         return None
 
-def _validate_ad_customizer_tags(text: str) -> str:
-    """Validate and fix malformed ad customizer tags."""
-    import re
-    
-    # Remove incomplete ad customizer tags
-    # This removes any { that doesn't have a matching }
-    while re.search(r'\{[^}]*$', text):
-        text = re.sub(r'\{[^}]*$', '', text)
-    
-    # Also remove any {LOCATION( that doesn't have a closing )
-    while re.search(r'\{LOCATION\([^)]*$', text):
-        text = re.sub(r'\{LOCATION\([^)]*$', '', text)
-    
-    # Clean up extra spaces
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+
 
 # Create a responsive search ad with up to 15 headlines and 4 descriptions
 def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str, 
@@ -598,10 +583,8 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add headlines with positions
         for i, headline in enumerate(headlines):
             if headline:
-                # Validate ad customizer tags in headline
-                validated_headline = _validate_ad_customizer_tags(headline)
                 headline_asset = client.get_type("AdTextAsset")
-                headline_asset.text = validated_headline[:30]
+                headline_asset.text = headline[:30]
                 if i < len(headline_positions) and headline_positions[i]:
                     headline_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"HEADLINE_{headline_positions[i]}"]
                 rsa.headlines.append(headline_asset)
@@ -609,10 +592,8 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add descriptions with positions
         for i, description in enumerate(descriptions):
             if description:
-                # Validate ad customizer tags in description
-                validated_description = _validate_ad_customizer_tags(description)
                 description_asset = client.get_type("AdTextAsset")
-                description_asset.text = validated_description[:60]
+                description_asset.text = description[:60]
                 if i < len(description_positions) and description_positions[i]:
                     description_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"DESCRIPTION_{description_positions[i]}"]
                 rsa.descriptions.append(description_asset)
