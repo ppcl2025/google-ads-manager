@@ -104,37 +104,6 @@ if st.sidebar.button("Clear Cache"):
     st.cache_data.clear()
     st.cache_resource.clear()
 
-# API Usage Monitoring in Sidebar
-st.sidebar.markdown("---")
-st.sidebar.subheader("📊 API Usage Monitor")
-
-# Get current usage stats
-usage_stats = st.session_state.api_tracker.get_usage_stats()
-
-# Display usage metrics
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    st.metric("Used", f"{usage_stats['used']:,}")
-with col2:
-    st.metric("Remaining", f"{usage_stats['remaining']:,}")
-
-# Progress bar
-st.sidebar.progress(usage_stats['percentage'] / 100)
-
-# Warning if approaching limit
-if usage_stats['percentage'] > 80:
-    st.sidebar.warning("⚠️ Approaching monthly limit!")
-elif usage_stats['percentage'] > 60:
-    st.sidebar.info("ℹ️ Moderate API usage")
-
-# Usage percentage
-st.sidebar.caption(f"Usage: {usage_stats['percentage']:.1f}%")
-
-# Reset button for testing
-if st.sidebar.button("Reset Counter (Test)"):
-    st.session_state.api_tracker.operations_count = 0
-    st.rerun()
-
 # Google Ads API credentials from Streamlit secrets
 def get_google_ads_client():
     """Create Google Ads client using Streamlit secrets"""
