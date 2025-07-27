@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 st.set_page_config(
     page_title="Google Ads Manager",
     page_icon="📊",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="expanded"
 )
 
