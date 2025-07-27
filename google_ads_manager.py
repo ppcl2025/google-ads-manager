@@ -411,7 +411,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
 
-        # Try to mutate campaign with bidding strategy first
+                # Try to mutate campaign with bidding strategy first
         try:
             response = campaign_service.mutate_campaigns(
                 customer_id=customer_id, operations=[campaign_operation]
@@ -512,14 +512,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                         logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
                     
                     show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. You can change to MSL - MaxCon later once conversion tracking is enabled.")
-                    return campaign_id
+        return campaign_id
                     
                 except Exception as fallback_ex:
                     handle_api_exception(fallback_ex, "create campaign with Manual CPC")
                     return None
             else:
                 handle_api_exception(ex, "create campaign")
-                return None
+        return None
         
     except Exception as ex:
         handle_api_exception(ex, "create campaign")
@@ -1163,7 +1163,7 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
         return
     
     # Overall summary metrics
-    st.subheader("📊 Keywords Performance Summary")
+    st.subheader("📊 Account Performance Summary")
     
     total_accounts = keywords_data['total_accounts']
     total_keywords = sum(acc['summary']['total_keywords'] for acc in keywords_data['accounts'])
@@ -1202,7 +1202,7 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str):
     sort_column = sort_options[sort_by_option]
     
     # Display each account
-    st.subheader("🏢 Keywords by Sub-Account & Campaign")
+    st.subheader("🏢 Performance by Account & Campaign")
     
     for account in keywords_data['accounts']:
         # Just show the sub-account name without summary metrics
