@@ -46,6 +46,32 @@ class APIUsageTracker:
 if 'api_tracker' not in st.session_state:
     st.session_state.api_tracker = APIUsageTracker()
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# App Usage Logger
+class AppUsageLogger:
+    def __init__(self):
+        self.log_file = "app_usage.log"
+    
+    def log_action(self, user_action: str, details: str = ""):
+        """Log user actions for analytics"""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] {user_action}: {details}"
+        logger.info(log_entry)
+        
+        # Also log to file for analysis
+        try:
+            with open(self.log_file, "a") as f:
+                f.write(log_entry + "\n")
+        except Exception as e:
+            logger.error(f"Failed to write to log file: {e}")
+
+# Initialize usage logger
+if 'usage_logger' not in st.session_state:
+    st.session_state.usage_logger = AppUsageLogger()
+
 # Constants
 DEFAULT_MCC_ID = "502-288-7746"
 DEFAULT_CURRENCIES = ["USD", "EUR", "GBP", "INR"]
@@ -55,9 +81,15 @@ REQUIRED_COLUMNS = ["ad_group_name", "headline1", "headline2", "headline3", "des
 MAX_HEADLINES = 15
 MAX_DESCRIPTIONS = 4
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# US Timezones for sub-account creation
+US_TIMEZONES = [
+    "America/New_York",      # Eastern Time
+    "America/Chicago",       # Central Time
+    "America/Denver",        # Mountain Time
+    "America/Los_Angeles",   # Pacific Time
+    "America/Anchorage",     # Alaska Time
+    "Pacific/Honolulu"       # Hawaii Time
+]
 
 # Page configuration
 st.set_page_config(
@@ -560,7 +592,7 @@ def main():
         st.info("ℹ️ New sub-accounts will automatically have conversion tracking set to 'This Manager' for bidding strategy compatibility")
         account_name = st.text_input("Account Name")
         currency_code = st.selectbox("Currency Code", DEFAULT_CURRENCIES)
-        time_zone = st.text_input("Time Zone (e.g., America/New_York)")
+        time_zone = st.selectbox("Time Zone", US_TIMEZONES)
         
         if st.button("Create Sub-Account"):
             if account_name and time_zone:
