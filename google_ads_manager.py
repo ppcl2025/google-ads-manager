@@ -563,6 +563,16 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
         logger.error(f"Ad group creation error: {str(ex)}")
         return None
 
+def _clean_ad_customizer_tags(text: str) -> str:
+    """Remove or clean ad customizer tags from text."""
+    import re
+    # Remove ad customizer tags like {LOCATION(City)}, {LOCATION}, etc.
+    # This regex matches { followed by any text and }
+    cleaned = re.sub(r'\{[^}]*\}', '', text)
+    # Remove any extra spaces that might be left
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
 # Create a responsive search ad with up to 15 headlines and 4 descriptions
 def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str, 
               headlines: List[str], descriptions: List[str], final_url: str, 
@@ -581,8 +591,10 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add headlines with positions
         for i, headline in enumerate(headlines):
             if headline:
+                # Clean ad customizer tags from headline
+                cleaned_headline = _clean_ad_customizer_tags(headline)
                 headline_asset = client.get_type("AdTextAsset")
-                headline_asset.text = headline[:30]
+                headline_asset.text = cleaned_headline[:30]
                 if i < len(headline_positions) and headline_positions[i]:
                     headline_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"HEADLINE_{headline_positions[i]}"]
                 rsa.headlines.append(headline_asset)
@@ -590,8 +602,10 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add descriptions with positions
         for i, description in enumerate(descriptions):
             if description:
+                # Clean ad customizer tags from description
+                cleaned_description = _clean_ad_customizer_tags(description)
                 description_asset = client.get_type("AdTextAsset")
-                description_asset.text = description[:60]
+                description_asset.text = cleaned_description[:60]
                 if i < len(description_positions) and description_positions[i]:
                     description_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"DESCRIPTION_{description_positions[i]}"]
                 rsa.descriptions.append(description_asset)
@@ -684,8 +698,10 @@ def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name
         # Group by ad_group_name
         grouped = df.groupby("ad_group_name")
         for ad_group_name, group in grouped:
-            # Create ad group
-            ad_group_id = create_ad_group(client, customer_id, campaign_id, ad_group_name)
+            # Create ad group with unique name to avoid duplicates
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            unique_ad_group_name = f"{ad_group_name}_{timestamp}"
+            ad_group_id = create_ad_group(client, customer_id, campaign_id, unique_ad_group_name)
             if not ad_group_id:
                 continue
                 
