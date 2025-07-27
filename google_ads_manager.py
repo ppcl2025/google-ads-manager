@@ -11,6 +11,7 @@ from typing import Optional, List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 import os
+from google.ads.googleads.v20.resources.types import Campaign
 
 # API Usage Tracker
 class APIUsageTracker:
@@ -351,9 +352,35 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         ppcl_negative_list_id = "11404993599"  # PPCL List negative keywords ID
         st.info(f"✅ Will apply PPCL List negative keywords (ID: {ppcl_negative_list_id}) after campaign creation")
         
-        # Note: Network and Location settings need to be configured manually in Google Ads UI
-        # API v20 doesn't support NetworkSettings or GeoTargetTypeSetting programmatically
-        st.info("ℹ️ Network and Location settings will need to be configured manually in Google Ads UI after campaign creation")
+        # Configure NetworkSettings to use only core Google Search Network
+        # Exclude search partners and Display Network
+        try:
+            # Use the correct API v20 approach with Campaign resource types
+            campaign.network_settings = Campaign.NetworkSettings()
+            campaign.network_settings.target_google_search = True  # Enable core Google Search
+            campaign.network_settings.target_search_network = False  # Disable search partners
+            campaign.network_settings.target_content_network = False  # Disable Display Network
+            campaign.network_settings.target_partner_search_network = False  # Disable partner search network
+            campaign.network_settings.target_youtube = False  # Disable YouTube
+            st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
+        except Exception as network_error:
+            st.warning(f"⚠️ Could not configure network settings: {network_error}")
+            logger.warning(f"Failed to configure network settings: {network_error}")
+        
+        # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
+        try:
+            # Use the correct API v20 approach with Campaign resource types
+            campaign.geo_target_type_setting = Campaign.GeoTargetTypeSetting()
+            campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+            campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+            st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
+        except Exception as location_error:
+            st.warning(f"⚠️ Could not configure location targeting: {location_error}")
+            logger.warning(f"Failed to configure location targeting: {location_error}")
+        
+        # In API v20, network settings are handled differently
+        # For Search campaigns, the network targeting is controlled by the advertising_channel_type
+        # and other campaign settings rather than a separate NetworkSettings object
         
         # Add manual configuration instructions
         with st.expander("📋 Manual Network & Location Configuration Instructions"):
@@ -433,9 +460,30 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.manual_cpc = client.get_type("ManualCpc")
                 campaign_fallback.manual_cpc.enhanced_cpc_enabled = False
                 
-                # Note: Network and Location settings need to be configured manually in Google Ads UI
-                # API v20 doesn't support NetworkSettings or GeoTargetTypeSetting programmatically
-                st.info("ℹ️ Network and Location settings will need to be configured manually in Google Ads UI after campaign creation")
+                # Configure NetworkSettings for fallback case too
+                try:
+                    # Use the correct API v20 approach with Campaign resource types
+                    campaign_fallback.network_settings = Campaign.NetworkSettings()
+                    campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search
+                    campaign_fallback.network_settings.target_search_network = False  # Disable search partners
+                    campaign_fallback.network_settings.target_content_network = False  # Disable Display Network
+                    campaign_fallback.network_settings.target_partner_search_network = False  # Disable partner search network
+                    campaign_fallback.network_settings.target_youtube = False  # Disable YouTube
+                    st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
+                except Exception as network_error:
+                    st.warning(f"⚠️ Could not configure network settings: {network_error}")
+                    logger.warning(f"Failed to configure network settings: {network_error}")
+                
+                # Configure Location Targeting for fallback case too
+                try:
+                    # Use the correct API v20 approach with Campaign resource types
+                    campaign_fallback.geo_target_type_setting = Campaign.GeoTargetTypeSetting()
+                    campaign_fallback.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                    campaign_fallback.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+                    st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
+                except Exception as location_error:
+                    st.warning(f"⚠️ Could not configure location targeting: {location_error}")
+                    logger.warning(f"Failed to configure location targeting: {location_error}")
                 
                 try:
                     response_fallback = campaign_service.mutate_campaigns(
@@ -752,34 +800,12 @@ def main():
         st.info("🎯 All campaigns will use the hardcoded MSL - MaxCon (Maximize Conversions) bidding strategy")
         st.info("✅ Conversion tracking is automatically set to 'This Manager' for new sub-accounts, enabling the bidding strategy")
         st.info("✅ All campaigns will use the hardcoded PPCL List shared negative keywords list")
-        st.info("ℹ️ Network and Location settings need to be configured manually in Google Ads UI after campaign creation")
+        st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
+        st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
         
-        # Add manual configuration instructions
-        with st.expander("📋 Manual Network & Location Configuration Instructions"):
-            st.markdown("""
-            **After creating a campaign, configure these settings in Google Ads UI:**
-            
-            **🌐 Network Settings (Google Search only):**
-            1. Go to **Campaigns** → Select your campaign → **Settings**
-            2. Click on **Networks** section
-            3. **Uncheck** "Search partners" 
-            4. **Uncheck** "Display Network"
-            5. **Keep checked** "Google Search" only
-            6. Click **Save**
-            
-            **📍 Location Targeting (Presence Only):**
-            1. Go to **Campaigns** → Select your campaign → **Settings**
-            2. Click on **Locations** section
-            3. Click **Location options** (gear icon)
-            4. Select **"Presence"** (not "Presence or interest")
-            5. Click **Save**
-            
-            **Why manual configuration?**
-            - Google Ads API v20 doesn't support programmatic network/location settings
-            - These settings must be configured through the Google Ads UI
-            - Campaigns will work correctly once these are set manually
-            """)
-        
+        campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
+        # No end_date (ongoing)
+
         if st.button("Create Campaign"):
             if customer_id and campaign_name and budget_amount:
                 create_campaign(client, customer_id, campaign_name, budget_amount)
