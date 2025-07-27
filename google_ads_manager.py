@@ -419,10 +419,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
 
         # Try to mutate campaign with bidding strategy first
         try:
-        response = campaign_service.mutate_campaigns(
-            customer_id=customer_id, operations=[campaign_operation]
-        )
-        campaign_id = response.results[0].resource_name.split("/")[-1]
+            response = campaign_service.mutate_campaigns(
+                customer_id=customer_id, operations=[campaign_operation]
+            )
+            campaign_id = response.results[0].resource_name.split("/")[-1]
             
             # Apply shared negative keywords list to the campaign
             try:
@@ -445,7 +445,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
             
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
-        return campaign_id
+            return campaign_id
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
             error_message = str(ex)
@@ -936,7 +936,7 @@ def main():
                     last_day = 30
                 elif today.month in [4, 6, 8, 9, 11]:  # Current month ends in 30, so previous month ends in 31
                     last_day = 31
-                else:
+            else:
                     last_day = 31  # Default fallback
                 
                 end_date = today.replace(month=today.month-1, day=last_day)
@@ -980,7 +980,7 @@ def main():
                     st.session_state.keyword_sort_option = "Cost (Highest)"  # Reset sort to default
                     st.session_state.keyword_date_range = (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
                     display_keywords_analysis(all_keywords_data, "Cost (Highest)", st.session_state.keyword_date_range)
-                else:
+            else:
                     st.warning("No performance data available for the selected date range.")
                     st.session_state.keywords_data = None
                     st.session_state.keyword_date_range = None
@@ -1333,7 +1333,7 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
                 # Use the provided date range or fallback to current month
                 if date_range:
                     pdf_date_range = date_range
-                else:
+            else:
                     # Fallback to current month
                     today = datetime.now().date()
                     start_date = today.replace(day=1)
@@ -1350,7 +1350,7 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
                         mime="application/pdf"
                     )
                     st.success("✅ PDF report generated successfully!")
-                else:
+            else:
                     st.error("❌ Failed to generate PDF report")
             except Exception as e:
                 st.error(f"❌ Error generating PDF: {str(e)}")
