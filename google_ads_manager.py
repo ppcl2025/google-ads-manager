@@ -605,7 +605,7 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add headlines with positions
         for i, headline in enumerate(headlines):
             if headline:
-                # Handle ad customizer tags properly - Google Ads API counts them toward limit
+                # Handle ad customizer tags properly - preserve full text, shorten tags if needed
                 import re
                 
                 # Find all ad customizer tags in the headline
@@ -614,22 +614,30 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
                 
                 # Remove ad customizer tags temporarily to count actual characters
                 headline_without_tags = re.sub(ad_customizer_pattern, '', headline)
+                text_length = len(headline_without_tags.strip())
                 
-                # Calculate how many characters we can use for text (30 - tag lengths)
-                total_tag_length = sum(len(tag) for tag in ad_customizer_tags)
-                available_chars_for_text = 30 - total_tag_length
+                # Calculate available space for tags (30 - text length)
+                available_chars_for_tags = 30 - text_length
                 
-                if available_chars_for_text > 0:
-                    # Truncate the text portion to fit within available space
-                    truncated_text = headline_without_tags.strip()[:available_chars_for_text]
-                    
-                    # Reconstruct headline with truncated text and full tags
-                    headline_text = truncated_text
-                    for tag in ad_customizer_tags:
-                        headline_text += tag
+                if available_chars_for_tags >= 0:
+                    # We have enough space for full text and tags
+                    headline_text = headline
                 else:
-                    # If tags take up all 30 chars, just use the first tag
-                    headline_text = ad_customizer_tags[0] if ad_customizer_tags else headline[:30]
+                    # Not enough space - keep full text, shorten tags to just location code
+                    shortened_tags = []
+                    for tag in ad_customizer_tags:
+                        # Extract location code (e.g., "SC" from "{LOCATION(City):SC}")
+                        location_match = re.search(r':([^}]+)', tag)
+                        if location_match:
+                            shortened_tags.append(f"{{{location_match.group(1)}}}")
+                        else:
+                            # Fallback: just use first 2 characters of the tag
+                            shortened_tags.append(tag[:2])
+                    
+                    # Replace original tags with shortened ones
+                    headline_text = headline
+                    for i, tag in enumerate(ad_customizer_tags):
+                        headline_text = headline_text.replace(tag, shortened_tags[i])
                 
                 headline_asset = client.get_type("AdTextAsset")
                 headline_asset.text = headline_text
@@ -643,28 +651,36 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add descriptions with positions
         for i, description in enumerate(descriptions):
             if description:
-                # Handle ad customizer tags properly - Google Ads API counts them toward limit
+                # Handle ad customizer tags properly - preserve full text, shorten tags if needed
                 # Find all ad customizer tags in the description
                 ad_customizer_tags = re.findall(ad_customizer_pattern, description)
                 
                 # Remove ad customizer tags temporarily to count actual characters
                 description_without_tags = re.sub(ad_customizer_pattern, '', description)
+                text_length = len(description_without_tags.strip())
                 
-                # Calculate how many characters we can use for text (60 - tag lengths)
-                total_tag_length = sum(len(tag) for tag in ad_customizer_tags)
-                available_chars_for_text = 60 - total_tag_length
+                # Calculate available space for tags (60 - text length)
+                available_chars_for_tags = 60 - text_length
                 
-                if available_chars_for_text > 0:
-                    # Truncate the text portion to fit within available space
-                    truncated_text = description_without_tags.strip()[:available_chars_for_text]
-                    
-                    # Reconstruct description with truncated text and full tags
-                    description_text = truncated_text
-                    for tag in ad_customizer_tags:
-                        description_text += tag
+                if available_chars_for_tags >= 0:
+                    # We have enough space for full text and tags
+                    description_text = description
                 else:
-                    # If tags take up all 60 chars, just use the first tag
-                    description_text = ad_customizer_tags[0] if ad_customizer_tags else description[:60]
+                    # Not enough space - keep full text, shorten tags to just location code
+                    shortened_tags = []
+                    for tag in ad_customizer_tags:
+                        # Extract location code (e.g., "SC" from "{LOCATION(City):SC}")
+                        location_match = re.search(r':([^}]+)', tag)
+                        if location_match:
+                            shortened_tags.append(f"{{{location_match.group(1)}}}")
+                        else:
+                            # Fallback: just use first 2 characters of the tag
+                            shortened_tags.append(tag[:2])
+                    
+                    # Replace original tags with shortened ones
+                    description_text = description
+                    for i, tag in enumerate(ad_customizer_tags):
+                        description_text = description_text.replace(tag, shortened_tags[i])
                 
                 description_asset = client.get_type("AdTextAsset")
                 description_asset.text = description_text
