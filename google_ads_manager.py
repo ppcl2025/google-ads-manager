@@ -590,17 +590,18 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Set the final URL (the actual landing page)
         ad.final_urls.append(final_url)
         
+        # Create the responsive search ad object
+        rsa = ad.responsive_search_ad
+        
         # For Google Ads responsive search ads, we can set display URL paths
         # This affects how the URL appears in the ad, not the actual landing page
-        if path1 or path2:
-            # Set display URL paths for the responsive search ad
-            rsa = ad.responsive_search_ad
-            if path1:
-                rsa.path1 = path1.strip()
-            if path2:
-                rsa.path2 = path2.strip()
+        if path1:
+            rsa.path1 = path1.strip()
+        if path2:
+            rsa.path2 = path2.strip()
         
-        rsa = ad.responsive_search_ad
+        # Debug: Log what's being sent to the API
+        st.write(f"DEBUG: API - final_urls: {ad.final_urls}, path1: '{rsa.path1 if hasattr(rsa, 'path1') else 'None'}', path2: '{rsa.path2 if hasattr(rsa, 'path2') else 'None'}'")
 
         # Add headlines with positions
         for i, headline in enumerate(headlines):
