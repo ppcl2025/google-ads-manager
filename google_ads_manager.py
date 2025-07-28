@@ -1262,17 +1262,20 @@ def main():
                         auction_data = get_auction_insights_data(client, comp_analysis_customer_id, campaign_id)
                         
                         if auction_data:
-                            # Analyze competitive landscape
+                            # Analyze competitive landscape (will automatically choose auction insights or performance-based)
                             competitive_analysis = analyze_competitive_landscape(auction_data)
                             
                             # Store in session state for persistence
                             st.session_state.competitive_analysis_data = competitive_analysis
+                            st.session_state.competitive_analysis_type = "auction_insights" if any(data.get('competitor_1_overlap', 0) > 0 for data in auction_data) else "performance_based"
                             
-                            # Display the report
-                            display_competitive_landscape_report(competitive_analysis)
+                            # Display the appropriate report
+                            if st.session_state.competitive_analysis_type == "auction_insights":
+                                display_competitive_landscape_report(competitive_analysis)
+                            else:
+                                display_performance_based_competitive_landscape(competitive_analysis)
                         else:
-                            st.warning("⚠️ Auction insights data is not available for this account. This feature requires active campaigns with sufficient competitive data.")
-                            st.info("💡 **Alternative**: Use the Bid Optimization Engine (Tab 5) with 'Performance-Based Analysis' for keyword optimization recommendations.")
+                            st.warning("⚠️ No performance data available for this account. Please ensure you have active campaigns with data.")
                             
                     except Exception as e:
                         st.error(f"Error generating competitive analysis: {str(e)}")
@@ -1281,7 +1284,12 @@ def main():
             # Display existing data if available
             elif 'competitive_analysis_data' in st.session_state and st.session_state.competitive_analysis_data:
                 st.info("📊 Displaying previous competitive analysis. Click 'Generate Competitive Analysis' to refresh.")
-                display_competitive_landscape_report(st.session_state.competitive_analysis_data)
+                
+                # Display the appropriate report based on the type
+                if st.session_state.get('competitive_analysis_type') == "performance_based":
+                    display_performance_based_competitive_landscape(st.session_state.competitive_analysis_data)
+                else:
+                    display_competitive_landscape_report(st.session_state.competitive_analysis_data)
         else:
             st.warning("No sub-accounts found. Please create sub-accounts first.")
 
@@ -2301,7 +2309,7 @@ def get_auction_insights_data(client: GoogleAdsClient, customer_id: str, campaig
     try:
         google_ads_service = client.get_service("GoogleAdsService")
         
-        # Build query for auction insights
+        # Build query for auction insights - using a simpler approach
         query = """
         SELECT 
             campaign.id,
@@ -2315,18 +2323,10 @@ def get_auction_insights_data(client: GoogleAdsClient, customer_id: str, campaig
             metrics.cost_micros,
             metrics.conversions,
             metrics.conversions_value,
-            auction_insights.search_impression_share,
-            auction_insights.overlap_rate,
-            auction_insights.position_above_rate,
-            auction_insights.top_of_page_rate,
-            auction_insights.outranking_share,
-            auction_insights.overlap_impression_share,
-            auction_insights.overlap_rate_competitor_1,
-            auction_insights.overlap_rate_competitor_2,
-            auction_insights.overlap_rate_competitor_3,
-            auction_insights.position_above_rate_competitor_1,
-            auction_insights.position_above_rate_competitor_2,
-            auction_insights.position_above_rate_competitor_3
+            metrics.search_impression_share,
+            metrics.search_rank_lost_impression_share,
+            metrics.search_budget_lost_impression_share,
+            metrics.search_top_impression_share
         FROM keyword_view 
         WHERE segments.date DURING LAST_30_DAYS
         """
@@ -2334,13 +2334,21 @@ def get_auction_insights_data(client: GoogleAdsClient, customer_id: str, campaig
         if campaign_id:
             query += f" AND campaign.id = {campaign_id}"
         
+        # Add debug output
+        st.info(f"🔍 Fetching auction insights data for customer: {customer_id}")
+        if campaign_id:
+            st.info(f"🎯 Campaign ID: {campaign_id}")
+        
         response = google_ads_service.search(
             customer_id=customer_id,
             query=query
         )
         
         auction_data = []
+        row_count = 0
+        
         for row in response:
+            row_count += 1
             auction_data.append({
                 'campaign_id': row.campaign.id,
                 'campaign_name': row.campaign.name,
@@ -2353,30 +2361,46 @@ def get_auction_insights_data(client: GoogleAdsClient, customer_id: str, campaig
                 'cost_micros': row.metrics.cost_micros,
                 'conversions': row.metrics.conversions,
                 'conversions_value': row.metrics.conversions_value,
-                'search_impression_share': row.auction_insights.search_impression_share,
-                'overlap_rate': row.auction_insights.overlap_rate,
-                'position_above_rate': row.auction_insights.position_above_rate,
-                'top_of_page_rate': row.auction_insights.top_of_page_rate,
-                'outranking_share': row.auction_insights.outranking_share,
-                'overlap_impression_share': row.auction_insights.overlap_impression_share,
-                'competitor_1_overlap': row.auction_insights.overlap_rate_competitor_1,
-                'competitor_2_overlap': row.auction_insights.overlap_rate_competitor_2,
-                'competitor_3_overlap': row.auction_insights.overlap_rate_competitor_3,
-                'competitor_1_position_above': row.auction_insights.position_above_rate_competitor_1,
-                'competitor_2_position_above': row.auction_insights.position_above_rate_competitor_2,
-                'competitor_3_position_above': row.auction_insights.position_above_rate_competitor_3
+                'search_impression_share': getattr(row.metrics, 'search_impression_share', 0),
+                'search_rank_lost_impression_share': getattr(row.metrics, 'search_rank_lost_impression_share', 0),
+                'search_budget_lost_impression_share': getattr(row.metrics, 'search_budget_lost_impression_share', 0),
+                'search_top_impression_share': getattr(row.metrics, 'search_top_impression_share', 0),
+                # Set default values for auction insights fields since they might not be available
+                'overlap_rate': 0,
+                'position_above_rate': 0,
+                'top_of_page_rate': 0,
+                'outranking_share': 0,
+                'overlap_impression_share': 0,
+                'competitor_1_overlap': 0,
+                'competitor_2_overlap': 0,
+                'competitor_3_overlap': 0,
+                'competitor_1_position_above': 0,
+                'competitor_2_position_above': 0,
+                'competitor_3_position_above': 0
             })
+        
+        st.success(f"✅ Successfully fetched {row_count} keyword records with performance data")
+        
+        # If we have data but no auction insights, provide a helpful message
+        if auction_data and row_count > 0:
+            st.info("💡 Note: Detailed auction insights (competitor overlap data) may not be available for all accounts. Using performance-based competitive analysis instead.")
         
         return auction_data
         
     except Exception as ex:
-        # Check if it's a specific error about auction insights not being available
-        if "auction_insights" in str(ex).lower() or "not available" in str(ex).lower():
-            st.warning("⚠️ Auction insights data is not available for this account. This feature requires active campaigns with sufficient data.")
-            return []
+        st.error(f"❌ Error fetching auction insights: {str(ex)}")
+        
+        # Try to provide more specific error information
+        if "UNRECOGNIZED_FIELD" in str(ex):
+            st.warning("⚠️ Some auction insights fields are not available for this account. Using performance-based analysis instead.")
+        elif "INVALID_ARGUMENT" in str(ex):
+            st.warning("⚠️ Invalid query parameters. Please check your customer ID and campaign selection.")
+        elif "PERMISSION_DENIED" in str(ex):
+            st.error("🚫 Permission denied. Please check your API access and account permissions.")
         else:
-            st.error(f"Error fetching auction insights: {str(ex)}")
-            return []
+            st.warning("⚠️ Auction insights data is not available for this account. This feature requires active campaigns with sufficient competitive data.")
+        
+        return []
 
 def analyze_bid_optimization_opportunities(auction_data: list) -> dict:
     """Analyze auction insights data and provide bid optimization recommendations."""
@@ -2565,10 +2589,22 @@ def display_bid_optimization_dashboard(recommendations: dict):
 
 # Competitive Landscape Report
 def analyze_competitive_landscape(auction_data: list) -> dict:
-    """Analyze auction insights data to provide competitive landscape insights."""
+    """Analyze performance data to provide competitive landscape insights."""
     if not auction_data:
         return {}
     
+    # Check if we have actual auction insights data or just performance data
+    has_auction_insights = any(data.get('competitor_1_overlap', 0) > 0 for data in auction_data)
+    
+    if has_auction_insights:
+        # Use the original auction insights analysis
+        return analyze_auction_insights_competitive_landscape(auction_data)
+    else:
+        # Use performance-based analysis
+        return analyze_performance_based_competitive_landscape(auction_data)
+
+def analyze_auction_insights_competitive_landscape(auction_data: list) -> dict:
+    """Original auction insights competitive landscape analysis."""
     competitive_analysis = {
         'market_share_analysis': {},
         'top_competitors': [],
@@ -2663,26 +2699,6 @@ def analyze_competitive_landscape(auction_data: list) -> dict:
                 'roas': data['conversions_value'] / (data['cost_micros'] / 1000000) if data['cost_micros'] > 0 else 0,
                 'opportunity_type': 'High ROAS, Low Share'
             })
-    
-    # Identify competitive threats
-    for data in auction_data:
-        if data['position_above_rate'] > 0.8 and data['conversions_value'] / (data['cost_micros'] / 1000000) < 1.5:
-            competitive_analysis['competitive_threats'].append({
-                'keyword': data['keyword'],
-                'campaign': data['campaign_name'],
-                'position_above_rate': data['position_above_rate'],
-                'roas': data['conversions_value'] / (data['cost_micros'] / 1000000) if data['cost_micros'] > 0 else 0,
-                'threat_level': 'High' if data['position_above_rate'] > 0.9 else 'Medium'
-            })
-    
-    # Generate summary insights
-    competitive_analysis['summary_insights'] = {
-        'total_competitors_analyzed': len(competitive_analysis['top_competitors']),
-        'market_opportunities_count': len(competitive_analysis['market_opportunities']),
-        'competitive_threats_count': len(competitive_analysis['competitive_threats']),
-        'avg_competitive_overlap': sum(c['avg_overlap_rate'] for c in competitive_analysis['top_competitors']) / len(competitive_analysis['top_competitors']) if competitive_analysis['top_competitors'] else 0,
-        'market_competition_level': 'High' if len(competitive_analysis['top_competitors']) > 5 else 'Medium' if len(competitive_analysis['top_competitors']) > 2 else 'Low'
-    }
     
     return competitive_analysis
 
@@ -3272,6 +3288,297 @@ def display_performance_based_bid_dashboard(recommendations: dict):
                     st.info(f"Showing first 10 of {len(recommendations['maintain_bids'])} keywords. Use filters to see more.")
             else:
                 st.info("No keywords in maintain category.")
+
+def analyze_performance_based_competitive_landscape(performance_data: list) -> dict:
+    """Analyze performance data to provide competitive landscape insights when auction insights are not available."""
+    if not performance_data:
+        return {}
+    
+    competitive_analysis = {
+        'market_share_analysis': {},
+        'performance_insights': [],
+        'competitive_positioning': {},
+        'market_opportunities': [],
+        'performance_threats': [],
+        'summary_insights': {}
+    }
+    
+    # Calculate overall performance metrics
+    total_impressions = sum(d['impressions'] for d in performance_data)
+    total_clicks = sum(d['clicks'] for d in performance_data)
+    total_cost = sum(d['cost_micros'] for d in performance_data) / 1000000
+    total_conversions = sum(d['conversions'] for d in performance_data)
+    total_conversion_value = sum(d['conversion_value'] for d in performance_data)
+    
+    overall_ctr = total_clicks / total_impressions if total_impressions > 0 else 0
+    overall_cpc = total_cost / total_clicks if total_clicks > 0 else 0
+    overall_roas = total_conversion_value / total_cost if total_cost > 0 else 0
+    overall_conversion_rate = total_conversions / total_clicks if total_clicks > 0 else 0
+    
+    # Analyze keyword performance patterns
+    high_performing_keywords = []
+    underperforming_keywords = []
+    opportunity_keywords = []
+    
+    for data in performance_data:
+        cost = data['cost_micros'] / 1000000
+        ctr = data['clicks'] / data['impressions'] if data['impressions'] > 0 else 0
+        cpc = cost / data['clicks'] if data['clicks'] > 0 else 0
+        roas = data['conversion_value'] / cost if cost > 0 else 0
+        conversion_rate = data['conversions'] / data['clicks'] if data['clicks'] > 0 else 0
+        
+        # High performing keywords (above average metrics)
+        if (ctr > overall_ctr * 1.2 and 
+            roas > overall_roas * 1.2 and 
+            conversion_rate > overall_conversion_rate * 1.2):
+            high_performing_keywords.append({
+                'keyword': data['keyword'],
+                'campaign': data['campaign_name'],
+                'ctr': ctr,
+                'roas': roas,
+                'conversion_rate': conversion_rate,
+                'impressions': data['impressions'],
+                'clicks': data['clicks'],
+                'cost': cost,
+                'conversions': data['conversions'],
+                'conversion_value': data['conversion_value']
+            })
+        
+        # Underperforming keywords (below average metrics)
+        elif (ctr < overall_ctr * 0.8 or 
+              roas < overall_roas * 0.8 or 
+              conversion_rate < overall_conversion_rate * 0.8):
+            underperforming_keywords.append({
+                'keyword': data['keyword'],
+                'campaign': data['campaign_name'],
+                'ctr': ctr,
+                'roas': roas,
+                'conversion_rate': conversion_rate,
+                'impressions': data['impressions'],
+                'clicks': data['clicks'],
+                'cost': cost,
+                'conversions': data['conversions'],
+                'conversion_value': data['conversion_value'],
+                'issues': []
+            })
+            
+            # Identify specific issues
+            if ctr < overall_ctr * 0.8:
+                underperforming_keywords[-1]['issues'].append('Low CTR')
+            if roas < overall_roas * 0.8:
+                underperforming_keywords[-1]['issues'].append('Low ROAS')
+            if conversion_rate < overall_conversion_rate * 0.8:
+                underperforming_keywords[-1]['issues'].append('Low Conversion Rate')
+        
+        # Opportunity keywords (high impressions, low competition indicators)
+        if (data['impressions'] > 100 and 
+            ctr > overall_ctr and 
+            roas > overall_roas * 0.9):
+            opportunity_keywords.append({
+                'keyword': data['keyword'],
+                'campaign': data['campaign_name'],
+                'impressions': data['impressions'],
+                'ctr': ctr,
+                'roas': roas,
+                'opportunity_score': (ctr / overall_ctr) * (roas / overall_roas) if overall_ctr > 0 and overall_roas > 0 else 0
+            })
+    
+    # Sort opportunities by score
+    opportunity_keywords.sort(key=lambda x: x['opportunity_score'], reverse=True)
+    
+    # Market share analysis based on performance
+    competitive_analysis['market_share_analysis'] = {
+        'total_impressions': total_impressions,
+        'total_clicks': total_clicks,
+        'total_cost': total_cost,
+        'total_conversions': total_conversions,
+        'total_conversion_value': total_conversion_value,
+        'overall_ctr': overall_ctr,
+        'overall_cpc': overall_cpc,
+        'overall_roas': overall_roas,
+        'overall_conversion_rate': overall_conversion_rate,
+        'performance_grade': 'A' if overall_roas > 3.0 and overall_ctr > 0.02 else 
+                           'B' if overall_roas > 2.0 and overall_ctr > 0.015 else
+                           'C' if overall_roas > 1.5 and overall_ctr > 0.01 else 'D'
+    }
+    
+    # Performance insights
+    competitive_analysis['performance_insights'] = {
+        'high_performing_keywords': high_performing_keywords[:10],  # Top 10
+        'underperforming_keywords': underperforming_keywords[:10],  # Top 10
+        'opportunity_keywords': opportunity_keywords[:10],  # Top 10
+        'total_high_performers': len(high_performing_keywords),
+        'total_underperformers': len(underperforming_keywords),
+        'total_opportunities': len(opportunity_keywords)
+    }
+    
+    # Market opportunities
+    competitive_analysis['market_opportunities'] = opportunity_keywords[:5]
+    
+    # Performance threats
+    competitive_analysis['performance_threats'] = underperforming_keywords[:5]
+    
+    # Summary insights
+    competitive_analysis['summary_insights'] = {
+        'performance_summary': f"Account shows {'excellent' if overall_roas > 3.0 else 'good' if overall_roas > 2.0 else 'fair' if overall_roas > 1.5 else 'poor'} performance with {overall_roas:.2f} ROAS",
+        'keyword_health': f"{len(high_performing_keywords)} high-performing keywords vs {len(underperforming_keywords)} underperforming keywords",
+        'opportunity_areas': f"{len(opportunity_keywords)} keywords show growth potential",
+        'recommendations': [
+            "Focus on expanding high-performing keyword themes",
+            "Optimize underperforming keywords or consider pausing them",
+            "Increase bids on opportunity keywords with high ROAS",
+            "Review ad copy and landing pages for low-CTR keywords"
+        ]
+    }
+    
+    return competitive_analysis
+
+def display_performance_based_competitive_landscape(competitive_analysis: dict):
+    """Display performance-based competitive landscape analysis."""
+    if not competitive_analysis:
+        st.warning("⚠️ No competitive analysis data available.")
+        return
+    
+    st.header("🏢 Performance-Based Competitive Landscape Report")
+    st.info("💡 This analysis is based on performance metrics since detailed auction insights are not available for this account.")
+    
+    # Market Share Analysis
+    if 'market_share_analysis' in competitive_analysis:
+        market_data = competitive_analysis['market_share_analysis']
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "Total Impressions", 
+                f"{market_data.get('total_impressions', 0):,}",
+                help="Total impressions across all keywords"
+            )
+        
+        with col2:
+            st.metric(
+                "Total Clicks", 
+                f"{market_data.get('total_clicks', 0):,}",
+                help="Total clicks across all keywords"
+            )
+        
+        with col3:
+            st.metric(
+                "Overall CTR", 
+                f"{market_data.get('overall_ctr', 0):.2%}",
+                help="Click-through rate across all keywords"
+            )
+        
+        with col4:
+            st.metric(
+                "Overall ROAS", 
+                f"{market_data.get('overall_roas', 0):.2f}",
+                help="Return on ad spend across all keywords"
+            )
+        
+        # Performance Grade
+        grade = market_data.get('performance_grade', 'N/A')
+        grade_color = {
+            'A': '🟢',
+            'B': '🟡', 
+            'C': '🟠',
+            'D': '🔴'
+        }.get(grade, '⚪')
+        
+        st.metric(
+            "Performance Grade",
+            f"{grade_color} {grade}",
+            help="Overall account performance grade based on ROAS and CTR"
+        )
+    
+    # Performance Insights
+    if 'performance_insights' in competitive_analysis:
+        insights = competitive_analysis['performance_insights']
+        
+        st.subheader("📊 Performance Insights")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "High Performers",
+                insights.get('total_high_performers', 0),
+                help="Keywords with above-average CTR, ROAS, and conversion rate"
+            )
+        
+        with col2:
+            st.metric(
+                "Underperformers", 
+                insights.get('total_underperformers', 0),
+                help="Keywords with below-average performance metrics"
+            )
+        
+        with col3:
+            st.metric(
+                "Opportunities",
+                insights.get('total_opportunities', 0),
+                help="Keywords with growth potential"
+            )
+        
+        # High Performing Keywords
+        if insights.get('high_performing_keywords'):
+            st.subheader("⭐ High Performing Keywords")
+            high_performers_df = pd.DataFrame(insights['high_performing_keywords'])
+            if not high_performers_df.empty:
+                high_performers_df['ctr'] = high_performers_df['ctr'].apply(lambda x: f"{x:.2%}")
+                high_performers_df['roas'] = high_performers_df['roas'].apply(lambda x: f"{x:.2f}")
+                high_performers_df['conversion_rate'] = high_performers_df['conversion_rate'].apply(lambda x: f"{x:.2%}")
+                high_performers_df['cost'] = high_performers_df['cost'].apply(lambda x: f"${x:.2f}")
+                
+                st.dataframe(
+                    high_performers_df[['keyword', 'campaign', 'impressions', 'clicks', 'ctr', 'roas', 'conversion_rate', 'cost']],
+                    use_container_width=True
+                )
+        
+        # Opportunity Keywords
+        if insights.get('opportunity_keywords'):
+            st.subheader("🚀 Growth Opportunities")
+            opportunities_df = pd.DataFrame(insights['opportunity_keywords'])
+            if not opportunities_df.empty:
+                opportunities_df['ctr'] = opportunities_df['ctr'].apply(lambda x: f"{x:.2%}")
+                opportunities_df['roas'] = opportunities_df['roas'].apply(lambda x: f"{x:.2f}")
+                opportunities_df['opportunity_score'] = opportunities_df['opportunity_score'].apply(lambda x: f"{x:.2f}")
+                
+                st.dataframe(
+                    opportunities_df[['keyword', 'campaign', 'impressions', 'ctr', 'roas', 'opportunity_score']],
+                    use_container_width=True
+                )
+        
+        # Underperforming Keywords
+        if insights.get('underperforming_keywords'):
+            st.subheader("⚠️ Underperforming Keywords")
+            underperformers_df = pd.DataFrame(insights['underperforming_keywords'])
+            if not underperformers_df.empty:
+                underperformers_df['ctr'] = underperformers_df['ctr'].apply(lambda x: f"{x:.2%}")
+                underperformers_df['roas'] = underperformers_df['roas'].apply(lambda x: f"{x:.2f}")
+                underperformers_df['conversion_rate'] = underperformers_df['conversion_rate'].apply(lambda x: f"{x:.2%}")
+                underperformers_df['cost'] = underperformers_df['cost'].apply(lambda x: f"${x:.2f}")
+                underperformers_df['issues'] = underperformers_df['issues'].apply(lambda x: ', '.join(x) if x else 'None')
+                
+                st.dataframe(
+                    underperformers_df[['keyword', 'campaign', 'impressions', 'clicks', 'ctr', 'roas', 'conversion_rate', 'cost', 'issues']],
+                    use_container_width=True
+                )
+    
+    # Summary Insights
+    if 'summary_insights' in competitive_analysis:
+        st.subheader("💡 Strategic Insights")
+        
+        summary = competitive_analysis['summary_insights']
+        
+        st.info(summary.get('performance_summary', ''))
+        st.info(summary.get('keyword_health', ''))
+        st.info(summary.get('opportunity_areas', ''))
+        
+        if summary.get('recommendations'):
+            st.subheader("🎯 Recommendations")
+            for i, rec in enumerate(summary['recommendations'], 1):
+                st.write(f"{i}. {rec}")
 
 if __name__ == "__main__":
     main()
