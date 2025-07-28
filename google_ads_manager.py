@@ -86,7 +86,14 @@ DEFAULT_MCC_ID = "502-288-7746"
 DEFAULT_CURRENCIES = ["USD", "EUR", "GBP", "INR"]
 DEFAULT_CAMPAIGN_STATUSES = ["PAUSED", "ENABLED"]
 DEFAULT_CPC_BID_MICROS = 1_000_000  # $1.00 CPC
-REQUIRED_COLUMNS = ["ad_group_name", "headline1", "headline2", "headline3", "description1", "description2", "final_url", "keywords"]
+# Build required columns dynamically
+REQUIRED_COLUMNS = ["ad_group_name"]
+# Add all 15 headlines
+REQUIRED_COLUMNS.extend([f"headline{i}" for i in range(1, MAX_HEADLINES + 1)])
+# Add all 4 descriptions  
+REQUIRED_COLUMNS.extend([f"description{i}" for i in range(1, MAX_DESCRIPTIONS + 1)])
+# Add other required columns
+REQUIRED_COLUMNS.extend(["final_url", "keywords"])
 MAX_HEADLINES = 15
 MAX_DESCRIPTIONS = 4
 
@@ -965,7 +972,8 @@ def main():
 
                 # Validate required columns
                 if not all(col in df.columns for col in REQUIRED_COLUMNS):
-                    show_message("File must contain required columns: ad_group_name, headline1, headline2, headline3, description1, description2, final_url, final_url_path, keywords", False)
+                    missing_columns = [col for col in REQUIRED_COLUMNS if col not in df.columns]
+                    show_message(f"File is missing required columns: {', '.join(missing_columns)}. Required: ad_group_name, headline1 to headline15, description1 to description4, final_url, keywords. Optional: path1, path2, headline_positions, description_positions", False)
                     return
 
                 # Process the bulk upload
