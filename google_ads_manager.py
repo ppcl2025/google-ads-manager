@@ -980,9 +980,9 @@ def main():
                 # Process the bulk upload
                 if process_bulk_upload(client, customer_id_bulk, campaign_name, df, campaign_id, budget_amount):
                     show_message("✅ Bulk upload completed successfully!")
-                    # Clear the file after successful upload
+                    # Clear the file after successful upload by changing the key
                     st.session_state.uploaded_file_cleared = not st.session_state.uploaded_file_cleared
-                    st.rerun()
+                    st.success("🔄 File uploader has been cleared. You can upload a new file.")
                 else:
                     show_message("❌ Bulk upload failed. Please check the file format and try again.", False)
 
