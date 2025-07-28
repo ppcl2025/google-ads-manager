@@ -605,91 +605,26 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add headlines with positions
         for i, headline in enumerate(headlines):
             if headline:
-                # Handle ad customizer tags properly - preserve full text, shorten tags if needed
-                import re
-                
-                # Find all ad customizer tags in the headline
-                ad_customizer_pattern = r'\{[^}]+\}'
-                ad_customizer_tags = re.findall(ad_customizer_pattern, headline)
-                
-                # Remove ad customizer tags temporarily to count actual characters
-                headline_without_tags = re.sub(ad_customizer_pattern, '', headline)
-                text_length = len(headline_without_tags.strip())
-                
-                # Calculate available space for tags (30 - text length)
-                available_chars_for_tags = 30 - text_length
-                
-                if available_chars_for_tags >= 0:
-                    # We have enough space for full text and tags
-                    headline_text = headline
-                else:
-                    # Not enough space - keep full text, shorten tags to just location code
-                    shortened_tags = []
-                    for tag in ad_customizer_tags:
-                        # Extract location code (e.g., "SC" from "{LOCATION(City):SC}")
-                        location_match = re.search(r':([^}]+)', tag)
-                        if location_match:
-                            shortened_tags.append(f"{{{location_match.group(1)}}}")
-                        else:
-                            # Fallback: just use first 2 characters of the tag
-                            shortened_tags.append(tag[:2])
-                    
-                    # Replace original tags with shortened ones
-                    headline_text = headline
-                    for i, tag in enumerate(ad_customizer_tags):
-                        headline_text = headline_text.replace(tag, shortened_tags[i])
-                
                 headline_asset = client.get_type("AdTextAsset")
-                headline_asset.text = headline_text
+                headline_asset.text = headline
                 if i < len(headline_positions) and headline_positions[i]:
                     headline_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"HEADLINE_{headline_positions[i]}"]
                 rsa.headlines.append(headline_asset)
                 # Debug: Log what's being sent
-                if "{" in headline_text:
-                    st.write(f"DEBUG: Headline {i+1} with ad customizer: '{headline_text}' (length: {len(headline_text)})")
+                if "{" in headline:
+                    st.write(f"DEBUG: Headline {i+1} with ad customizer: '{headline}' (length: {len(headline)})")
 
         # Add descriptions with positions
         for i, description in enumerate(descriptions):
             if description:
-                # Handle ad customizer tags properly - preserve full text, shorten tags if needed
-                # Find all ad customizer tags in the description
-                ad_customizer_tags = re.findall(ad_customizer_pattern, description)
-                
-                # Remove ad customizer tags temporarily to count actual characters
-                description_without_tags = re.sub(ad_customizer_pattern, '', description)
-                text_length = len(description_without_tags.strip())
-                
-                # Calculate available space for tags (60 - text length)
-                available_chars_for_tags = 60 - text_length
-                
-                if available_chars_for_tags >= 0:
-                    # We have enough space for full text and tags
-                    description_text = description
-                else:
-                    # Not enough space - keep full text, shorten tags to just location code
-                    shortened_tags = []
-                    for tag in ad_customizer_tags:
-                        # Extract location code (e.g., "SC" from "{LOCATION(City):SC}")
-                        location_match = re.search(r':([^}]+)', tag)
-                        if location_match:
-                            shortened_tags.append(f"{{{location_match.group(1)}}}")
-                        else:
-                            # Fallback: just use first 2 characters of the tag
-                            shortened_tags.append(tag[:2])
-                    
-                    # Replace original tags with shortened ones
-                    description_text = description
-                    for i, tag in enumerate(ad_customizer_tags):
-                        description_text = description_text.replace(tag, shortened_tags[i])
-                
                 description_asset = client.get_type("AdTextAsset")
-                description_asset.text = description_text
+                description_asset.text = description
                 if i < len(description_positions) and description_positions[i]:
                     description_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"DESCRIPTION_{description_positions[i]}"]
                 rsa.descriptions.append(description_asset)
                 # Debug: Log what's being sent
-                if "{" in description_text:
-                    st.write(f"DEBUG: Description {i+1} with ad customizer: '{description_text}' (length: {len(description_text)})")
+                if "{" in description:
+                    st.write(f"DEBUG: Description {i+1} with ad customizer: '{description}' (length: {len(description)})")
 
         ad_group_ad.ad = ad
         ad_group_ad_operation = client.get_type("AdGroupAdOperation")
