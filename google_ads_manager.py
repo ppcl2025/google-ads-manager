@@ -86,6 +86,9 @@ DEFAULT_MCC_ID = "502-288-7746"
 DEFAULT_CURRENCIES = ["USD", "EUR", "GBP", "INR"]
 DEFAULT_CAMPAIGN_STATUSES = ["PAUSED", "ENABLED"]
 DEFAULT_CPC_BID_MICROS = 1_000_000  # $1.00 CPC
+MAX_HEADLINES = 15
+MAX_DESCRIPTIONS = 4
+
 # Build required columns dynamically
 REQUIRED_COLUMNS = ["ad_group_name"]
 # Add all 15 headlines
@@ -94,8 +97,6 @@ REQUIRED_COLUMNS.extend([f"headline{i}" for i in range(1, MAX_HEADLINES + 1)])
 REQUIRED_COLUMNS.extend([f"description{i}" for i in range(1, MAX_DESCRIPTIONS + 1)])
 # Add other required columns
 REQUIRED_COLUMNS.extend(["final_url", "keywords"])
-MAX_HEADLINES = 15
-MAX_DESCRIPTIONS = 4
 
 # US Timezones for sub-account creation
 US_TIMEZONES = [
