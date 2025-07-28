@@ -86,7 +86,7 @@ DEFAULT_MCC_ID = "502-288-7746"
 DEFAULT_CURRENCIES = ["USD", "EUR", "GBP", "INR"]
 DEFAULT_CAMPAIGN_STATUSES = ["PAUSED", "ENABLED"]
 DEFAULT_CPC_BID_MICROS = 1_000_000  # $1.00 CPC
-REQUIRED_COLUMNS = ["ad_group_name", "headline1", "headline2", "headline3", "description1", "description2", "final_url", "final_url_path", "keywords"]
+REQUIRED_COLUMNS = ["ad_group_name", "headline1", "headline2", "headline3", "description1", "description2", "final_url", "keywords"]
 MAX_HEADLINES = 15
 MAX_DESCRIPTIONS = 4
 
@@ -568,7 +568,8 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
 # Create a responsive search ad with up to 15 headlines and 4 descriptions
 def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str, 
               headlines: List[str], descriptions: List[str], final_url: str, 
-              headline_positions: List[str], description_positions: List[str]) -> Optional[str]:
+              headline_positions: List[str], description_positions: List[str],
+              path1: str = "", path2: str = "") -> Optional[str]:
     """Create a responsive search ad."""
     try:
         ad_group_ad_service = client.get_service("AdGroupAdService")
@@ -577,7 +578,20 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         ad_group_ad.status = client.enums.AdGroupAdStatusEnum.ENABLED
 
         ad = client.get_type("Ad")
-        ad.final_urls.append(final_url)
+        
+        # For Google Ads responsive search ads, we can use URL parameters
+        # to achieve the desired display URL while keeping the actual landing page
+        if path1 or path2:
+            # Add path parameters to the final URL for display purposes
+            display_url = final_url.rstrip('/')
+            if path1:
+                display_url += f"/{path1.strip()}"
+            if path2:
+                display_url += f"/{path2.strip()}"
+            ad.final_urls.append(display_url)
+        else:
+            ad.final_urls.append(final_url)
+        
         rsa = ad.responsive_search_ad
 
         # Add headlines with positions
@@ -696,18 +710,10 @@ def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name
                 headlines = [row.get(f"headline{i}", "") for i in range(1, MAX_HEADLINES + 1)]
                 descriptions = [row.get(f"description{i}", "") for i in range(1, MAX_DESCRIPTIONS + 1)]
                 
-                # Construct final URL from base URL and path
-                final_url = row["final_url"]
-                final_url_path = row.get("final_url_path", "")
-                
-                # Combine base URL with path if path is provided
-                if pd.notna(final_url_path) and str(final_url_path).strip():
-                    # Ensure proper URL construction
-                    base_url = final_url.rstrip('/')
-                    path = str(final_url_path).strip()
-                    if not path.startswith('/'):
-                        path = '/' + path
-                    final_url = base_url + path
+                # Get final URL and path parameters
+                final_url = row["final_url"].rstrip('/')
+                path1 = row.get("path1", "").strip() if pd.notna(row.get("path1")) else ""
+                path2 = row.get("path2", "").strip() if pd.notna(row.get("path2")) else ""
                 
                 headline_positions = (row.get("headline_positions", "").split(";") 
                                     if pd.notna(row.get("headline_positions")) else [""] * MAX_HEADLINES)
@@ -715,7 +721,7 @@ def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name
                                        if pd.notna(row.get("description_positions")) else [""] * MAX_DESCRIPTIONS)
                 
                 create_ad(client, customer_id, ad_group_id, headlines, descriptions, 
-                         final_url, headline_positions, description_positions)
+                         final_url, headline_positions, description_positions, path1, path2)
                 
             # Upload keywords (use first row's keywords)
             if pd.notna(group["keywords"].iloc[0]):
@@ -850,7 +856,7 @@ def main():
     # Tab 3: Bulk Upload
     with tab3:
         st.subheader("Bulk Upload Ad Groups, Ads, and Keywords")
-        st.write("Upload a CSV or Excel file with columns: ad_group_name, headline1 to headline15, description1 to description4, final_url, final_url_path, keywords, headline_positions, description_positions. All rows are added to a single campaign specified below. **Keywords only need to be specified in the first row of each ad group.**")
+        st.write("Upload a CSV or Excel file with columns: ad_group_name, headline1 to headline15, description1 to description4, final_url, path1, path2, keywords, headline_positions, description_positions. All rows are added to a single campaign specified below. **Keywords only need to be specified in the first row of each ad group.**")
         
         # Use dropdown for customer selection with fallback
         if sub_accounts_list:
