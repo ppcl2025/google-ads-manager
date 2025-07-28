@@ -971,6 +971,8 @@ def main():
                     return
 
                 # Validate required columns
+                st.write(f"DEBUG: Required columns: {REQUIRED_COLUMNS}")
+                st.write(f"DEBUG: File columns: {list(df.columns)}")
                 if not all(col in df.columns for col in REQUIRED_COLUMNS):
                     missing_columns = [col for col in REQUIRED_COLUMNS if col not in df.columns]
                     show_message(f"File is missing required columns: {', '.join(missing_columns)}. Required: ad_group_name, headline1 to headline15, description1 to description4, final_url, keywords. Optional: path1, path2, headline_positions, description_positions", False)
