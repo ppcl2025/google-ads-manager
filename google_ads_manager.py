@@ -574,6 +574,23 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
 
 
 # Create a responsive search ad with up to 15 headlines and 4 descriptions
+def clean_ad_customizer_tags(text: str) -> str:
+    """Clean incomplete ad customizer tags from text."""
+    if not text:
+        return text
+    
+    # Remove incomplete ad customizer tags
+    import re
+    
+    # Pattern to match incomplete ad customizer tags
+    # Matches {LOCATION(anything that doesn't end with )}
+    pattern = r'\{LOCATION\([^)]*$|\{[^}]*$'
+    
+    # Remove incomplete tags
+    cleaned_text = re.sub(pattern, '', text)
+    
+    return cleaned_text.strip()
+
 def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str, 
               headlines: List[str], descriptions: List[str], final_url: str, 
               headline_positions: List[str], description_positions: List[str],
@@ -605,20 +622,26 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add headlines with positions
         for i, headline in enumerate(headlines):
             if headline:
-                headline_asset = client.get_type("AdTextAsset")
-                headline_asset.text = headline[:30]
-                if i < len(headline_positions) and headline_positions[i]:
-                    headline_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"HEADLINE_{headline_positions[i]}"]
-                rsa.headlines.append(headline_asset)
+                # Clean incomplete ad customizer tags
+                cleaned_headline = clean_ad_customizer_tags(headline)
+                if cleaned_headline:  # Only add if there's content after cleaning
+                    headline_asset = client.get_type("AdTextAsset")
+                    headline_asset.text = cleaned_headline[:30]
+                    if i < len(headline_positions) and headline_positions[i]:
+                        headline_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"HEADLINE_{headline_positions[i]}"]
+                    rsa.headlines.append(headline_asset)
 
         # Add descriptions with positions
         for i, description in enumerate(descriptions):
             if description:
-                description_asset = client.get_type("AdTextAsset")
-                description_asset.text = description[:60]
-                if i < len(description_positions) and description_positions[i]:
-                    description_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"DESCRIPTION_{description_positions[i]}"]
-                rsa.descriptions.append(description_asset)
+                # Clean incomplete ad customizer tags
+                cleaned_description = clean_ad_customizer_tags(description)
+                if cleaned_description:  # Only add if there's content after cleaning
+                    description_asset = client.get_type("AdTextAsset")
+                    description_asset.text = cleaned_description[:60]
+                    if i < len(description_positions) and description_positions[i]:
+                        description_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"DESCRIPTION_{description_positions[i]}"]
+                    rsa.descriptions.append(description_asset)
 
         ad_group_ad.ad = ad
         ad_group_ad_operation = client.get_type("AdGroupAdOperation")
