@@ -809,11 +809,14 @@ def main():
         sub_accounts_list = []  # Ensure it's an empty list
 
     # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "Create Sub-Account", 
         "Create Campaign", 
         "Bulk Upload", 
-        "Performance Analysis"
+        "Performance Analysis",
+        "🤖 Bid Optimization",
+        "🏢 Competitive Analysis",
+        "📊 Keywords Analysis"
     ])
 
     # Tab 1: Create Sub-Account
@@ -1000,29 +1003,30 @@ def main():
                 show_message(f"Error processing file: {str(e)}", False)
                 logger.error(f"Bulk upload error: {str(e)}")
 
-    # Tab 4: Performance Analysis (formerly Keywords Analysis)
+    # Tab 4: Performance Analysis
     with tab4:
-        st.subheader("Performance Analysis")
-        st.write("Analyze top keywords by spend across selected sub-accounts with comprehensive performance metrics.")
+        st.subheader("📈 Performance Analysis")
+        st.write("Get an overview of campaign performance across all sub-accounts with key metrics and insights.")
         
-        # Sub-account selection for keywords analysis
+        # Sub-account selection for performance analysis
         st.write("**Select which sub-accounts to include in performance analysis:**")
         if sub_accounts_list:
-            selected_keyword_accounts = st.multiselect(
+            selected_perf_accounts = st.multiselect(
                 "Choose sub-accounts for performance analysis",
                 options=[acc['display'] for acc in sub_accounts_list],
                 default=[acc['display'] for acc in sub_accounts_list],  # Default to all selected
-                help="Select the sub-accounts you want to include in the performance analysis. Uncheck paused accounts that aren't running ads."
+                help="Select the sub-accounts you want to include in the performance analysis. Uncheck paused accounts that aren't running ads.",
+                key="perf_analysis_accounts"
             )
             
             # Convert selected display names back to account objects
-            selected_keyword_sub_accounts = [acc for acc in sub_accounts_list if acc['display'] in selected_keyword_accounts]
+            selected_perf_sub_accounts = [acc for acc in sub_accounts_list if acc['display'] in selected_perf_accounts]
             
-            if not selected_keyword_sub_accounts:
+            if not selected_perf_sub_accounts:
                 st.warning("Please select at least one sub-account for performance analysis.")
                 return
                 
-            st.info(f"📊 Will analyze performance from {len(selected_keyword_sub_accounts)} selected sub-accounts")
+            st.info(f"📊 Will analyze performance from {len(selected_perf_sub_accounts)} selected sub-accounts")
         else:
             st.warning("No sub-accounts found. Please create sub-accounts first.")
             return
@@ -1032,7 +1036,8 @@ def main():
             "Select Date Range:",
             options=["Current Month", "Last Month", "Last 2 Weeks", "Custom Date Range"],
             index=0,  # Default to "Current Month"
-            help="Choose a predefined date range or select custom dates"
+            help="Choose a predefined date range or select custom dates",
+            key="perf_date_range"
         )
         
         # Calculate dates based on selection
@@ -1071,49 +1076,285 @@ def main():
             # Show date inputs for custom range
             col1, col2 = st.columns(2)
             with col1:
-                start_date = st.date_input("Start Date", value=today - timedelta(days=30), key="keyword_start")
+                start_date = st.date_input("Start Date", value=today - timedelta(days=30), key="perf_start")
             with col2:
-                end_date = st.date_input("End Date", value=today, key="keyword_end")
+                end_date = st.date_input("End Date", value=today, key="perf_end")
             
             if start_date > end_date:
                 st.warning("Start date cannot be after end date. Please select a valid date range.")
                 return
         
         # Display selected date range
-        st.info(f"📅 Analyzing data from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        st.info(f"📅 Analyzing performance data from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
-        # Initialize session state for keywords data and sort
-        if 'keywords_data' not in st.session_state:
-            st.session_state.keywords_data = None
-        if 'keyword_sort_option' not in st.session_state:
-            st.session_state.keyword_sort_option = "Cost (Highest)"
-        if 'keyword_date_range' not in st.session_state:
-            st.session_state.keyword_date_range = None
+        # Initialize session state for performance data
+        if 'performance_data' not in st.session_state:
+            st.session_state.performance_data = None
+        if 'performance_date_range' not in st.session_state:
+            st.session_state.performance_date_range = None
         
-        # Get keyword insights
-        if st.button("Fetch Performance Analysis"):
+        # Get performance insights
+        if st.button("📊 Fetch Performance Analysis", key="fetch_performance"):
             st.info(f"Fetching performance analysis from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}...")
             try:
-                # Get keywords data from selected sub-accounts
-                all_keywords_data = get_keywords_analysis(client, selected_keyword_sub_accounts, (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
+                # Get performance data from selected sub-accounts
+                all_performance_data = get_keywords_analysis(client, selected_perf_sub_accounts, (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
                 
-                if all_keywords_data:
+                if all_performance_data:
                     # Store data in session state
-                    st.session_state.keywords_data = all_keywords_data
-                    st.session_state.keyword_sort_option = "Cost (Highest)"  # Reset sort to default
-                    st.session_state.keyword_date_range = (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
-                    display_keywords_analysis(all_keywords_data, "Cost (Highest)", st.session_state.keyword_date_range)
+                    st.session_state.performance_data = all_performance_data
+                    st.session_state.performance_date_range = (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+                    
+                    # Display performance overview
+                    display_performance_overview(all_performance_data, st.session_state.performance_date_range)
                 else:
                     st.warning("No performance data available for the selected date range.")
-                    st.session_state.keywords_data = None
-                    st.session_state.keyword_date_range = None
+                    st.session_state.performance_data = None
+                    st.session_state.performance_date_range = None
                     
             except Exception as e:
                 show_message(f"Error fetching performance analysis: {str(e)}", False)
                 logger.error(f"Performance analysis error: {str(e)}")
         
         # Display existing data if available
-        elif st.session_state.keywords_data:
+        elif st.session_state.performance_data:
+            st.info("📊 Displaying previous performance analysis. Click 'Fetch Performance Analysis' to refresh.")
+            display_performance_overview(st.session_state.performance_data, st.session_state.performance_date_range)
+
+    # Tab 5: Bid Optimization Engine
+    with tab5:
+        st.subheader("🤖 Bid Optimization Engine")
+        st.write("Analyze auction insights data and get intelligent bid optimization recommendations based on performance metrics and competitive positioning.")
+        
+        # Sub-account selection for bid optimization
+        if sub_accounts_list:
+            bid_opt_customer_display = st.selectbox(
+                "Select Customer Account for Bid Optimization",
+                [acc['display'] for acc in sub_accounts_list],
+                key="bid_opt_customer"
+            )
+            bid_opt_customer_id = next(acc['id'] for acc in sub_accounts_list if acc['display'] == bid_opt_customer_display)
+            
+            # Campaign selection (optional)
+            existing_campaigns = get_campaigns_for_account(client, bid_opt_customer_id)
+            campaign_options = ["All Campaigns"] + [f"{camp['name']} ({camp['status']})" for camp in existing_campaigns] if existing_campaigns else ["All Campaigns"]
+            
+            selected_campaign_option = st.selectbox(
+                "Select Campaign (optional)",
+                options=campaign_options,
+                key="bid_opt_campaign"
+            )
+            
+            campaign_id = None
+            if selected_campaign_option != "All Campaigns":
+                campaign_name = selected_campaign_option.split(" (")[0]
+                selected_campaign = next(camp for camp in existing_campaigns if camp['name'] == campaign_name)
+                campaign_id = selected_campaign['id']
+            
+            if st.button("🚀 Run Bid Optimization Analysis"):
+                with st.spinner("Analyzing auction insights and generating bid recommendations..."):
+                    try:
+                        # Get auction insights data
+                        auction_data = get_auction_insights_data(client, bid_opt_customer_id, campaign_id)
+                        
+                        if auction_data:
+                            # Analyze bid optimization opportunities
+                            recommendations = analyze_bid_optimization_opportunities(auction_data)
+                            
+                            # Store in session state for persistence
+                            st.session_state.bid_optimization_data = recommendations
+                            
+                            # Display the dashboard
+                            display_bid_optimization_dashboard(recommendations)
+                        else:
+                            st.warning("No auction insights data available for the selected account/campaign.")
+                            
+                    except Exception as e:
+                        st.error(f"Error running bid optimization analysis: {str(e)}")
+                        logger.error(f"Bid optimization error: {str(e)}")
+            
+            # Display existing data if available
+            elif 'bid_optimization_data' in st.session_state and st.session_state.bid_optimization_data:
+                st.info("📊 Displaying previous bid optimization analysis. Click 'Run Bid Optimization Analysis' to refresh.")
+                display_bid_optimization_dashboard(st.session_state.bid_optimization_data)
+        else:
+            st.warning("No sub-accounts found. Please create sub-accounts first.")
+
+    # Tab 6: Competitive Landscape Report
+    with tab6:
+        st.subheader("🏢 Competitive Landscape Report")
+        st.write("Get comprehensive competitive intelligence including market share analysis, competitor positioning, and strategic recommendations.")
+        
+        # Sub-account selection for competitive analysis
+        if sub_accounts_list:
+            comp_analysis_customer_display = st.selectbox(
+                "Select Customer Account for Competitive Analysis",
+                [acc['display'] for acc in sub_accounts_list],
+                key="comp_analysis_customer"
+            )
+            comp_analysis_customer_id = next(acc['id'] for acc in sub_accounts_list if acc['display'] == comp_analysis_customer_display)
+            
+            # Campaign selection (optional)
+            existing_campaigns = get_campaigns_for_account(client, comp_analysis_customer_id)
+            campaign_options = ["All Campaigns"] + [f"{camp['name']} ({camp['status']})" for camp in existing_campaigns] if existing_campaigns else ["All Campaigns"]
+            
+            selected_campaign_option = st.selectbox(
+                "Select Campaign (optional)",
+                options=campaign_options,
+                key="comp_analysis_campaign"
+            )
+            
+            campaign_id = None
+            if selected_campaign_option != "All Campaigns":
+                campaign_name = selected_campaign_option.split(" (")[0]
+                selected_campaign = next(camp for camp in existing_campaigns if camp['name'] == campaign_name)
+                campaign_id = selected_campaign['id']
+            
+            if st.button("🔍 Generate Competitive Analysis"):
+                with st.spinner("Analyzing competitive landscape and generating market intelligence..."):
+                    try:
+                        # Get auction insights data
+                        auction_data = get_auction_insights_data(client, comp_analysis_customer_id, campaign_id)
+                        
+                        if auction_data:
+                            # Analyze competitive landscape
+                            competitive_analysis = analyze_competitive_landscape(auction_data)
+                            
+                            # Store in session state for persistence
+                            st.session_state.competitive_analysis_data = competitive_analysis
+                            
+                            # Display the report
+                            display_competitive_landscape_report(competitive_analysis)
+                        else:
+                            st.warning("No auction insights data available for the selected account/campaign.")
+                            
+                    except Exception as e:
+                        st.error(f"Error generating competitive analysis: {str(e)}")
+                        logger.error(f"Competitive analysis error: {str(e)}")
+            
+            # Display existing data if available
+            elif 'competitive_analysis_data' in st.session_state and st.session_state.competitive_analysis_data:
+                st.info("📊 Displaying previous competitive analysis. Click 'Generate Competitive Analysis' to refresh.")
+                display_competitive_landscape_report(st.session_state.competitive_analysis_data)
+        else:
+            st.warning("No sub-accounts found. Please create sub-accounts first.")
+
+    # Tab 7: Keywords Analysis (moved from Performance Analysis)
+    with tab7:
+        st.subheader("📊 Keywords Analysis")
+        st.write("Analyze top keywords by spend across selected sub-accounts with comprehensive performance metrics.")
+        
+        # Sub-account selection for keywords analysis
+        st.write("**Select which sub-accounts to include in keywords analysis:**")
+        if sub_accounts_list:
+            selected_keyword_accounts = st.multiselect(
+                "Choose sub-accounts for keywords analysis",
+                options=[acc['display'] for acc in sub_accounts_list],
+                default=[acc['display'] for acc in sub_accounts_list],  # Default to all selected
+                help="Select the sub-accounts you want to include in the keywords analysis. Uncheck paused accounts that aren't running ads.",
+                key="keywords_analysis_accounts"
+            )
+            
+            # Convert selected display names back to account objects
+            selected_keyword_sub_accounts = [acc for acc in sub_accounts_list if acc['display'] in selected_keyword_accounts]
+            
+            if not selected_keyword_sub_accounts:
+                st.warning("Please select at least one sub-account for keywords analysis.")
+                return
+                
+            st.info(f"📊 Will analyze keywords from {len(selected_keyword_sub_accounts)} selected sub-accounts")
+        else:
+            st.warning("No sub-accounts found. Please create sub-accounts first.")
+            return
+        
+        # Date range selection with predefined options
+        date_range_option = st.selectbox(
+            "Select Date Range:",
+            options=["Current Month", "Last Month", "Last 2 Weeks", "Custom Date Range"],
+            index=0,  # Default to "Current Month"
+            help="Choose a predefined date range or select custom dates",
+            key="keywords_date_range"
+        )
+        
+        # Calculate dates based on selection
+        today = datetime.now().date()
+        
+        if date_range_option == "Current Month":
+            # Current month: from 1st of current month to today
+            start_date = today.replace(day=1)
+            end_date = today
+        elif date_range_option == "Last Month":
+            # Last month: from 1st to last day of previous month
+            if today.month == 1:
+                start_date = today.replace(year=today.year-1, month=12, day=1)
+                end_date = today.replace(year=today.year-1, month=12, day=31)
+            else:
+                start_date = today.replace(month=today.month-1, day=1)
+                # Get last day of previous month
+                if today.month == 1:
+                    last_day = 31
+                elif today.month in [3, 5, 7, 8, 10, 12]:
+                    last_day = 31
+                elif today.month == 2:
+                    # Check if leap year
+                    if today.year % 4 == 0 and (today.year % 100 != 0 or today.year % 400 == 0):
+                        last_day = 29
+                    else:
+                        last_day = 28
+                else:
+                    last_day = 30
+                end_date = today.replace(month=today.month-1, day=last_day)
+        elif date_range_option == "Last 2 Weeks":
+            # Last 2 weeks: 14 days ago to today
+            start_date = today - timedelta(days=14)
+            end_date = today
+        else:  # Custom Date Range
+            # Show date inputs for custom range
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("Start Date", value=today - timedelta(days=30), key="keyword_start_new")
+            with col2:
+                end_date = st.date_input("End Date", value=today, key="keyword_end_new")
+            
+            if start_date > end_date:
+                st.warning("Start date cannot be after end date. Please select a valid date range.")
+                return
+        
+        # Display selected date range
+        st.info(f"📅 Analyzing keywords data from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        
+        # Initialize session state for keywords data and sort
+        if 'keywords_data_new' not in st.session_state:
+            st.session_state.keywords_data_new = None
+        if 'keyword_sort_option_new' not in st.session_state:
+            st.session_state.keyword_sort_option_new = "Cost (Highest)"
+        if 'keyword_date_range_new' not in st.session_state:
+            st.session_state.keyword_date_range_new = None
+        
+        # Get keyword insights
+        if st.button("Fetch Keywords Analysis", key="fetch_keywords_new"):
+            st.info(f"Fetching keywords analysis from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}...")
+            try:
+                # Get keywords data from selected sub-accounts
+                all_keywords_data = get_keywords_analysis(client, selected_keyword_sub_accounts, (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
+                
+                if all_keywords_data:
+                    # Store data in session state
+                    st.session_state.keywords_data_new = all_keywords_data
+                    st.session_state.keyword_sort_option_new = "Cost (Highest)"  # Reset sort to default
+                    st.session_state.keyword_date_range_new = (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+                    display_keywords_analysis(all_keywords_data, "Cost (Highest)", st.session_state.keyword_date_range_new)
+                else:
+                    st.warning("No keywords data available for the selected date range.")
+                    st.session_state.keywords_data_new = None
+                    st.session_state.keyword_date_range_new = None
+                    
+            except Exception as e:
+                show_message(f"Error fetching keywords analysis: {str(e)}", False)
+                logger.error(f"Keywords analysis error: {str(e)}")
+        
+        # Display existing data if available
+        elif st.session_state.keywords_data_new:
             # Sort options
             sort_options = {
                 "Cost (Highest)": "cost",
@@ -1128,16 +1369,16 @@ def main():
             selected_sort = st.selectbox(
                 "Sort by:", 
                 list(sort_options.keys()), 
-                index=list(sort_options.keys()).index(st.session_state.keyword_sort_option),
-                key="keyword_sort_persistent"
+                index=list(sort_options.keys()).index(st.session_state.keyword_sort_option_new),
+                key="keyword_sort_persistent_new"
             )
             
             # Update session state if sort changed
-            if selected_sort != st.session_state.keyword_sort_option:
-                st.session_state.keyword_sort_option = selected_sort
+            if selected_sort != st.session_state.keyword_sort_option_new:
+                st.session_state.keyword_sort_option_new = selected_sort
             
             # Display the data with current sort
-            display_keywords_analysis(st.session_state.keywords_data, selected_sort, st.session_state.keyword_date_range)
+            display_keywords_analysis(st.session_state.keywords_data_new, selected_sort, st.session_state.keyword_date_range_new)
 
 # Get keywords analysis across all sub-accounts
 @st.cache_data(ttl=3600)  # Cache for 1 hour to reduce API calls
@@ -2007,6 +2248,668 @@ def get_campaigns_for_account(_client: GoogleAdsClient, customer_id: str) -> lis
         st.error(f"💥 Error fetching campaigns: {str(ex)}")
         handle_api_exception(ex, "fetch campaigns")
         return []
+
+# Bid Optimization Engine
+def get_auction_insights_data(client: GoogleAdsClient, customer_id: str, campaign_id: str = None) -> dict:
+    """Get auction insights data for bid optimization analysis."""
+    try:
+        google_ads_service = client.get_service("GoogleAdsService")
+        
+        # Build query for auction insights
+        query = """
+        SELECT 
+            campaign.id,
+            campaign.name,
+            ad_group.id,
+            ad_group.name,
+            keyword.text,
+            keyword.match_type,
+            metrics.impressions,
+            metrics.clicks,
+            metrics.cost_micros,
+            metrics.conversions,
+            metrics.conversions_value,
+            auction_insights.search_impression_share,
+            auction_insights.overlap_rate,
+            auction_insights.position_above_rate,
+            auction_insights.top_of_page_rate,
+            auction_insights.outranking_share,
+            auction_insights.overlap_impression_share,
+            auction_insights.overlap_rate_competitor_1,
+            auction_insights.overlap_rate_competitor_2,
+            auction_insights.overlap_rate_competitor_3,
+            auction_insights.position_above_rate_competitor_1,
+            auction_insights.position_above_rate_competitor_2,
+            auction_insights.position_above_rate_competitor_3
+        FROM keyword_view 
+        WHERE segments.date DURING LAST_30_DAYS
+        """
+        
+        if campaign_id:
+            query += f" AND campaign.id = {campaign_id}"
+        
+        response = google_ads_service.search(
+            customer_id=customer_id,
+            query=query
+        )
+        
+        auction_data = []
+        for row in response:
+            auction_data.append({
+                'campaign_id': row.campaign.id,
+                'campaign_name': row.campaign.name,
+                'ad_group_id': row.ad_group.id,
+                'ad_group_name': row.ad_group.name,
+                'keyword': row.keyword.text,
+                'match_type': row.keyword.match_type.name,
+                'impressions': row.metrics.impressions,
+                'clicks': row.metrics.clicks,
+                'cost_micros': row.metrics.cost_micros,
+                'conversions': row.metrics.conversions,
+                'conversions_value': row.metrics.conversions_value,
+                'search_impression_share': row.auction_insights.search_impression_share,
+                'overlap_rate': row.auction_insights.overlap_rate,
+                'position_above_rate': row.auction_insights.position_above_rate,
+                'top_of_page_rate': row.auction_insights.top_of_page_rate,
+                'outranking_share': row.auction_insights.outranking_share,
+                'overlap_impression_share': row.auction_insights.overlap_impression_share,
+                'competitor_1_overlap': row.auction_insights.overlap_rate_competitor_1,
+                'competitor_2_overlap': row.auction_insights.overlap_rate_competitor_2,
+                'competitor_3_overlap': row.auction_insights.overlap_rate_competitor_3,
+                'competitor_1_position_above': row.auction_insights.position_above_rate_competitor_1,
+                'competitor_2_position_above': row.auction_insights.position_above_rate_competitor_2,
+                'competitor_3_position_above': row.auction_insights.position_above_rate_competitor_3
+            })
+        
+        return auction_data
+        
+    except Exception as ex:
+        # Check if it's a specific error about auction insights not being available
+        if "auction_insights" in str(ex).lower() or "not available" in str(ex).lower():
+            st.warning("⚠️ Auction insights data is not available for this account. This feature requires active campaigns with sufficient data.")
+            return []
+        else:
+            st.error(f"Error fetching auction insights: {str(ex)}")
+            return []
+
+def analyze_bid_optimization_opportunities(auction_data: list) -> dict:
+    """Analyze auction insights data and provide bid optimization recommendations."""
+    if not auction_data:
+        return {}
+    
+    recommendations = {
+        'increase_bids': [],
+        'decrease_bids': [],
+        'maintain_bids': [],
+        'pause_keywords': [],
+        'competitive_insights': [],
+        'summary_stats': {}
+    }
+    
+    for data in auction_data:
+        # Calculate key metrics
+        cost = data['cost_micros'] / 1000000  # Convert from micros
+        ctr = data['clicks'] / data['impressions'] if data['impressions'] > 0 else 0
+        cpc = cost / data['clicks'] if data['clicks'] > 0 else 0
+        roas = data['conversions_value'] / cost if cost > 0 else 0
+        impression_share = data['search_impression_share']
+        position_above_rate = data['position_above_rate']
+        
+        # Bid optimization logic
+        recommendation = {
+            'keyword': data['keyword'],
+            'campaign': data['campaign_name'],
+            'ad_group': data['ad_group_name'],
+            'current_metrics': {
+                'impressions': data['impressions'],
+                'clicks': data['clicks'],
+                'cost': cost,
+                'ctr': ctr,
+                'cpc': cpc,
+                'roas': roas,
+                'impression_share': impression_share,
+                'position_above_rate': position_above_rate
+            },
+            'recommendation': '',
+            'reason': '',
+            'suggested_action': ''
+        }
+        
+        # High ROAS, low impression share - increase bids
+        if roas > 3.0 and impression_share < 0.7:
+            recommendation['recommendation'] = 'increase_bid'
+            recommendation['reason'] = f'High ROAS ({roas:.2f}) with low impression share ({impression_share:.1%})'
+            recommendation['suggested_action'] = 'Increase bid by 15-25% to capture more impressions'
+            recommendations['increase_bids'].append(recommendation)
+        
+        # Low ROAS, high impression share - decrease bids
+        elif roas < 1.5 and impression_share > 0.8:
+            recommendation['recommendation'] = 'decrease_bid'
+            recommendation['reason'] = f'Low ROAS ({roas:.2f}) with high impression share ({impression_share:.1%})'
+            recommendation['suggested_action'] = 'Decrease bid by 10-20% to improve efficiency'
+            recommendations['decrease_bids'].append(recommendation)
+        
+        # Poor performance, high competition - consider pausing
+        elif roas < 1.0 and position_above_rate > 0.8:
+            recommendation['recommendation'] = 'pause_keyword'
+            recommendation['reason'] = f'Poor ROAS ({roas:.2f}) with high competition ({position_above_rate:.1%} above)'
+            recommendation['suggested_action'] = 'Consider pausing or reducing bids significantly'
+            recommendations['pause_keywords'].append(recommendation)
+        
+        # Good performance, optimal position - maintain
+        else:
+            recommendation['recommendation'] = 'maintain_bid'
+            recommendation['reason'] = f'Balanced performance (ROAS: {roas:.2f}, Impression Share: {impression_share:.1%})'
+            recommendation['suggested_action'] = 'Maintain current bid strategy'
+            recommendations['maintain_bids'].append(recommendation)
+    
+    # Calculate summary statistics
+    total_keywords = len(auction_data)
+    recommendations['summary_stats'] = {
+        'total_keywords': total_keywords,
+        'increase_bids_count': len(recommendations['increase_bids']),
+        'decrease_bids_count': len(recommendations['decrease_bids']),
+        'maintain_bids_count': len(recommendations['maintain_bids']),
+        'pause_keywords_count': len(recommendations['pause_keywords']),
+        'avg_roas': sum(d['conversions_value'] / (d['cost_micros'] / 1000000) for d in auction_data if d['cost_micros'] > 0) / len([d for d in auction_data if d['cost_micros'] > 0]) if any(d['cost_micros'] > 0 for d in auction_data) else 0,
+        'avg_impression_share': sum(d['search_impression_share'] for d in auction_data) / len(auction_data) if auction_data else 0
+    }
+    
+    return recommendations
+
+def display_bid_optimization_dashboard(recommendations: dict):
+    """Display the bid optimization dashboard with recommendations."""
+    st.header("🤖 Bid Optimization Engine")
+    
+    if not recommendations:
+        st.warning("No bid optimization data available. Please run the analysis first.")
+        return
+    
+    # Summary statistics
+    stats = recommendations['summary_stats']
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Keywords", stats['total_keywords'])
+    with col2:
+        st.metric("Increase Bids", stats['increase_bids_count'], delta=f"+{stats['increase_bids_count']}")
+    with col3:
+        st.metric("Decrease Bids", stats['decrease_bids_count'], delta=f"-{stats['decrease_bids_count']}")
+    with col4:
+        st.metric("Avg ROAS", f"{stats['avg_roas']:.2f}")
+    
+    # Recommendations by category
+    tabs = st.tabs(["📈 Increase Bids", "📉 Decrease Bids", "⏸️ Pause Keywords", "⚖️ Maintain Bids"])
+    
+    with tabs[0]:
+        if recommendations['increase_bids']:
+            st.subheader(f"📈 Increase Bids ({len(recommendations['increase_bids'])} keywords)")
+            for rec in recommendations['increase_bids']:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                        st.write(f"• Impression Share: {rec['current_metrics']['impression_share']:.1%}")
+                        st.write(f"• Clicks: {rec['current_metrics']['clicks']}")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+        else:
+            st.info("No keywords recommended for bid increases.")
+    
+    with tabs[1]:
+        if recommendations['decrease_bids']:
+            st.subheader(f"📉 Decrease Bids ({len(recommendations['decrease_bids'])} keywords)")
+            for rec in recommendations['decrease_bids']:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                        st.write(f"• Impression Share: {rec['current_metrics']['impression_share']:.1%}")
+                        st.write(f"• Cost: ${rec['current_metrics']['cost']:.2f}")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+        else:
+            st.info("No keywords recommended for bid decreases.")
+    
+    with tabs[2]:
+        if recommendations['pause_keywords']:
+            st.subheader(f"⏸️ Pause Keywords ({len(recommendations['pause_keywords'])} keywords)")
+            for rec in recommendations['pause_keywords']:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                        st.write(f"• Position Above Rate: {rec['current_metrics']['position_above_rate']:.1%}")
+                        st.write(f"• Cost: ${rec['current_metrics']['cost']:.2f}")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+        else:
+            st.info("No keywords recommended for pausing.")
+    
+    with tabs[3]:
+        if recommendations['maintain_bids']:
+            st.subheader(f"⚖️ Maintain Bids ({len(recommendations['maintain_bids'])} keywords)")
+            # Show first 10 for brevity
+            for rec in recommendations['maintain_bids'][:10]:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                        st.write(f"• Impression Share: {rec['current_metrics']['impression_share']:.1%}")
+                        st.write(f"• CTR: {rec['current_metrics']['ctr']:.2%}")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+            
+            if len(recommendations['maintain_bids']) > 10:
+                st.info(f"Showing first 10 of {len(recommendations['maintain_bids'])} keywords. Use filters to see more.")
+        else:
+            st.info("No keywords in maintain category.")
+
+# Competitive Landscape Report
+def analyze_competitive_landscape(auction_data: list) -> dict:
+    """Analyze auction insights data to provide competitive landscape insights."""
+    if not auction_data:
+        return {}
+    
+    competitive_analysis = {
+        'market_share_analysis': {},
+        'top_competitors': [],
+        'competitive_positioning': {},
+        'market_opportunities': [],
+        'competitive_threats': [],
+        'summary_insights': {}
+    }
+    
+    # Analyze competitor overlap data
+    competitor_data = {}
+    total_impressions = sum(d['impressions'] for d in auction_data)
+    
+    for data in auction_data:
+        # Collect competitor overlap data
+        if data['competitor_1_overlap'] > 0:
+            if 'competitor_1' not in competitor_data:
+                competitor_data['competitor_1'] = {
+                    'overlap_rate': [],
+                    'position_above_rate': [],
+                    'impressions': 0,
+                    'total_overlap_impressions': 0
+                }
+            competitor_data['competitor_1']['overlap_rate'].append(data['competitor_1_overlap'])
+            competitor_data['competitor_1']['position_above_rate'].append(data['competitor_1_position_above'])
+            competitor_data['competitor_1']['total_overlap_impressions'] += data['impressions'] * data['competitor_1_overlap']
+        
+        if data['competitor_2_overlap'] > 0:
+            if 'competitor_2' not in competitor_data:
+                competitor_data['competitor_2'] = {
+                    'overlap_rate': [],
+                    'position_above_rate': [],
+                    'impressions': 0,
+                    'total_overlap_impressions': 0
+                }
+            competitor_data['competitor_2']['overlap_rate'].append(data['competitor_2_overlap'])
+            competitor_data['competitor_2']['position_above_rate'].append(data['competitor_2_position_above'])
+            competitor_data['competitor_2']['total_overlap_impressions'] += data['impressions'] * data['competitor_2_overlap']
+        
+        if data['competitor_3_overlap'] > 0:
+            if 'competitor_3' not in competitor_data:
+                competitor_data['competitor_3'] = {
+                    'overlap_rate': [],
+                    'position_above_rate': [],
+                    'impressions': 0,
+                    'total_overlap_impressions': 0
+                }
+            competitor_data['competitor_3']['overlap_rate'].append(data['competitor_3_overlap'])
+            competitor_data['competitor_3']['position_above_rate'].append(data['competitor_3_position_above'])
+            competitor_data['competitor_3']['total_overlap_impressions'] += data['impressions'] * data['competitor_3_overlap']
+    
+    # Calculate competitor metrics
+    for comp_id, comp_data in competitor_data.items():
+        avg_overlap = sum(comp_data['overlap_rate']) / len(comp_data['overlap_rate']) if comp_data['overlap_rate'] else 0
+        avg_position_above = sum(comp_data['position_above_rate']) / len(comp_data['position_above_rate']) if comp_data['position_above_rate'] else 0
+        
+        competitor_analysis = {
+            'competitor_id': comp_id,
+            'avg_overlap_rate': avg_overlap,
+            'avg_position_above_rate': avg_position_above,
+            'total_overlap_impressions': comp_data['total_overlap_impressions'],
+            'market_share_estimate': comp_data['total_overlap_impressions'] / total_impressions if total_impressions > 0 else 0,
+            'competitive_intensity': 'High' if avg_overlap > 0.7 else 'Medium' if avg_overlap > 0.4 else 'Low',
+            'positioning': 'Aggressive' if avg_position_above > 0.6 else 'Balanced' if avg_position_above > 0.3 else 'Conservative'
+        }
+        
+        competitive_analysis['top_competitors'].append(competitor_analysis)
+    
+    # Sort competitors by market share
+    competitive_analysis['top_competitors'].sort(key=lambda x: x['market_share_estimate'], reverse=True)
+    
+    # Calculate your market position
+    your_impressions = sum(d['impressions'] for d in auction_data)
+    your_market_share = your_impressions / total_impressions if total_impressions > 0 else 0
+    avg_position_above_rate = sum(d['position_above_rate'] for d in auction_data) / len(auction_data) if auction_data else 0
+    
+    competitive_analysis['market_share_analysis'] = {
+        'your_market_share': your_market_share,
+        'total_market_impressions': total_impressions,
+        'your_impressions': your_impressions,
+        'avg_position_above_rate': avg_position_above_rate,
+        'market_position': 'Leader' if your_market_share > 0.4 else 'Challenger' if your_market_share > 0.2 else 'Niche'
+    }
+    
+    # Identify market opportunities
+    for data in auction_data:
+        if data['search_impression_share'] < 0.5 and data['conversions_value'] / (data['cost_micros'] / 1000000) > 2.0:
+            competitive_analysis['market_opportunities'].append({
+                'keyword': data['keyword'],
+                'campaign': data['campaign_name'],
+                'impression_share': data['search_impression_share'],
+                'roas': data['conversions_value'] / (data['cost_micros'] / 1000000) if data['cost_micros'] > 0 else 0,
+                'opportunity_type': 'High ROAS, Low Share'
+            })
+    
+    # Identify competitive threats
+    for data in auction_data:
+        if data['position_above_rate'] > 0.8 and data['conversions_value'] / (data['cost_micros'] / 1000000) < 1.5:
+            competitive_analysis['competitive_threats'].append({
+                'keyword': data['keyword'],
+                'campaign': data['campaign_name'],
+                'position_above_rate': data['position_above_rate'],
+                'roas': data['conversions_value'] / (data['cost_micros'] / 1000000) if data['cost_micros'] > 0 else 0,
+                'threat_level': 'High' if data['position_above_rate'] > 0.9 else 'Medium'
+            })
+    
+    # Generate summary insights
+    competitive_analysis['summary_insights'] = {
+        'total_competitors_analyzed': len(competitive_analysis['top_competitors']),
+        'market_opportunities_count': len(competitive_analysis['market_opportunities']),
+        'competitive_threats_count': len(competitive_analysis['competitive_threats']),
+        'avg_competitive_overlap': sum(c['avg_overlap_rate'] for c in competitive_analysis['top_competitors']) / len(competitive_analysis['top_competitors']) if competitive_analysis['top_competitors'] else 0,
+        'market_competition_level': 'High' if len(competitive_analysis['top_competitors']) > 5 else 'Medium' if len(competitive_analysis['top_competitors']) > 2 else 'Low'
+    }
+    
+    return competitive_analysis
+
+def display_competitive_landscape_report(competitive_analysis: dict):
+    """Display the competitive landscape report with comprehensive insights."""
+    st.header("🏢 Competitive Landscape Report")
+    
+    if not competitive_analysis:
+        st.warning("No competitive analysis data available. Please run the analysis first.")
+        return
+    
+    # Market Share Analysis
+    st.subheader("📊 Market Share Analysis")
+    market_share = competitive_analysis['market_share_analysis']
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Your Market Share", f"{market_share['your_market_share']:.1%}")
+    with col2:
+        st.metric("Market Position", market_share['market_position'])
+    with col3:
+        st.metric("Total Market Impressions", f"{market_share['total_market_impressions']:,}")
+    with col4:
+        st.metric("Avg Position Above Rate", f"{market_share['avg_position_above_rate']:.1%}")
+    
+    # Top Competitors
+    st.subheader("🏆 Top Competitors")
+    if competitive_analysis['top_competitors']:
+        competitors_df = []
+        for comp in competitive_analysis['top_competitors']:
+            competitors_df.append({
+                'Competitor': comp['competitor_id'].replace('_', ' ').title(),
+                'Market Share': f"{comp['market_share_estimate']:.1%}",
+                'Overlap Rate': f"{comp['avg_overlap_rate']:.1%}",
+                'Position Above': f"{comp['avg_position_above_rate']:.1%}",
+                'Competitive Intensity': comp['competitive_intensity'],
+                'Positioning': comp['positioning']
+            })
+        
+        st.dataframe(competitors_df, use_container_width=True)
+    else:
+        st.info("No competitor data available.")
+    
+    # Market Opportunities
+    st.subheader("💡 Market Opportunities")
+    if competitive_analysis['market_opportunities']:
+        opportunities_df = []
+        for opp in competitive_analysis['market_opportunities']:
+            opportunities_df.append({
+                'Keyword': opp['keyword'],
+                'Campaign': opp['campaign'],
+                'Impression Share': f"{opp['impression_share']:.1%}",
+                'ROAS': f"{opp['roas']:.2f}",
+                'Opportunity Type': opp['opportunity_type']
+            })
+        
+        st.dataframe(opportunities_df, use_container_width=True)
+    else:
+        st.info("No market opportunities identified.")
+    
+    # Competitive Threats
+    st.subheader("⚠️ Competitive Threats")
+    if competitive_analysis['competitive_threats']:
+        threats_df = []
+        for threat in competitive_analysis['competitive_threats']:
+            threats_df.append({
+                'Keyword': threat['keyword'],
+                'Campaign': threat['campaign'],
+                'Position Above Rate': f"{threat['position_above_rate']:.1%}",
+                'ROAS': f"{threat['roas']:.2f}",
+                'Threat Level': threat['threat_level']
+            })
+        
+        st.dataframe(threats_df, use_container_width=True)
+    else:
+        st.info("No competitive threats identified.")
+    
+    # Summary Insights
+    st.subheader("📈 Summary Insights")
+    insights = competitive_analysis['summary_insights']
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Competitors Analyzed", insights['total_competitors_analyzed'])
+    with col2:
+        st.metric("Market Opportunities", insights['market_opportunities_count'])
+    with col3:
+        st.metric("Competitive Threats", insights['competitive_threats_count'])
+    with col4:
+        st.metric("Competition Level", insights['market_competition_level'])
+    
+    # Strategic Recommendations
+    st.subheader("🎯 Strategic Recommendations")
+    
+    # Generate recommendations based on analysis
+    recommendations = []
+    
+    if market_share['your_market_share'] < 0.2:
+        recommendations.append("🚀 **Market Expansion**: Consider increasing bids on high-ROAS keywords to capture more market share")
+    
+    if market_share['avg_position_above_rate'] > 0.7:
+        recommendations.append("📈 **Position Improvement**: Focus on outranking competitors on high-value keywords")
+    
+    if insights['market_opportunities_count'] > 5:
+        recommendations.append("💡 **Opportunity Capture**: Prioritize keywords with high ROAS and low impression share")
+    
+    if insights['competitive_threats_count'] > 3:
+        recommendations.append("🛡️ **Threat Mitigation**: Review and optimize keywords with high competitive pressure")
+    
+    if insights['market_competition_level'] == 'High':
+        recommendations.append("⚖️ **Competitive Strategy**: Consider niche targeting or differentiation strategies")
+    
+    for rec in recommendations:
+        st.write(rec)
+    
+    if not recommendations:
+        st.success("✅ Your competitive position appears strong. Continue monitoring for changes.")
+
+def display_performance_overview(performance_data: dict, date_range: tuple = None):
+    """Display performance overview with key metrics and insights."""
+    st.header("📈 Performance Overview")
+    
+    if not performance_data:
+        st.warning("No performance data available.")
+        return
+    
+    # Calculate overall metrics across all accounts
+    total_impressions = 0
+    total_clicks = 0
+    total_cost = 0
+    total_conversions = 0
+    total_conversion_value = 0
+    total_keywords = 0
+    total_campaigns = 0
+    
+    for account_name, account_data in performance_data.items():
+        summary = account_data['summary']
+        total_impressions += summary['total_impressions']
+        total_clicks += summary['total_clicks']
+        total_cost += summary['total_cost']
+        total_conversions += summary['total_conversions']
+        total_conversion_value += summary.get('total_conversion_value', 0)
+        total_keywords += summary['total_keywords']
+        total_campaigns += len(account_data['campaigns'])
+    
+    # Calculate overall metrics
+    overall_ctr = total_clicks / total_impressions if total_impressions > 0 else 0
+    overall_conversion_rate = total_conversions / total_clicks if total_clicks > 0 else 0
+    overall_cost_per_conversion = total_cost / total_conversions if total_conversions > 0 else 0
+    overall_roas = total_conversion_value / total_cost if total_cost > 0 else 0
+    
+    # Display key metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Impressions", f"{total_impressions:,}")
+        st.metric("Total Clicks", f"{total_clicks:,}")
+    with col2:
+        st.metric("Total Cost", f"${total_cost:,.2f}")
+        st.metric("Total Conversions", f"{total_conversions:,}")
+    with col3:
+        st.metric("Overall CTR", f"{overall_ctr:.2%}")
+        st.metric("Conversion Rate", f"{overall_conversion_rate:.2%}")
+    with col4:
+        st.metric("Cost per Conversion", f"${overall_cost_per_conversion:.2f}")
+        st.metric("Overall ROAS", f"{overall_roas:.2f}")
+    
+    # Account performance comparison
+    st.subheader("📊 Account Performance Comparison")
+    
+    account_comparison_data = []
+    for account_name, account_data in performance_data.items():
+        summary = account_data['summary']
+        account_comparison_data.append({
+            'Account': account_name,
+            'Impressions': summary['total_impressions'],
+            'Clicks': summary['total_clicks'],
+            'Cost': summary['total_cost'],
+            'Conversions': summary['total_conversions'],
+            'CTR': summary['avg_ctr'],
+            'Conversion Rate': summary['avg_conversion_rate'],
+            'Cost per Conversion': summary['avg_cost_per_conversion'],
+            'Campaigns': len(account_data['campaigns']),
+            'Keywords': summary['total_keywords']
+        })
+    
+    # Create DataFrame for display
+    import pandas as pd
+    df = pd.DataFrame(account_comparison_data)
+    
+    # Format metrics for display
+    display_df = df.copy()
+    display_df['CTR'] = display_df['CTR'].apply(lambda x: f"{x:.2%}")
+    display_df['Conversion Rate'] = display_df['Conversion Rate'].apply(lambda x: f"{x:.2%}")
+    display_df['Cost per Conversion'] = display_df['Cost per Conversion'].apply(lambda x: f"${x:.2f}")
+    display_df['Cost'] = display_df['Cost'].apply(lambda x: f"${x:,.2f}")
+    
+    st.dataframe(display_df, use_container_width=True)
+    
+    # Top performing campaigns
+    st.subheader("🏆 Top Performing Campaigns")
+    
+    campaign_data = []
+    for account_name, account_data in performance_data.items():
+        for campaign_name, campaign_info in account_data['campaigns'].items():
+            campaign_data.append({
+                'Account': account_name,
+                'Campaign': campaign_name,
+                'Impressions': campaign_info['impressions'],
+                'Clicks': campaign_info['clicks'],
+                'Cost': campaign_info['cost'],
+                'Conversions': campaign_info['conversions'],
+                'CTR': campaign_info['ctr'],
+                'Conversion Rate': campaign_info['conversion_rate'],
+                'Cost per Conversion': campaign_info['cost_per_conversion']
+            })
+    
+    if campaign_data:
+        # Sort by cost (highest first)
+        campaign_df = pd.DataFrame(campaign_data)
+        campaign_df = campaign_df.sort_values('Cost', ascending=False).head(10)
+        
+        # Format for display
+        display_campaign_df = campaign_df.copy()
+        display_campaign_df['CTR'] = display_campaign_df['CTR'].apply(lambda x: f"{x:.2%}")
+        display_campaign_df['Conversion Rate'] = display_campaign_df['Conversion Rate'].apply(lambda x: f"{x:.2%}")
+        display_campaign_df['Cost per Conversion'] = display_campaign_df['Cost per Conversion'].apply(lambda x: f"${x:.2f}")
+        display_campaign_df['Cost'] = display_campaign_df['Cost'].apply(lambda x: f"${x:,.2f}")
+        
+        st.dataframe(display_campaign_df, use_container_width=True)
+    else:
+        st.info("No campaign data available.")
+    
+    # Performance insights
+    st.subheader("💡 Performance Insights")
+    
+    insights = []
+    
+    # Account with highest ROAS
+    if account_comparison_data:
+        best_roas_account = max(account_comparison_data, key=lambda x: x['Cost per Conversion'] if x['Cost per Conversion'] > 0 else float('inf'))
+        insights.append(f"🎯 **Best performing account**: {best_roas_account['Account']} with lowest cost per conversion (${best_roas_account['Cost per Conversion']:.2f})")
+    
+    # Account with most impressions
+    if account_comparison_data:
+        most_impressions_account = max(account_comparison_data, key=lambda x: x['Impressions'])
+        insights.append(f"👁️ **Highest visibility**: {most_impressions_account['Account']} with {most_impressions_account['Impressions']:,} impressions")
+    
+    # Account with best CTR
+    if account_comparison_data:
+        best_ctr_account = max(account_comparison_data, key=lambda x: x['CTR'])
+        insights.append(f"📈 **Best click-through rate**: {best_ctr_account['Account']} with {best_ctr_account['CTR']:.2%} CTR")
+    
+    # Overall performance assessment
+    if overall_roas > 3.0:
+        insights.append("✅ **Excellent ROAS**: Overall return on ad spend is strong")
+    elif overall_roas > 2.0:
+        insights.append("👍 **Good ROAS**: Overall return on ad spend is positive")
+    else:
+        insights.append("⚠️ **ROAS needs improvement**: Consider optimizing campaigns for better returns")
+    
+    if overall_ctr > 0.05:
+        insights.append("✅ **Strong CTR**: Click-through rates are performing well")
+    elif overall_ctr > 0.02:
+        insights.append("👍 **Decent CTR**: Click-through rates are acceptable")
+    else:
+        insights.append("⚠️ **CTR needs improvement**: Consider optimizing ad copy and targeting")
+    
+    for insight in insights:
+        st.write(insight)
+    
+    # Date range info
+    if date_range:
+        st.info(f"📅 Data period: {date_range[0]} to {date_range[1]}")
 
 if __name__ == "__main__":
     main()

@@ -8,6 +8,9 @@ A Streamlit-based web application for managing Google Ads campaigns, ad groups, 
 - **Create Campaigns**: Set up campaigns with shared bidding strategies and negative keyword lists
 - **Bulk Upload**: Upload ad groups, ads, and keywords via CSV/Excel files
 - **Performance Analysis**: Analyze campaign and keyword performance across sub-accounts
+- **🤖 Bid Optimization Engine**: AI-powered bid recommendations based on auction insights and performance metrics
+- **🏢 Competitive Landscape Report**: Comprehensive competitive intelligence and market positioning analysis
+- **📊 Keywords Analysis**: Detailed keyword performance analysis with sorting and filtering
 - **MCC Management**: Manage multiple sub-accounts from a single interface
 
 ## Deployment to Streamlit Cloud
@@ -88,6 +91,9 @@ A Streamlit-based web application for managing Google Ads campaigns, ad groups, 
    - Test creating a campaign
    - Test bulk upload functionality
    - Test performance analysis
+   - Test bid optimization engine
+   - Test competitive landscape analysis
+   - Test keywords analysis
 
 ### Environment Variables Reference
 
@@ -98,6 +104,43 @@ A Streamlit-based web application for managing Google Ads campaigns, ad groups, 
 | `GOOGLE_ADS_DEVELOPER_TOKEN` | API Developer Token | `ABC123DEF456` |
 | `GOOGLE_ADS_REFRESH_TOKEN` | OAuth2 Refresh Token | `1//04abc123def456` |
 | `GOOGLE_ADS_LOGIN_CUSTOMER_ID` | MCC Customer ID | `502-288-7746` |
+
+## Advanced Features
+
+### 🤖 Bid Optimization Engine
+
+The Bid Optimization Engine analyzes auction insights data to provide intelligent bid recommendations:
+
+- **Increase Bids**: Keywords with high ROAS but low impression share
+- **Decrease Bids**: Keywords with low ROAS but high impression share  
+- **Pause Keywords**: Poor performing keywords with high competition
+- **Maintain Bids**: Keywords with balanced performance
+
+**Requirements**: Active campaigns with sufficient auction insights data
+
+### 🏢 Competitive Landscape Report
+
+Get comprehensive competitive intelligence including:
+
+- **Market Share Analysis**: Your position vs. competitors
+- **Top Competitors**: Overlap rates and positioning strategies
+- **Market Opportunities**: High-ROAS keywords with low competition
+- **Competitive Threats**: Keywords with high competitive pressure
+- **Strategic Recommendations**: Actionable insights for improvement
+
+**Requirements**: Active campaigns with auction insights data
+
+### 📊 Keywords Analysis
+
+Detailed keyword performance analysis with:
+
+- **Multi-Account Analysis**: Compare performance across sub-accounts
+- **Flexible Date Ranges**: Current month, last month, custom ranges
+- **Sorting Options**: Cost, impressions, CTR, conversions, conversion rate
+- **Export Capabilities**: Download performance reports as PDF
+- **Performance Insights**: Automated recommendations and insights
+
+**Requirements**: Active campaigns with performance data
 
 ### Security Best Practices
 
