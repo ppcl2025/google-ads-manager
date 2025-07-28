@@ -81,11 +81,6 @@ class AppUsageLogger:
 if 'usage_logger' not in st.session_state:
     st.session_state.usage_logger = AppUsageLogger()
 
-# Clear uploaded file on app restart
-if 'file_uploader_key' not in st.session_state:
-    import time
-    st.session_state.file_uploader_key = f"file_uploader_{int(time.time())}"
-
 # Constants
 DEFAULT_MCC_ID = "502-288-7746"
 DEFAULT_CURRENCIES = ["USD", "EUR", "GBP", "INR"]
@@ -742,6 +737,15 @@ def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name
 
 # Streamlit UI
 def main():
+    # Clear uploaded file on app refresh/restart
+    if 'uploaded_file_cleared' not in st.session_state:
+        st.session_state.uploaded_file_cleared = False
+    
+    # Clear the uploaded file when the app starts
+    if not st.session_state.uploaded_file_cleared:
+        st.session_state.uploaded_file_cleared = True
+        # This will force the file uploader to be empty on app refresh
+    
     st.title("Google Ads Manager AI Agent")
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
 
@@ -921,19 +925,24 @@ def main():
             campaign_name = st.text_input("Campaign Name for Bulk Upload")
             campaign_id = None
             budget_amount = 10.0  # Default budget for new campaign
-        uploaded_file = st.file_uploader("Upload CSV or Excel file", type=["csv", "xlsx"], key=st.session_state.file_uploader_key)
+        # File upload with clear functionality
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            uploaded_file = st.file_uploader(
+                "Upload CSV or Excel file", 
+                type=["csv", "xlsx"],
+                key=f"bulk_upload_file_{st.session_state.uploaded_file_cleared}"
+            )
+        with col2:
+            if st.button("🗑️ Clear File", help="Clear the uploaded file"):
+                st.session_state.uploaded_file_cleared = not st.session_state.uploaded_file_cleared
+                st.rerun()
         
-        # Add button to clear uploaded file
+        # Show file status
         if uploaded_file:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.success(f"✅ File uploaded: {uploaded_file.name}")
-            with col2:
-                if st.button("🗑️ Clear File"):
-                    # Generate new key to clear the file uploader
-                    import time
-                    st.session_state.file_uploader_key = f"file_uploader_{int(time.time())}"
-                    st.rerun()
+            st.success(f"✅ File uploaded: {uploaded_file.name}")
+        else:
+            st.info("📁 Please upload a CSV or Excel file to proceed")
         
         if st.button("Process Bulk Upload"):
             if not campaign_name:
@@ -962,6 +971,9 @@ def main():
                 # Process the bulk upload
                 if process_bulk_upload(client, customer_id_bulk, campaign_name, df, campaign_id, budget_amount):
                     show_message("✅ Bulk upload completed successfully!")
+                    # Clear the file after successful upload
+                    st.session_state.uploaded_file_cleared = not st.session_state.uploaded_file_cleared
+                    st.rerun()
                 else:
                     show_message("❌ Bulk upload failed. Please check the file format and try again.", False)
 
