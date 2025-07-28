@@ -81,6 +81,11 @@ class AppUsageLogger:
 if 'usage_logger' not in st.session_state:
     st.session_state.usage_logger = AppUsageLogger()
 
+# Clear uploaded file on app restart
+if 'file_uploader_key' not in st.session_state:
+    import time
+    st.session_state.file_uploader_key = f"file_uploader_{int(time.time())}"
+
 # Constants
 DEFAULT_MCC_ID = "502-288-7746"
 DEFAULT_CURRENCIES = ["USD", "EUR", "GBP", "INR"]
@@ -916,7 +921,19 @@ def main():
             campaign_name = st.text_input("Campaign Name for Bulk Upload")
             campaign_id = None
             budget_amount = 10.0  # Default budget for new campaign
-        uploaded_file = st.file_uploader("Upload CSV or Excel file", type=["csv", "xlsx"])
+        uploaded_file = st.file_uploader("Upload CSV or Excel file", type=["csv", "xlsx"], key=st.session_state.file_uploader_key)
+        
+        # Add button to clear uploaded file
+        if uploaded_file:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.success(f"✅ File uploaded: {uploaded_file.name}")
+            with col2:
+                if st.button("🗑️ Clear File"):
+                    # Generate new key to clear the file uploader
+                    import time
+                    st.session_state.file_uploader_key = f"file_uploader_{int(time.time())}"
+                    st.rerun()
         
         if st.button("Process Bulk Upload"):
             if not campaign_name:
