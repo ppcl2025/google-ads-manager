@@ -2969,15 +2969,14 @@ def get_performance_based_bid_data(client: GoogleAdsClient, customer_id: str, ca
             campaign.name,
             ad_group.id,
             ad_group.name,
-            keyword.text,
-            keyword.match_type,
+            ad_group_criterion.keyword.text,
+            ad_group_criterion.keyword.match_type,
             metrics.impressions,
             metrics.clicks,
             metrics.cost_micros,
             metrics.conversions,
             metrics.conversions_value,
             metrics.average_cpc,
-            metrics.quality_score,
             segments.date
         FROM keyword_view 
         WHERE segments.date DURING LAST_30_DAYS
@@ -3000,15 +2999,15 @@ def get_performance_based_bid_data(client: GoogleAdsClient, customer_id: str, ca
                 'campaign_name': row.campaign.name,
                 'ad_group_id': row.ad_group.id,
                 'ad_group_name': row.ad_group.name,
-                'keyword': row.keyword.text,
-                'match_type': row.keyword.match_type.name,
+                'keyword': row.ad_group_criterion.keyword.text,
+                'match_type': row.ad_group_criterion.keyword.match_type.name,
                 'impressions': row.metrics.impressions,
                 'clicks': row.metrics.clicks,
                 'cost_micros': row.metrics.cost_micros,
                 'conversions': row.metrics.conversions,
                 'conversions_value': row.metrics.conversions_value,
                 'average_cpc': row.metrics.average_cpc,
-                'quality_score': row.metrics.quality_score,
+                'quality_score': 0,  # Default value since quality_score field is not available
                 'date': str(row.segments.date)
             })
         
@@ -3082,7 +3081,7 @@ def analyze_performance_based_bid_optimization(performance_data: list) -> dict:
             recommendation['suggested_action'] = 'Consider pausing or reducing bids significantly'
             recommendations['pause_keywords'].append(recommendation)
         
-        # Good quality score but low impressions - opportunity
+        # Good quality score but low impressions - opportunity (only if quality score is available)
         elif quality_score >= 7 and data['impressions'] < 500:
             recommendation['recommendation'] = 'quality_score_opportunity'
             recommendation['reason'] = f'High quality score ({quality_score}/10) but low impressions ({data["impressions"]})'
@@ -3113,7 +3112,7 @@ def analyze_performance_based_bid_optimization(performance_data: list) -> dict:
         'total_conversions': total_conversions,
         'total_conversion_value': total_conversion_value,
         'overall_roas': total_conversion_value / total_cost if total_cost > 0 else 0,
-        'avg_quality_score': sum(d['quality_score'] for d in performance_data if d['quality_score']) / len([d for d in performance_data if d['quality_score']]) if any(d['quality_score'] for d in performance_data) else 0
+        'avg_quality_score': sum(d['quality_score'] for d in performance_data if d['quality_score'] > 0) / len([d for d in performance_data if d['quality_score'] > 0]) if any(d['quality_score'] > 0 for d in performance_data) else 0
     }
     
     return recommendations
@@ -3135,7 +3134,10 @@ def display_performance_based_bid_dashboard(recommendations: dict):
         st.metric("Overall ROAS", f"{stats['overall_roas']:.2f}")
     with col2:
         st.metric("Increase Bids", stats['increase_bids_count'], delta=f"+{stats['increase_bids_count']}")
-        st.metric("Avg Quality Score", f"{stats['avg_quality_score']:.1f}/10")
+        if stats['avg_quality_score'] > 0:
+            st.metric("Avg Quality Score", f"{stats['avg_quality_score']:.1f}/10")
+        else:
+            st.metric("Quality Score", "Not Available")
     with col3:
         st.metric("Decrease Bids", stats['decrease_bids_count'], delta=f"-{stats['decrease_bids_count']}")
         st.metric("Total Cost", f"${stats['total_cost']:,.2f}")
@@ -3144,7 +3146,10 @@ def display_performance_based_bid_dashboard(recommendations: dict):
         st.metric("Total Conversions", stats['total_conversions'])
     
     # Recommendations by category
-    tabs = st.tabs(["📈 Increase Bids", "📉 Decrease Bids", "⏸️ Pause Keywords", "⭐ Quality Score Opportunities", "⚖️ Maintain Bids"])
+    if stats['avg_quality_score'] > 0:
+        tabs = st.tabs(["📈 Increase Bids", "📉 Decrease Bids", "⏸️ Pause Keywords", "⭐ Quality Score Opportunities", "⚖️ Maintain Bids"])
+    else:
+        tabs = st.tabs(["📈 Increase Bids", "📉 Decrease Bids", "⏸️ Pause Keywords", "⚖️ Maintain Bids"])
     
     with tabs[0]:
         if recommendations['increase_bids']:
@@ -3203,46 +3208,70 @@ def display_performance_based_bid_dashboard(recommendations: dict):
         else:
             st.info("No keywords recommended for pausing.")
     
-    with tabs[3]:
-        if recommendations['quality_score_opportunities']:
-            st.subheader(f"⭐ Quality Score Opportunities ({len(recommendations['quality_score_opportunities'])} keywords)")
-            for rec in recommendations['quality_score_opportunities']:
-                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write(f"**Current Metrics:**")
-                        st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
-                        st.write(f"• Impressions: {rec['current_metrics']['impressions']}")
-                        st.write(f"• CTR: {rec['current_metrics']['ctr']:.1%}")
-                        st.write(f"• CPC: ${rec['current_metrics']['cpc']:.2f}")
-                    with col2:
-                        st.write(f"**Recommendation:**")
-                        st.write(f"• {rec['suggested_action']}")
-                        st.write(f"• Reason: {rec['reason']}")
-        else:
-            st.info("No quality score opportunities identified.")
-    
-    with tabs[4]:
-        if recommendations['maintain_bids']:
-            st.subheader(f"⚖️ Maintain Bids ({len(recommendations['maintain_bids'])} keywords)")
-            # Show first 10 for brevity
-            for rec in recommendations['maintain_bids'][:10]:
-                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write(f"**Current Metrics:**")
-                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
-                        st.write(f"• CTR: {rec['current_metrics']['ctr']:.1%}")
-                        st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
-                    with col2:
-                        st.write(f"**Recommendation:**")
-                        st.write(f"• {rec['suggested_action']}")
-                        st.write(f"• Reason: {rec['reason']}")
-            
-            if len(recommendations['maintain_bids']) > 10:
-                st.info(f"Showing first 10 of {len(recommendations['maintain_bids'])} keywords. Use filters to see more.")
-        else:
-            st.info("No keywords in maintain category.")
+    # Handle quality score opportunities tab if available
+    if stats['avg_quality_score'] > 0:
+        with tabs[3]:
+            if recommendations['quality_score_opportunities']:
+                st.subheader(f"⭐ Quality Score Opportunities ({len(recommendations['quality_score_opportunities'])} keywords)")
+                for rec in recommendations['quality_score_opportunities']:
+                    with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**Current Metrics:**")
+                            st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
+                            st.write(f"• Impressions: {rec['current_metrics']['impressions']}")
+                            st.write(f"• CTR: {rec['current_metrics']['ctr']:.1%}")
+                            st.write(f"• CPC: ${rec['current_metrics']['cpc']:.2f}")
+                        with col2:
+                            st.write(f"**Recommendation:**")
+                            st.write(f"• {rec['suggested_action']}")
+                            st.write(f"• Reason: {rec['reason']}")
+            else:
+                st.info("No quality score opportunities identified.")
+        
+        with tabs[4]:
+            if recommendations['maintain_bids']:
+                st.subheader(f"⚖️ Maintain Bids ({len(recommendations['maintain_bids'])} keywords)")
+                # Show first 10 for brevity
+                for rec in recommendations['maintain_bids'][:10]:
+                    with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**Current Metrics:**")
+                            st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                            st.write(f"• CTR: {rec['current_metrics']['ctr']:.1%}")
+                            st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
+                        with col2:
+                            st.write(f"**Recommendation:**")
+                            st.write(f"• {rec['suggested_action']}")
+                            st.write(f"• Reason: {rec['reason']}")
+                
+                if len(recommendations['maintain_bids']) > 10:
+                    st.info(f"Showing first 10 of {len(recommendations['maintain_bids'])} keywords. Use filters to see more.")
+            else:
+                st.info("No keywords in maintain category.")
+    else:
+        with tabs[3]:
+            if recommendations['maintain_bids']:
+                st.subheader(f"⚖️ Maintain Bids ({len(recommendations['maintain_bids'])} keywords)")
+                # Show first 10 for brevity
+                for rec in recommendations['maintain_bids'][:10]:
+                    with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**Current Metrics:**")
+                            st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                            st.write(f"• CTR: {rec['current_metrics']['ctr']:.1%}")
+                            st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
+                        with col2:
+                            st.write(f"**Recommendation:**")
+                            st.write(f"• {rec['suggested_action']}")
+                            st.write(f"• Reason: {rec['reason']}")
+                
+                if len(recommendations['maintain_bids']) > 10:
+                    st.info(f"Showing first 10 of {len(recommendations['maintain_bids'])} keywords. Use filters to see more.")
+            else:
+                st.info("No keywords in maintain category.")
 
 if __name__ == "__main__":
     main()
