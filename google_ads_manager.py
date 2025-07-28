@@ -729,6 +729,9 @@ def process_bulk_upload(client: GoogleAdsClient, customer_id: str, campaign_name
                 path1 = row.get("path1", "").strip() if pd.notna(row.get("path1")) else ""
                 path2 = row.get("path2", "").strip() if pd.notna(row.get("path2")) else ""
                 
+                # Debug: Log the URL values being used
+                st.write(f"DEBUG: Row {_}: final_url='{final_url}', path1='{path1}', path2='{path2}'")
+                
                 headline_positions = (row.get("headline_positions", "").split(";") 
                                     if pd.notna(row.get("headline_positions")) else [""] * MAX_HEADLINES)
                 description_positions = (row.get("description_positions", "").split(";") 
