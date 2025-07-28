@@ -1151,23 +1151,61 @@ def main():
                 selected_campaign = next(camp for camp in existing_campaigns if camp['name'] == campaign_name)
                 campaign_id = selected_campaign['id']
             
+            # Add analysis type selection
+            analysis_type = st.radio(
+                "Select Analysis Type:",
+                ["🎯 Auction Insights (Advanced)", "📊 Performance-Based (Always Available)"],
+                help="Auction insights provide competitive data but require sufficient campaign data. Performance-based analysis works with any active campaigns."
+            )
+            
             if st.button("🚀 Run Bid Optimization Analysis"):
-                with st.spinner("Analyzing auction insights and generating bid recommendations..."):
+                with st.spinner("Analyzing data and generating bid recommendations..."):
                     try:
-                        # Get auction insights data
-                        auction_data = get_auction_insights_data(client, bid_opt_customer_id, campaign_id)
-                        
-                        if auction_data:
-                            # Analyze bid optimization opportunities
-                            recommendations = analyze_bid_optimization_opportunities(auction_data)
+                        if analysis_type == "🎯 Auction Insights (Advanced)":
+                            # Try auction insights first
+                            auction_data = get_auction_insights_data(client, bid_opt_customer_id, campaign_id)
                             
-                            # Store in session state for persistence
-                            st.session_state.bid_optimization_data = recommendations
-                            
-                            # Display the dashboard
-                            display_bid_optimization_dashboard(recommendations)
+                            if auction_data:
+                                # Analyze bid optimization opportunities
+                                recommendations = analyze_bid_optimization_opportunities(auction_data)
+                                
+                                # Store in session state for persistence
+                                st.session_state.bid_optimization_data = recommendations
+                                st.session_state.bid_optimization_type = "auction_insights"
+                                
+                                # Display the dashboard
+                                display_bid_optimization_dashboard(recommendations)
+                            else:
+                                st.warning("No auction insights data available. Trying performance-based analysis instead...")
+                                # Fall back to performance-based analysis
+                                performance_data = get_performance_based_bid_data(client, bid_opt_customer_id, campaign_id)
+                                
+                                if performance_data:
+                                    recommendations = analyze_performance_based_bid_optimization(performance_data)
+                                    
+                                    # Store in session state for persistence
+                                    st.session_state.bid_optimization_data = recommendations
+                                    st.session_state.bid_optimization_type = "performance_based"
+                                    
+                                    # Display the dashboard
+                                    display_performance_based_bid_dashboard(recommendations)
+                                else:
+                                    st.error("No performance data available for the selected account/campaign.")
                         else:
-                            st.warning("No auction insights data available for the selected account/campaign.")
+                            # Use performance-based analysis
+                            performance_data = get_performance_based_bid_data(client, bid_opt_customer_id, campaign_id)
+                            
+                            if performance_data:
+                                recommendations = analyze_performance_based_bid_optimization(performance_data)
+                                
+                                # Store in session state for persistence
+                                st.session_state.bid_optimization_data = recommendations
+                                st.session_state.bid_optimization_type = "performance_based"
+                                
+                                # Display the dashboard
+                                display_performance_based_bid_dashboard(recommendations)
+                            else:
+                                st.error("No performance data available for the selected account/campaign.")
                             
                     except Exception as e:
                         st.error(f"Error running bid optimization analysis: {str(e)}")
@@ -1176,7 +1214,14 @@ def main():
             # Display existing data if available
             elif 'bid_optimization_data' in st.session_state and st.session_state.bid_optimization_data:
                 st.info("📊 Displaying previous bid optimization analysis. Click 'Run Bid Optimization Analysis' to refresh.")
-                display_bid_optimization_dashboard(st.session_state.bid_optimization_data)
+                
+                # Check which type of analysis was used
+                analysis_type = st.session_state.get('bid_optimization_type', 'performance_based')
+                
+                if analysis_type == 'auction_insights':
+                    display_bid_optimization_dashboard(st.session_state.bid_optimization_data)
+                else:
+                    display_performance_based_bid_dashboard(st.session_state.bid_optimization_data)
         else:
             st.warning("No sub-accounts found. Please create sub-accounts first.")
 
@@ -1226,7 +1271,8 @@ def main():
                             # Display the report
                             display_competitive_landscape_report(competitive_analysis)
                         else:
-                            st.warning("No auction insights data available for the selected account/campaign.")
+                            st.warning("⚠️ Auction insights data is not available for this account. This feature requires active campaigns with sufficient competitive data.")
+                            st.info("💡 **Alternative**: Use the Bid Optimization Engine (Tab 5) with 'Performance-Based Analysis' for keyword optimization recommendations.")
                             
                     except Exception as e:
                         st.error(f"Error generating competitive analysis: {str(e)}")
@@ -2910,6 +2956,293 @@ def display_performance_overview(performance_data: dict, date_range: tuple = Non
     # Date range info
     if date_range:
         st.info(f"📅 Data period: {date_range[0]} to {date_range[1]}")
+
+def get_performance_based_bid_data(client: GoogleAdsClient, customer_id: str, campaign_id: str = None) -> list:
+    """Get performance data for bid optimization analysis when auction insights aren't available."""
+    try:
+        google_ads_service = client.get_service("GoogleAdsService")
+        
+        # Build query for keyword performance data
+        query = """
+        SELECT 
+            campaign.id,
+            campaign.name,
+            ad_group.id,
+            ad_group.name,
+            keyword.text,
+            keyword.match_type,
+            metrics.impressions,
+            metrics.clicks,
+            metrics.cost_micros,
+            metrics.conversions,
+            metrics.conversions_value,
+            metrics.average_cpc,
+            metrics.quality_score,
+            segments.date
+        FROM keyword_view 
+        WHERE segments.date DURING LAST_30_DAYS
+        AND ad_group_criterion.status = 'ENABLED'
+        AND campaign.status = 'ENABLED'
+        """
+        
+        if campaign_id:
+            query += f" AND campaign.id = {campaign_id}"
+        
+        response = google_ads_service.search(
+            customer_id=customer_id,
+            query=query
+        )
+        
+        performance_data = []
+        for row in response:
+            performance_data.append({
+                'campaign_id': row.campaign.id,
+                'campaign_name': row.campaign.name,
+                'ad_group_id': row.ad_group.id,
+                'ad_group_name': row.ad_group.name,
+                'keyword': row.keyword.text,
+                'match_type': row.keyword.match_type.name,
+                'impressions': row.metrics.impressions,
+                'clicks': row.metrics.clicks,
+                'cost_micros': row.metrics.cost_micros,
+                'conversions': row.metrics.conversions,
+                'conversions_value': row.metrics.conversions_value,
+                'average_cpc': row.metrics.average_cpc,
+                'quality_score': row.metrics.quality_score,
+                'date': str(row.segments.date)
+            })
+        
+        return performance_data
+        
+    except Exception as ex:
+        st.error(f"Error fetching performance data: {str(ex)}")
+        return []
+
+def analyze_performance_based_bid_optimization(performance_data: list) -> dict:
+    """Analyze performance data and provide bid optimization recommendations."""
+    if not performance_data:
+        return {}
+    
+    recommendations = {
+        'increase_bids': [],
+        'decrease_bids': [],
+        'maintain_bids': [],
+        'pause_keywords': [],
+        'quality_score_opportunities': [],
+        'summary_stats': {}
+    }
+    
+    for data in performance_data:
+        # Calculate key metrics
+        cost = data['cost_micros'] / 1000000  # Convert from micros
+        ctr = data['clicks'] / data['impressions'] if data['impressions'] > 0 else 0
+        cpc = data['average_cpc'] / 1000000 if data['average_cpc'] else 0
+        roas = data['conversions_value'] / cost if cost > 0 else 0
+        conversion_rate = data['conversions'] / data['clicks'] if data['clicks'] > 0 else 0
+        quality_score = data['quality_score'] if data['quality_score'] else 0
+        
+        # Bid optimization logic based on performance
+        recommendation = {
+            'keyword': data['keyword'],
+            'campaign': data['campaign_name'],
+            'ad_group': data['ad_group_name'],
+            'current_metrics': {
+                'impressions': data['impressions'],
+                'clicks': data['clicks'],
+                'cost': cost,
+                'ctr': ctr,
+                'cpc': cpc,
+                'roas': roas,
+                'conversion_rate': conversion_rate,
+                'quality_score': quality_score
+            },
+            'recommendation': '',
+            'reason': '',
+            'suggested_action': ''
+        }
+        
+        # High ROAS, good conversion rate, low impressions - increase bids
+        if roas > 3.0 and conversion_rate > 0.05 and data['impressions'] < 1000:
+            recommendation['recommendation'] = 'increase_bid'
+            recommendation['reason'] = f'High ROAS ({roas:.2f}) with good conversion rate ({conversion_rate:.1%}) but low impressions ({data["impressions"]})'
+            recommendation['suggested_action'] = 'Increase bid by 15-25% to capture more impressions'
+            recommendations['increase_bids'].append(recommendation)
+        
+        # Low ROAS, poor conversion rate, high cost - decrease bids
+        elif roas < 1.5 and conversion_rate < 0.02 and cost > 50:
+            recommendation['recommendation'] = 'decrease_bid'
+            recommendation['reason'] = f'Low ROAS ({roas:.2f}) with poor conversion rate ({conversion_rate:.1%}) and high cost (${cost:.2f})'
+            recommendation['suggested_action'] = 'Decrease bid by 10-20% to improve efficiency'
+            recommendations['decrease_bids'].append(recommendation)
+        
+        # Poor performance, high cost, no conversions - consider pausing
+        elif roas < 1.0 and data['conversions'] == 0 and cost > 100:
+            recommendation['recommendation'] = 'pause_keyword'
+            recommendation['reason'] = f'Poor ROAS ({roas:.2f}) with no conversions and high cost (${cost:.2f})'
+            recommendation['suggested_action'] = 'Consider pausing or reducing bids significantly'
+            recommendations['pause_keywords'].append(recommendation)
+        
+        # Good quality score but low impressions - opportunity
+        elif quality_score >= 7 and data['impressions'] < 500:
+            recommendation['recommendation'] = 'quality_score_opportunity'
+            recommendation['reason'] = f'High quality score ({quality_score}/10) but low impressions ({data["impressions"]})'
+            recommendation['suggested_action'] = 'Consider increasing bid to leverage high quality score'
+            recommendations['quality_score_opportunities'].append(recommendation)
+        
+        # Balanced performance - maintain
+        else:
+            recommendation['recommendation'] = 'maintain_bid'
+            recommendation['reason'] = f'Balanced performance (ROAS: {roas:.2f}, CTR: {ctr:.1%}, Quality Score: {quality_score}/10)'
+            recommendation['suggested_action'] = 'Maintain current bid strategy'
+            recommendations['maintain_bids'].append(recommendation)
+    
+    # Calculate summary statistics
+    total_keywords = len(performance_data)
+    total_cost = sum(d['cost_micros'] / 1000000 for d in performance_data)
+    total_conversions = sum(d['conversions'] for d in performance_data)
+    total_conversion_value = sum(d['conversions_value'] for d in performance_data)
+    
+    recommendations['summary_stats'] = {
+        'total_keywords': total_keywords,
+        'increase_bids_count': len(recommendations['increase_bids']),
+        'decrease_bids_count': len(recommendations['decrease_bids']),
+        'maintain_bids_count': len(recommendations['maintain_bids']),
+        'pause_keywords_count': len(recommendations['pause_keywords']),
+        'quality_score_opportunities_count': len(recommendations['quality_score_opportunities']),
+        'total_cost': total_cost,
+        'total_conversions': total_conversions,
+        'total_conversion_value': total_conversion_value,
+        'overall_roas': total_conversion_value / total_cost if total_cost > 0 else 0,
+        'avg_quality_score': sum(d['quality_score'] for d in performance_data if d['quality_score']) / len([d for d in performance_data if d['quality_score']]) if any(d['quality_score'] for d in performance_data) else 0
+    }
+    
+    return recommendations
+
+def display_performance_based_bid_dashboard(recommendations: dict):
+    """Display the performance-based bid optimization dashboard."""
+    st.header("🤖 Performance-Based Bid Optimization")
+    
+    if not recommendations:
+        st.warning("No bid optimization data available. Please run the analysis first.")
+        return
+    
+    # Summary statistics
+    stats = recommendations['summary_stats']
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Keywords", stats['total_keywords'])
+        st.metric("Overall ROAS", f"{stats['overall_roas']:.2f}")
+    with col2:
+        st.metric("Increase Bids", stats['increase_bids_count'], delta=f"+{stats['increase_bids_count']}")
+        st.metric("Avg Quality Score", f"{stats['avg_quality_score']:.1f}/10")
+    with col3:
+        st.metric("Decrease Bids", stats['decrease_bids_count'], delta=f"-{stats['decrease_bids_count']}")
+        st.metric("Total Cost", f"${stats['total_cost']:,.2f}")
+    with col4:
+        st.metric("Pause Keywords", stats['pause_keywords_count'])
+        st.metric("Total Conversions", stats['total_conversions'])
+    
+    # Recommendations by category
+    tabs = st.tabs(["📈 Increase Bids", "📉 Decrease Bids", "⏸️ Pause Keywords", "⭐ Quality Score Opportunities", "⚖️ Maintain Bids"])
+    
+    with tabs[0]:
+        if recommendations['increase_bids']:
+            st.subheader(f"📈 Increase Bids ({len(recommendations['increase_bids'])} keywords)")
+            for rec in recommendations['increase_bids']:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                        st.write(f"• Conversion Rate: {rec['current_metrics']['conversion_rate']:.1%}")
+                        st.write(f"• Impressions: {rec['current_metrics']['impressions']}")
+                        st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+        else:
+            st.info("No keywords recommended for bid increases.")
+    
+    with tabs[1]:
+        if recommendations['decrease_bids']:
+            st.subheader(f"📉 Decrease Bids ({len(recommendations['decrease_bids'])} keywords)")
+            for rec in recommendations['decrease_bids']:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                        st.write(f"• Conversion Rate: {rec['current_metrics']['conversion_rate']:.1%}")
+                        st.write(f"• Cost: ${rec['current_metrics']['cost']:.2f}")
+                        st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+        else:
+            st.info("No keywords recommended for bid decreases.")
+    
+    with tabs[2]:
+        if recommendations['pause_keywords']:
+            st.subheader(f"⏸️ Pause Keywords ({len(recommendations['pause_keywords'])} keywords)")
+            for rec in recommendations['pause_keywords']:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                        st.write(f"• Conversions: {rec['current_metrics']['conversions']}")
+                        st.write(f"• Cost: ${rec['current_metrics']['cost']:.2f}")
+                        st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+        else:
+            st.info("No keywords recommended for pausing.")
+    
+    with tabs[3]:
+        if recommendations['quality_score_opportunities']:
+            st.subheader(f"⭐ Quality Score Opportunities ({len(recommendations['quality_score_opportunities'])} keywords)")
+            for rec in recommendations['quality_score_opportunities']:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
+                        st.write(f"• Impressions: {rec['current_metrics']['impressions']}")
+                        st.write(f"• CTR: {rec['current_metrics']['ctr']:.1%}")
+                        st.write(f"• CPC: ${rec['current_metrics']['cpc']:.2f}")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+        else:
+            st.info("No quality score opportunities identified.")
+    
+    with tabs[4]:
+        if recommendations['maintain_bids']:
+            st.subheader(f"⚖️ Maintain Bids ({len(recommendations['maintain_bids'])} keywords)")
+            # Show first 10 for brevity
+            for rec in recommendations['maintain_bids'][:10]:
+                with st.expander(f"**{rec['keyword']}** - {rec['campaign']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Current Metrics:**")
+                        st.write(f"• ROAS: {rec['current_metrics']['roas']:.2f}")
+                        st.write(f"• CTR: {rec['current_metrics']['ctr']:.1%}")
+                        st.write(f"• Quality Score: {rec['current_metrics']['quality_score']}/10")
+                    with col2:
+                        st.write(f"**Recommendation:**")
+                        st.write(f"• {rec['suggested_action']}")
+                        st.write(f"• Reason: {rec['reason']}")
+            
+            if len(recommendations['maintain_bids']) > 10:
+                st.info(f"Showing first 10 of {len(recommendations['maintain_bids'])} keywords. Use filters to see more.")
+        else:
+            st.info("No keywords in maintain category.")
 
 if __name__ == "__main__":
     main()
