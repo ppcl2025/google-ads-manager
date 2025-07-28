@@ -587,18 +587,18 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
 
         ad = client.get_type("Ad")
         
-        # For Google Ads responsive search ads, we can use URL parameters
-        # to achieve the desired display URL while keeping the actual landing page
+        # Set the final URL (the actual landing page)
+        ad.final_urls.append(final_url)
+        
+        # For Google Ads responsive search ads, we can set display URL paths
+        # This affects how the URL appears in the ad, not the actual landing page
         if path1 or path2:
-            # Add path parameters to the final URL for display purposes
-            display_url = final_url.rstrip('/')
+            # Set display URL paths for the responsive search ad
+            rsa = ad.responsive_search_ad
             if path1:
-                display_url += f"/{path1.strip()}"
+                rsa.path1 = path1.strip()
             if path2:
-                display_url += f"/{path2.strip()}"
-            ad.final_urls.append(display_url)
-        else:
-            ad.final_urls.append(final_url)
+                rsa.path2 = path2.strip()
         
         rsa = ad.responsive_search_ad
 
