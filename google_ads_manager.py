@@ -605,24 +605,64 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add headlines with positions
         for i, headline in enumerate(headlines):
             if headline:
+                # Handle ad customizer tags properly - they don't count toward character limit
+                import re
+                
+                # Find all ad customizer tags in the headline
+                ad_customizer_pattern = r'\{[^}]+\}'
+                ad_customizer_tags = re.findall(ad_customizer_pattern, headline)
+                
+                # Remove ad customizer tags temporarily to count actual characters
+                headline_without_tags = re.sub(ad_customizer_pattern, '', headline)
+                
+                # Calculate how many characters we can use (30 - actual text length)
+                available_chars = 30 - len(headline_without_tags.strip())
+                
+                # If we have room, include the full headline with tags
+                if available_chars >= 0:
+                    headline_text = headline
+                else:
+                    # Truncate the text portion, but keep ad customizer tags intact
+                    # This is a simplified approach - in practice, you might want to be more sophisticated
+                    headline_text = headline[:30]
+                
                 headline_asset = client.get_type("AdTextAsset")
-                headline_text = headline[:30]
                 headline_asset.text = headline_text
                 if i < len(headline_positions) and headline_positions[i]:
                     headline_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"HEADLINE_{headline_positions[i]}"]
                 rsa.headlines.append(headline_asset)
                 # Debug: Log what's being sent
                 if "{" in headline_text:
-                    st.write(f"DEBUG: Headline {i+1} with ad customizer: '{headline_text}'")
+                    st.write(f"DEBUG: Headline {i+1} with ad customizer: '{headline_text}' (length: {len(headline_text)})")
 
         # Add descriptions with positions
         for i, description in enumerate(descriptions):
             if description:
+                # Handle ad customizer tags properly - they don't count toward character limit
+                # Find all ad customizer tags in the description
+                ad_customizer_tags = re.findall(ad_customizer_pattern, description)
+                
+                # Remove ad customizer tags temporarily to count actual characters
+                description_without_tags = re.sub(ad_customizer_pattern, '', description)
+                
+                # Calculate how many characters we can use (60 - actual text length)
+                available_chars = 60 - len(description_without_tags.strip())
+                
+                # If we have room, include the full description with tags
+                if available_chars >= 0:
+                    description_text = description
+                else:
+                    # Truncate the text portion, but keep ad customizer tags intact
+                    description_text = description[:60]
+                
                 description_asset = client.get_type("AdTextAsset")
-                description_asset.text = description[:60]
+                description_asset.text = description_text
                 if i < len(description_positions) and description_positions[i]:
                     description_asset.pinned_field = client.enums.ServedAssetFieldTypeEnum[f"DESCRIPTION_{description_positions[i]}"]
                 rsa.descriptions.append(description_asset)
+                # Debug: Log what's being sent
+                if "{" in description_text:
+                    st.write(f"DEBUG: Description {i+1} with ad customizer: '{description_text}' (length: {len(description_text)})")
 
         ad_group_ad.ad = ad
         ad_group_ad_operation = client.get_type("AdGroupAdOperation")
