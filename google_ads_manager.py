@@ -605,7 +605,7 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add headlines with positions
         for i, headline in enumerate(headlines):
             if headline:
-                # Handle ad customizer tags properly - they don't count toward character limit
+                # Handle ad customizer tags properly - Google Ads API counts them toward limit
                 import re
                 
                 # Find all ad customizer tags in the headline
@@ -615,16 +615,21 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
                 # Remove ad customizer tags temporarily to count actual characters
                 headline_without_tags = re.sub(ad_customizer_pattern, '', headline)
                 
-                # Calculate how many characters we can use (30 - actual text length)
-                available_chars = 30 - len(headline_without_tags.strip())
+                # Calculate how many characters we can use for text (30 - tag lengths)
+                total_tag_length = sum(len(tag) for tag in ad_customizer_tags)
+                available_chars_for_text = 30 - total_tag_length
                 
-                # If we have room, include the full headline with tags
-                if available_chars >= 0:
-                    headline_text = headline
+                if available_chars_for_text > 0:
+                    # Truncate the text portion to fit within available space
+                    truncated_text = headline_without_tags.strip()[:available_chars_for_text]
+                    
+                    # Reconstruct headline with truncated text and full tags
+                    headline_text = truncated_text
+                    for tag in ad_customizer_tags:
+                        headline_text += tag
                 else:
-                    # Truncate the text portion, but keep ad customizer tags intact
-                    # This is a simplified approach - in practice, you might want to be more sophisticated
-                    headline_text = headline[:30]
+                    # If tags take up all 30 chars, just use the first tag
+                    headline_text = ad_customizer_tags[0] if ad_customizer_tags else headline[:30]
                 
                 headline_asset = client.get_type("AdTextAsset")
                 headline_asset.text = headline_text
@@ -638,22 +643,28 @@ def create_ad(client: GoogleAdsClient, customer_id: str, ad_group_id: str,
         # Add descriptions with positions
         for i, description in enumerate(descriptions):
             if description:
-                # Handle ad customizer tags properly - they don't count toward character limit
+                # Handle ad customizer tags properly - Google Ads API counts them toward limit
                 # Find all ad customizer tags in the description
                 ad_customizer_tags = re.findall(ad_customizer_pattern, description)
                 
                 # Remove ad customizer tags temporarily to count actual characters
                 description_without_tags = re.sub(ad_customizer_pattern, '', description)
                 
-                # Calculate how many characters we can use (60 - actual text length)
-                available_chars = 60 - len(description_without_tags.strip())
+                # Calculate how many characters we can use for text (60 - tag lengths)
+                total_tag_length = sum(len(tag) for tag in ad_customizer_tags)
+                available_chars_for_text = 60 - total_tag_length
                 
-                # If we have room, include the full description with tags
-                if available_chars >= 0:
-                    description_text = description
+                if available_chars_for_text > 0:
+                    # Truncate the text portion to fit within available space
+                    truncated_text = description_without_tags.strip()[:available_chars_for_text]
+                    
+                    # Reconstruct description with truncated text and full tags
+                    description_text = truncated_text
+                    for tag in ad_customizer_tags:
+                        description_text += tag
                 else:
-                    # Truncate the text portion, but keep ad customizer tags intact
-                    description_text = description[:60]
+                    # If tags take up all 60 chars, just use the first tag
+                    description_text = ad_customizer_tags[0] if ad_customizer_tags else description[:60]
                 
                 description_asset = client.get_type("AdTextAsset")
                 description_asset.text = description_text
