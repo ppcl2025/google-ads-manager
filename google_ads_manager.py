@@ -1217,8 +1217,11 @@ def main():
                         # Step 2: Try to set conversion tracking to MCC
                         st.write("**Step 2: Attempting to set conversion tracking to 'This Manager'...**")
                         
-                        # Use GoogleAdsService to update customer settings
+                        # Try different approaches to update customer settings
                         try:
+                            # Approach 1: Try using CustomerService directly
+                            customer_service = client.get_service("CustomerService")
+                            
                             # Create customer operation
                             customer_operation = client.get_type("CustomerOperation")
                             customer_update = customer_operation.update
@@ -1231,13 +1234,41 @@ def main():
                             
                             customer_update.conversion_tracking_setting = conversion_setting
                             
-                            # Update the customer using GoogleAdsService
-                            response = google_ads_service.mutate(
-                                customer_id=test_account_id,
-                                operations=[customer_operation]
-                            )
-                            
-                            st.success("✅ Successfully updated conversion tracking!")
+                            # Try to update using CustomerService
+                            try:
+                                response = customer_service.mutate_customers(
+                                    customer_id=test_account_id,
+                                    operations=[customer_operation]
+                                )
+                                st.success("✅ Successfully updated conversion tracking using CustomerService!")
+                                
+                            except Exception as customer_service_error:
+                                st.warning(f"CustomerService approach failed: {str(customer_service_error)}")
+                                
+                                # Approach 2: Try using GoogleAdsService with different method
+                                try:
+                                    # Try using mutate with different parameters
+                                    response = google_ads_service.mutate(
+                                        customer_id=test_account_id,
+                                        customer_operations=[customer_operation]
+                                    )
+                                    st.success("✅ Successfully updated conversion tracking using GoogleAdsService!")
+                                    
+                                except Exception as google_ads_error:
+                                    st.warning(f"GoogleAdsService approach failed: {str(google_ads_error)}")
+                                    
+                                    # Approach 3: Try using the correct mutate method
+                                    try:
+                                        response = google_ads_service.mutate(
+                                            customer_id=test_account_id,
+                                            operations=[customer_operation]
+                                        )
+                                        st.success("✅ Successfully updated conversion tracking!")
+                                        
+                                    except Exception as final_error:
+                                        st.error(f"❌ All approaches failed. Final error: {str(final_error)}")
+                                        st.info("This indicates that the API approach needs to be adjusted or permissions are insufficient.")
+                                        return
                             
                         except Exception as update_error:
                             st.error(f"❌ Error updating conversion tracking: {str(update_error)}")
@@ -1323,8 +1354,10 @@ def main():
                                     st.error("Could not retrieve customer information")
                                     return
                                 
-                                # Try to update
+                                # Try to update using multiple approaches
                                 try:
+                                    customer_service = client.get_service("CustomerService")
+                                    
                                     customer_operation = client.get_type("CustomerOperation")
                                     customer_update = customer_operation.update
                                     customer_update.resource_name = f"customers/{manual_test_id}"
@@ -1335,12 +1368,39 @@ def main():
                                     
                                     customer_update.conversion_tracking_setting = conversion_setting
                                     
-                                    response = google_ads_service.mutate(
-                                        customer_id=manual_test_id,
-                                        operations=[customer_operation]
-                                    )
-                                    
-                                    st.success("✅ Successfully updated conversion tracking!")
+                                    # Try CustomerService first
+                                    try:
+                                        response = customer_service.mutate_customers(
+                                            customer_id=manual_test_id,
+                                            operations=[customer_operation]
+                                        )
+                                        st.success("✅ Successfully updated conversion tracking using CustomerService!")
+                                        
+                                    except Exception as customer_service_error:
+                                        st.warning(f"CustomerService approach failed: {str(customer_service_error)}")
+                                        
+                                        # Try GoogleAdsService
+                                        try:
+                                            response = google_ads_service.mutate(
+                                                customer_id=manual_test_id,
+                                                customer_operations=[customer_operation]
+                                            )
+                                            st.success("✅ Successfully updated conversion tracking using GoogleAdsService!")
+                                            
+                                        except Exception as google_ads_error:
+                                            st.warning(f"GoogleAdsService approach failed: {str(google_ads_error)}")
+                                            
+                                            # Try final approach
+                                            try:
+                                                response = google_ads_service.mutate(
+                                                    customer_id=manual_test_id,
+                                                    operations=[customer_operation]
+                                                )
+                                                st.success("✅ Successfully updated conversion tracking!")
+                                                
+                                            except Exception as final_error:
+                                                st.error(f"❌ All approaches failed. Final error: {str(final_error)}")
+                                                return
                                     
                                 except Exception as update_error:
                                     st.error(f"❌ Error updating conversion tracking: {str(update_error)}")
