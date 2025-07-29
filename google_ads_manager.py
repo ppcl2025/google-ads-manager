@@ -222,7 +222,16 @@ def get_sub_accounts(_client: GoogleAdsClient, mcc_customer_id: str) -> list[dic
 # Create a new sub-account under MCC
 def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_name: str, 
                       currency_code: str, time_zone: str) -> Optional[str]:
-    """Create a new sub-account under MCC with conversion tracking set to 'This Manager'."""
+    """Create a new sub-account under MCC with conversion tracking set to 'This Manager'.
+    Sub-accounts are created without MCC payment profile linking so clients can set up their own payment methods.
+    
+    Args:
+        client: Google Ads client
+        mcc_customer_id: MCC customer ID
+        account_name: Name for the new sub-account
+        currency_code: Currency code for the account
+        time_zone: Time zone for the account
+    """
     try:
         customer_service = client.get_service("CustomerService")
         customer = client.get_type("Customer")
@@ -230,6 +239,12 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         customer.currency_code = currency_code
         customer.time_zone = time_zone
         customer.tracking_url_template = ""
+
+        # Always create accounts without MCC payment profile linking
+        customer.manager = False  # This prevents automatic MCC payment profile linking
+        customer.test_account = False
+        
+        st.info("ℹ️ Account will be created without MCC payment profile linking. Client will need to set up their own payment methods.")
 
         # Create the customer client first (without conversion tracking)
         response = customer_service.create_customer_client(
@@ -276,8 +291,8 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 customer_update.conversion_tracking_setting.conversion_tracking_id = mcc_customer_id
                 customer_update.conversion_tracking_setting.cross_account_conversion_tracking_id = mcc_customer_id
                 
-                # Also set the manager link to ensure proper MCC relationship
-                customer_update.manager = True
+                # Keep manager link as False (no MCC payment profile linking)
+                customer_update.manager = False
                 customer_update.test_account = False
                 
                 # Update the customer with conversion tracking settings
@@ -286,12 +301,13 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                     operations=[customer_operation]
                 )
                 
-                show_message(f"✅ Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
+                show_message(f"✅ Created sub-account with ID: {new_customer_id} without MCC payment profile and conversion tracking set to 'This Manager'")
                 logger.info(f"Created sub-account: {new_customer_id} with conversion tracking enabled")
                 
-                # Add helpful instructions
+                # Add helpful instructions for client setup
                 st.info("""
-                **Next Steps:**
+                **Next Steps for Client:**
+                - Set up payment methods for this account in Google Ads UI
                 - Verify conversion tracking is set to 'This Manager' in Google Ads UI
                 - If not, go to Account Settings → Conversion tracking → Select 'This manager (USD)'
                 - This enables MSL-MaxCon bidding strategy for campaigns
@@ -302,7 +318,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
             except Exception as conversion_error:
                 # If setting conversion tracking fails, still return the account ID
                 logger.warning(f"Could not set conversion tracking: {conversion_error}")
-                show_message(f"✅ Created sub-account with ID: {new_customer_id}. Conversion tracking may need to be set manually.")
+                show_message(f"✅ Created sub-account with ID: {new_customer_id} without MCC payment profile. Conversion tracking may need to be set manually.")
                 return new_customer_id
         
         return new_customer_id
@@ -310,6 +326,8 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
     except Exception as ex:
         handle_api_exception(ex, "create sub-account")
         return None
+
+
 
 # Create a campaign with daily budget
 def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
@@ -809,11 +827,12 @@ def main():
         sub_accounts_list = []  # Ensure it's an empty list
 
     # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "Create Sub-Account", 
         "Create Campaign", 
         "Bulk Upload", 
-        "Performance Analysis"
+        "Performance Analysis",
+        "Test Conversion Tracking"
     ])
 
     # Tab 1: Create Sub-Account
@@ -837,6 +856,8 @@ def main():
         account_name = st.text_input("Account Name")
         currency_code = st.selectbox("Currency Code", DEFAULT_CURRENCIES)
         time_zone = st.selectbox("Time Zone", US_TIMEZONES)
+        
+        st.info("ℹ️ **Note**: All sub-accounts are created without MCC payment profile linking. Clients will need to set up their own payment methods in Google Ads UI.")
         
         if st.button("Create Sub-Account"):
             if account_name and time_zone:
@@ -1138,6 +1159,145 @@ def main():
             
             # Display the data with current sort
             display_keywords_analysis(st.session_state.keywords_data, selected_sort, st.session_state.keyword_date_range)
+
+    # Tab 5: Test Conversion Tracking
+    with tab5:
+        st.subheader("Test Conversion Tracking Setup")
+        st.write("Test if conversion tracking can be set to 'This Manager' via API for existing sub-accounts.")
+        
+        if not sub_accounts_list:
+            st.warning("No sub-accounts found. Please create sub-accounts first.")
+        else:
+            st.info("ℹ️ This test will attempt to set conversion tracking to 'This Manager' for a selected sub-account.")
+            
+            # Select sub-account to test
+            test_account_display = st.selectbox("Select Sub-Account to Test", [acc['display'] for acc in sub_accounts_list])
+            test_account_id = next(acc['id'] for acc in sub_accounts_list if acc['display'] == test_account_display)
+            
+            if st.button("Test Conversion Tracking Setup"):
+                with st.spinner("Testing conversion tracking setup..."):
+                    try:
+                        # Step 1: Check current status
+                        st.write("**Step 1: Checking current conversion tracking status...**")
+                        customer_service = client.get_service("CustomerService")
+                        customer = customer_service.get_customer(customer_id=test_account_id)
+                        
+                        st.write(f"Account: {customer.descriptive_name} ({customer.id})")
+                        
+                        if hasattr(customer, 'conversion_tracking_setting') and customer.conversion_tracking_setting:
+                            st.write(f"Current conversion tracking ID: {customer.conversion_tracking_setting.conversion_tracking_id}")
+                            st.write(f"Current cross account conversion tracking ID: {customer.conversion_tracking_setting.cross_account_conversion_tracking_id}")
+                        else:
+                            st.write("No conversion tracking setting currently set")
+                        
+                        # Step 2: Try to set conversion tracking to MCC
+                        st.write("**Step 2: Attempting to set conversion tracking to 'This Manager'...**")
+                        
+                        # Create customer operation
+                        customer_operation = client.get_type("CustomerOperation")
+                        customer_update = customer_operation.update
+                        customer_update.resource_name = f"customers/{test_account_id}"
+                        
+                        # Set conversion tracking to use MCC
+                        conversion_setting = client.get_type("ConversionTrackingSetting")
+                        conversion_setting.conversion_tracking_id = mcc_customer_id
+                        conversion_setting.cross_account_conversion_tracking_id = mcc_customer_id
+                        
+                        customer_update.conversion_tracking_setting = conversion_setting
+                        
+                        # Update the customer
+                        response = customer_service.mutate_customers(
+                            customer_id=test_account_id,
+                            operations=[customer_operation]
+                        )
+                        
+                        st.success("✅ Successfully updated conversion tracking!")
+                        
+                        # Step 3: Verify the change
+                        st.write("**Step 3: Verifying the change...**")
+                        customer = customer_service.get_customer(customer_id=test_account_id)
+                        
+                        if hasattr(customer, 'conversion_tracking_setting') and customer.conversion_tracking_setting:
+                            st.write(f"Updated conversion tracking ID: {customer.conversion_tracking_setting.conversion_tracking_id}")
+                            st.write(f"Updated cross account conversion tracking ID: {customer.conversion_tracking_setting.cross_account_conversion_tracking_id}")
+                            
+                            if customer.conversion_tracking_setting.conversion_tracking_id == mcc_customer_id:
+                                st.success("🎉 SUCCESS: Conversion tracking is now set to use MCC account!")
+                                st.info("This should appear as 'This Manager' in the Google Ads UI")
+                            else:
+                                st.warning("⚠️ Conversion tracking ID doesn't match MCC ID")
+                        else:
+                            st.warning("⚠️ No conversion tracking setting found after update")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Error during test: {str(e)}")
+                        st.info("This might indicate that the API approach needs to be adjusted or permissions are insufficient.")
+            
+            # Manual test section
+            st.subheader("Manual Test with Custom Customer ID")
+            manual_test_id = st.text_input("Enter Customer ID to Test (format: XXX-XXX-XXXX)", "")
+            
+            if manual_test_id:
+                if not validate_customer_id(manual_test_id):
+                    st.warning("Please enter a valid Customer ID (e.g., 123-456-7890)")
+                else:
+                    manual_test_id = format_customer_id(manual_test_id)
+                    
+                    if st.button("Test Custom Customer ID"):
+                        with st.spinner("Testing conversion tracking setup..."):
+                            try:
+                                customer_service = client.get_service("CustomerService")
+                                
+                                # Check current status
+                                customer = customer_service.get_customer(customer_id=manual_test_id)
+                                st.write(f"Account: {customer.descriptive_name} ({customer.id})")
+                                
+                                if hasattr(customer, 'conversion_tracking_setting') and customer.conversion_tracking_setting:
+                                    st.write(f"Current conversion tracking ID: {customer.conversion_tracking_setting.conversion_tracking_id}")
+                                else:
+                                    st.write("No conversion tracking setting currently set")
+                                
+                                # Try to update
+                                customer_operation = client.get_type("CustomerOperation")
+                                customer_update = customer_operation.update
+                                customer_update.resource_name = f"customers/{manual_test_id}"
+                                
+                                conversion_setting = client.get_type("ConversionTrackingSetting")
+                                conversion_setting.conversion_tracking_id = mcc_customer_id
+                                conversion_setting.cross_account_conversion_tracking_id = mcc_customer_id
+                                
+                                customer_update.conversion_tracking_setting = conversion_setting
+                                
+                                response = customer_service.mutate_customers(
+                                    customer_id=manual_test_id,
+                                    operations=[customer_operation]
+                                )
+                                
+                                st.success("✅ Successfully updated conversion tracking!")
+                                
+                            except Exception as e:
+                                st.error(f"❌ Error: {str(e)}")
+            
+            # Information section
+            with st.expander("ℹ️ About Conversion Tracking Testing"):
+                st.markdown("""
+                **What this test does:**
+                
+                1. **Checks current status** - Shows the current conversion tracking settings
+                2. **Attempts to set** - Tries to set conversion tracking to use the MCC account
+                3. **Verifies the change** - Confirms if the setting was applied successfully
+                
+                **Expected Results:**
+                - If successful, the conversion tracking ID should match your MCC ID
+                - This should appear as "This Manager" in the Google Ads UI
+                - The account should be able to use MSL-MaxCon bidding strategies
+                
+                **If it fails:**
+                - Check your API permissions
+                - Verify the customer ID is correct
+                - The account might need to be fully set up first
+                - There might be a delay before settings take effect
+                """)
 
 # Get keywords analysis across all sub-accounts
 @st.cache_data(ttl=3600)  # Cache for 1 hour to reduce API calls

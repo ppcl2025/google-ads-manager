@@ -4,7 +4,7 @@ A Streamlit-based web application for managing Google Ads campaigns, ad groups, 
 
 ## Features
 
-- **Create Sub-Accounts**: Automatically create new sub-accounts with conversion tracking
+- **Create Sub-Accounts**: Automatically create new sub-accounts with conversion tracking (clients set up their own payment methods)
 - **Create Campaigns**: Set up campaigns with shared bidding strategies and negative keyword lists
 - **Bulk Upload**: Upload ad groups, ads, and keywords via CSV/Excel files
 - **Performance Analysis**: Analyze campaign and keyword performance across sub-accounts
@@ -135,6 +135,20 @@ A Streamlit-based web application for managing Google Ads campaigns, ad groups, 
 - Review [Streamlit Cloud documentation](https://docs.streamlit.io/streamlit-community-cloud)
 - Check the app logs in Streamlit Cloud dashboard
 
+### Client Payment Setup
+
+All sub-accounts are created without linking to your MCC payment profile:
+
+#### Sub-Account Creation
+- All new sub-accounts are created without MCC payment profile linking
+- Clients must set up their own payment methods in Google Ads UI
+- This ensures clients have full control over their billing
+
+#### Important Notes
+- Sub-accounts cannot run ads until clients set up payment methods
+- Conversion tracking is still set to 'This Manager' for bidding strategy compatibility
+- Clients need to add payment methods in their Google Ads account: Billing → Payment methods
+
 ### Local Development
 
 To run the app locally:
@@ -152,6 +166,8 @@ To run the app locally:
    ```bash
    streamlit run google_ads_manager.py
    ```
+
+
 
 ### Support
 
