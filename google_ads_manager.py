@@ -1261,13 +1261,13 @@ def main():
                                     try:
                                         response = google_ads_service.mutate(
                                             customer_id=test_account_id,
-                                            operations=[customer_operation]
+                                            mutate_operations=[customer_operation]
                                         )
                                         st.success("✅ Successfully updated conversion tracking!")
                                         
                                     except Exception as final_error:
                                         st.error(f"❌ All approaches failed. Final error: {str(final_error)}")
-                                        st.info("This indicates that the API approach needs to be adjusted or permissions are insufficient.")
+                                        st.info("The Google Ads API version you're using may not support updating conversion tracking via API, or requires different permissions.")
                                         return
                             
                         except Exception as update_error:
@@ -1390,17 +1390,18 @@ def main():
                                         except Exception as google_ads_error:
                                             st.warning(f"GoogleAdsService approach failed: {str(google_ads_error)}")
                                             
-                                            # Try final approach
-                                            try:
-                                                response = google_ads_service.mutate(
-                                                    customer_id=manual_test_id,
-                                                    operations=[customer_operation]
-                                                )
-                                                st.success("✅ Successfully updated conversion tracking!")
-                                                
-                                            except Exception as final_error:
-                                                st.error(f"❌ All approaches failed. Final error: {str(final_error)}")
-                                                return
+                                                                                # Try final approach with mutate_operations
+                                    try:
+                                        response = google_ads_service.mutate(
+                                            customer_id=manual_test_id,
+                                            mutate_operations=[customer_operation]
+                                        )
+                                        st.success("✅ Successfully updated conversion tracking!")
+                                        
+                                    except Exception as final_error:
+                                        st.error(f"❌ All approaches failed. Final error: {str(final_error)}")
+                                        st.info("The Google Ads API version you're using may not support updating conversion tracking via API, or requires different permissions.")
+                                        return
                                     
                                 except Exception as update_error:
                                     st.error(f"❌ Error updating conversion tracking: {str(update_error)}")
@@ -1423,11 +1424,16 @@ def main():
                 - This should appear as "This Manager" in the Google Ads UI
                 - The account should be able to use MSL-MaxCon bidding strategies
                 
+                **Current Status Analysis:**
+                - Your test account currently has conversion tracking ID: 17413789793
+                - This is NOT your MCC ID (5022887746), so it's not set to "This Manager"
+                - The cross account conversion tracking ID is 0, indicating no cross-account setup
+                
                 **If it fails:**
-                - Check your API permissions
-                - Verify the customer ID is correct
+                - The Google Ads API may not support updating conversion tracking via API
+                - This setting might need to be done manually in the Google Ads UI
+                - Your API permissions might not include customer settings modification
                 - The account might need to be fully set up first
-                - There might be a delay before settings take effect
                 """)
 
 # Get keywords analysis across all sub-accounts
