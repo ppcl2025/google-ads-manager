@@ -1179,16 +1179,40 @@ def main():
                     try:
                         # Step 1: Check current status
                         st.write("**Step 1: Checking current conversion tracking status...**")
-                        customer_service = client.get_service("CustomerService")
-                        customer = customer_service.get_customer(customer_id=test_account_id)
+                        google_ads_service = client.get_service("GoogleAdsService")
                         
-                        st.write(f"Account: {customer.descriptive_name} ({customer.id})")
+                        # Query for customer info including conversion tracking
+                        query = f"""
+                            SELECT 
+                                customer.id,
+                                customer.descriptive_name,
+                                customer.conversion_tracking_setting.conversion_tracking_id,
+                                customer.conversion_tracking_setting.cross_account_conversion_tracking_id
+                            FROM customer
+                            WHERE customer.id = {test_account_id}
+                        """
                         
-                        if hasattr(customer, 'conversion_tracking_setting') and customer.conversion_tracking_setting:
-                            st.write(f"Current conversion tracking ID: {customer.conversion_tracking_setting.conversion_tracking_id}")
-                            st.write(f"Current cross account conversion tracking ID: {customer.conversion_tracking_setting.cross_account_conversion_tracking_id}")
+                        response = google_ads_service.search(
+                            customer_id=test_account_id,
+                            query=query
+                        )
+                        
+                        customer_info = None
+                        for row in response:
+                            customer_info = row.customer
+                            break
+                        
+                        if customer_info:
+                            st.write(f"Account: {customer_info.descriptive_name} ({customer_info.id})")
+                            
+                            if hasattr(customer_info, 'conversion_tracking_setting') and customer_info.conversion_tracking_setting:
+                                st.write(f"Current conversion tracking ID: {customer_info.conversion_tracking_setting.conversion_tracking_id}")
+                                st.write(f"Current cross account conversion tracking ID: {customer_info.conversion_tracking_setting.cross_account_conversion_tracking_id}")
+                            else:
+                                st.write("No conversion tracking setting currently set")
                         else:
-                            st.write("No conversion tracking setting currently set")
+                            st.error("Could not retrieve customer information")
+                            return
                         
                         # Step 2: Try to set conversion tracking to MCC
                         st.write("**Step 2: Attempting to set conversion tracking to 'This Manager'...**")
@@ -1215,13 +1239,23 @@ def main():
                         
                         # Step 3: Verify the change
                         st.write("**Step 3: Verifying the change...**")
-                        customer = customer_service.get_customer(customer_id=test_account_id)
                         
-                        if hasattr(customer, 'conversion_tracking_setting') and customer.conversion_tracking_setting:
-                            st.write(f"Updated conversion tracking ID: {customer.conversion_tracking_setting.conversion_tracking_id}")
-                            st.write(f"Updated cross account conversion tracking ID: {customer.conversion_tracking_setting.cross_account_conversion_tracking_id}")
+                        # Query again to verify the change
+                        response = google_ads_service.search(
+                            customer_id=test_account_id,
+                            query=query
+                        )
+                        
+                        customer_info = None
+                        for row in response:
+                            customer_info = row.customer
+                            break
+                        
+                        if customer_info and hasattr(customer_info, 'conversion_tracking_setting') and customer_info.conversion_tracking_setting:
+                            st.write(f"Updated conversion tracking ID: {customer_info.conversion_tracking_setting.conversion_tracking_id}")
+                            st.write(f"Updated cross account conversion tracking ID: {customer_info.conversion_tracking_setting.cross_account_conversion_tracking_id}")
                             
-                            if customer.conversion_tracking_setting.conversion_tracking_id == mcc_customer_id:
+                            if customer_info.conversion_tracking_setting.conversion_tracking_id == mcc_customer_id:
                                 st.success("🎉 SUCCESS: Conversion tracking is now set to use MCC account!")
                                 st.info("This should appear as 'This Manager' in the Google Ads UI")
                             else:
@@ -1249,13 +1283,38 @@ def main():
                                 customer_service = client.get_service("CustomerService")
                                 
                                 # Check current status
-                                customer = customer_service.get_customer(customer_id=manual_test_id)
-                                st.write(f"Account: {customer.descriptive_name} ({customer.id})")
+                                google_ads_service = client.get_service("GoogleAdsService")
                                 
-                                if hasattr(customer, 'conversion_tracking_setting') and customer.conversion_tracking_setting:
-                                    st.write(f"Current conversion tracking ID: {customer.conversion_tracking_setting.conversion_tracking_id}")
+                                query = f"""
+                                    SELECT 
+                                        customer.id,
+                                        customer.descriptive_name,
+                                        customer.conversion_tracking_setting.conversion_tracking_id,
+                                        customer.conversion_tracking_setting.cross_account_conversion_tracking_id
+                                    FROM customer
+                                    WHERE customer.id = {manual_test_id}
+                                """
+                                
+                                response = google_ads_service.search(
+                                    customer_id=manual_test_id,
+                                    query=query
+                                )
+                                
+                                customer_info = None
+                                for row in response:
+                                    customer_info = row.customer
+                                    break
+                                
+                                if customer_info:
+                                    st.write(f"Account: {customer_info.descriptive_name} ({customer_info.id})")
+                                    
+                                    if hasattr(customer_info, 'conversion_tracking_setting') and customer_info.conversion_tracking_setting:
+                                        st.write(f"Current conversion tracking ID: {customer_info.conversion_tracking_setting.conversion_tracking_id}")
+                                    else:
+                                        st.write("No conversion tracking setting currently set")
                                 else:
-                                    st.write("No conversion tracking setting currently set")
+                                    st.error("Could not retrieve customer information")
+                                    return
                                 
                                 # Try to update
                                 customer_operation = client.get_type("CustomerOperation")
