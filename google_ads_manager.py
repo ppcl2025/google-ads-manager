@@ -1217,25 +1217,32 @@ def main():
                         # Step 2: Try to set conversion tracking to MCC
                         st.write("**Step 2: Attempting to set conversion tracking to 'This Manager'...**")
                         
-                        # Create customer operation
-                        customer_operation = client.get_type("CustomerOperation")
-                        customer_update = customer_operation.update
-                        customer_update.resource_name = f"customers/{test_account_id}"
-                        
-                        # Set conversion tracking to use MCC
-                        conversion_setting = client.get_type("ConversionTrackingSetting")
-                        conversion_setting.conversion_tracking_id = mcc_customer_id
-                        conversion_setting.cross_account_conversion_tracking_id = mcc_customer_id
-                        
-                        customer_update.conversion_tracking_setting = conversion_setting
-                        
-                        # Update the customer
-                        response = customer_service.mutate_customers(
-                            customer_id=test_account_id,
-                            operations=[customer_operation]
-                        )
-                        
-                        st.success("✅ Successfully updated conversion tracking!")
+                        # Use GoogleAdsService to update customer settings
+                        try:
+                            # Create customer operation
+                            customer_operation = client.get_type("CustomerOperation")
+                            customer_update = customer_operation.update
+                            customer_update.resource_name = f"customers/{test_account_id}"
+                            
+                            # Set conversion tracking to use MCC
+                            conversion_setting = client.get_type("ConversionTrackingSetting")
+                            conversion_setting.conversion_tracking_id = mcc_customer_id
+                            conversion_setting.cross_account_conversion_tracking_id = mcc_customer_id
+                            
+                            customer_update.conversion_tracking_setting = conversion_setting
+                            
+                            # Update the customer using GoogleAdsService
+                            response = google_ads_service.mutate(
+                                customer_id=test_account_id,
+                                operations=[customer_operation]
+                            )
+                            
+                            st.success("✅ Successfully updated conversion tracking!")
+                            
+                        except Exception as update_error:
+                            st.error(f"❌ Error updating conversion tracking: {str(update_error)}")
+                            st.info("This might indicate that the API approach needs to be adjusted or permissions are insufficient.")
+                            return
                         
                         # Step 3: Verify the change
                         st.write("**Step 3: Verifying the change...**")
@@ -1317,22 +1324,27 @@ def main():
                                     return
                                 
                                 # Try to update
-                                customer_operation = client.get_type("CustomerOperation")
-                                customer_update = customer_operation.update
-                                customer_update.resource_name = f"customers/{manual_test_id}"
-                                
-                                conversion_setting = client.get_type("ConversionTrackingSetting")
-                                conversion_setting.conversion_tracking_id = mcc_customer_id
-                                conversion_setting.cross_account_conversion_tracking_id = mcc_customer_id
-                                
-                                customer_update.conversion_tracking_setting = conversion_setting
-                                
-                                response = customer_service.mutate_customers(
-                                    customer_id=manual_test_id,
-                                    operations=[customer_operation]
-                                )
-                                
-                                st.success("✅ Successfully updated conversion tracking!")
+                                try:
+                                    customer_operation = client.get_type("CustomerOperation")
+                                    customer_update = customer_operation.update
+                                    customer_update.resource_name = f"customers/{manual_test_id}"
+                                    
+                                    conversion_setting = client.get_type("ConversionTrackingSetting")
+                                    conversion_setting.conversion_tracking_id = mcc_customer_id
+                                    conversion_setting.cross_account_conversion_tracking_id = mcc_customer_id
+                                    
+                                    customer_update.conversion_tracking_setting = conversion_setting
+                                    
+                                    response = google_ads_service.mutate(
+                                        customer_id=manual_test_id,
+                                        operations=[customer_operation]
+                                    )
+                                    
+                                    st.success("✅ Successfully updated conversion tracking!")
+                                    
+                                except Exception as update_error:
+                                    st.error(f"❌ Error updating conversion tracking: {str(update_error)}")
+                                    return
                                 
                             except Exception as e:
                                 st.error(f"❌ Error: {str(e)}")
