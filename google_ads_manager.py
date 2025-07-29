@@ -308,8 +308,11 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 st.info("""
                 **Next Steps for Client:**
                 - Set up payment methods for this account in Google Ads UI
-                - Verify conversion tracking is set to 'This Manager' in Google Ads UI
-                - If not, go to Account Settings → Conversion tracking → Select 'This manager (USD)'
+                - Set conversion tracking to 'This Manager' in Google Ads UI:
+                  1. Go to Account Settings → Conversion tracking
+                  2. Click on 'Google Ads conversion account'
+                  3. Select 'This manager (USD)' from the dropdown
+                  4. Save the changes
                 - This enables MSL-MaxCon bidding strategy for campaigns
                 """)
                 
@@ -827,12 +830,11 @@ def main():
         sub_accounts_list = []  # Ensure it's an empty list
 
     # Create tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "Create Sub-Account", 
         "Create Campaign", 
         "Bulk Upload", 
-        "Performance Analysis",
-        "Test Conversion Tracking"
+        "Performance Analysis"
     ])
 
     # Tab 1: Create Sub-Account
@@ -1160,8 +1162,7 @@ def main():
             # Display the data with current sort
             display_keywords_analysis(st.session_state.keywords_data, selected_sort, st.session_state.keyword_date_range)
 
-    # Tab 5: Test Conversion Tracking
-    with tab5:
+# Get keywords analysis across all sub-accounts
         st.subheader("Test Conversion Tracking Setup")
         st.write("Test if conversion tracking can be set to 'This Manager' via API for existing sub-accounts.")
         
