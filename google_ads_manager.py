@@ -1,6 +1,9 @@
 import pandas as pd
 import logging
 import re
+import gc
+import psutil
+import os
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import GoogleAPICallError
@@ -10,7 +13,6 @@ import streamlit as st
 from typing import Optional, List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
-import os
 from google.ads.googleads.v20.resources.types import Campaign
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
@@ -19,6 +21,52 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import io
+
+# Memory Management Utilities
+class MemoryManager:
+    """Utility class for managing memory usage and preventing memory leaks."""
+    
+    @staticmethod
+    def get_memory_usage():
+        """Get current memory usage in MB."""
+        process = psutil.Process(os.getpid())
+        return process.memory_info().rss / 1024 / 1024  # Convert to MB
+    
+    @staticmethod
+    def log_memory_usage(location: str):
+        """Log current memory usage for debugging."""
+        memory_mb = MemoryManager.get_memory_usage()
+        logger.info(f"Memory usage at {location}: {memory_mb:.2f} MB")
+        
+        # Warning if memory usage is high
+        if memory_mb > 1000:  # 1GB threshold
+            logger.warning(f"High memory usage detected: {memory_mb:.2f} MB at {location}")
+    
+    @staticmethod
+    def cleanup_dataframes():
+        """Force garbage collection of DataFrames and other large objects."""
+        gc.collect()
+        logger.info("Forced garbage collection completed")
+    
+    @staticmethod
+    def clear_session_data():
+        """Clear large data from session state to prevent memory leaks."""
+        keys_to_clear = ['keywords_data', 'keyword_date_range']
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+                logger.info(f"Cleared session state key: {key}")
+    
+    @staticmethod
+    def limit_dataframe_size(df: pd.DataFrame, max_rows: int = 1000) -> pd.DataFrame:
+        """Limit DataFrame size to prevent memory issues."""
+        if len(df) > max_rows:
+            logger.warning(f"DataFrame truncated from {len(df)} to {max_rows} rows to prevent memory issues")
+            return df.head(max_rows)
+        return df
+
+# Initialize memory manager
+memory_manager = MemoryManager()
 
 # API Usage Tracker
 class APIUsageTracker:
@@ -178,10 +226,13 @@ def handle_api_exception(ex: Exception, operation: str) -> None:
         show_message(f"Unexpected error {operation}: {str(ex)}", False)
         logger.error(f"Unexpected error: {str(ex)}")
 
-@st.cache_data(ttl=1800)  # Cache for 30 minutes
+@st.cache_data(ttl=300)  # Cache for 5 minutes instead of 30
 def get_sub_accounts(_client: GoogleAdsClient, mcc_customer_id: str) -> list[dict]:
     """Fetch all direct, active sub-accounts under the MCC account using GAQL."""
     try:
+        # Track memory usage
+        memory_manager.log_memory_usage("get_sub_accounts_start")
+        
         # Track API usage
         st.session_state.api_tracker.increment(1)
         
@@ -213,6 +264,9 @@ def get_sub_accounts(_client: GoogleAdsClient, mcc_customer_id: str) -> list[dic
         st.success(f"🎉 Found {len(sub_accounts)} active sub-accounts under this MCC.")
         if not sub_accounts:
             st.warning("⚠️ No active sub-accounts found. Make sure you have active sub-accounts under this MCC.")
+        
+        # Log memory usage after processing
+        memory_manager.log_memory_usage("get_sub_accounts_end")
         return sub_accounts
     except Exception as ex:
         st.error(f"💥 Error fetching sub-accounts: {str(ex)}")
@@ -785,8 +839,30 @@ def main():
         st.session_state.uploaded_file_cleared = True
         # This will force the file uploader to be empty on app refresh
     
+    # Memory management - clear old session data on app start
+    if 'memory_cleanup_done' not in st.session_state:
+        memory_manager.clear_session_data()
+        st.session_state.memory_cleanup_done = True
+    
     st.title("Google Ads Manager AI Agent")
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
+
+    # Memory usage display and cleanup options
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        memory_usage = memory_manager.get_memory_usage()
+        st.info(f"💾 Current Memory Usage: {memory_usage:.1f} MB")
+    with col2:
+        if st.button("🧹 Clear Cache"):
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            memory_manager.clear_session_data()
+            memory_manager.cleanup_dataframes()
+            st.success("Cache and memory cleared!")
+    with col3:
+        if st.button("🔄 Force GC"):
+            memory_manager.cleanup_dataframes()
+            st.success("Garbage collection completed!")
 
     # Load client once and cache it
     client = get_google_ads_client()
@@ -1163,292 +1239,20 @@ def main():
             display_keywords_analysis(st.session_state.keywords_data, selected_sort, st.session_state.keyword_date_range)
 
 # Get keywords analysis across all sub-accounts
-        st.subheader("Test Conversion Tracking Setup")
-        st.write("Test if conversion tracking can be set to 'This Manager' via API for existing sub-accounts.")
-        
-        if not sub_accounts_list:
-            st.warning("No sub-accounts found. Please create sub-accounts first.")
-        else:
-            st.info("ℹ️ This test will attempt to set conversion tracking to 'This Manager' for a selected sub-account.")
-            
-            # Select sub-account to test
-            test_account_display = st.selectbox("Select Sub-Account to Test", [acc['display'] for acc in sub_accounts_list])
-            test_account_id = next(acc['id'] for acc in sub_accounts_list if acc['display'] == test_account_display)
-            
-            if st.button("Test Conversion Tracking Setup"):
-                with st.spinner("Testing conversion tracking setup..."):
-                    try:
-                        # Step 1: Check current status
-                        st.write("**Step 1: Checking current conversion tracking status...**")
-                        google_ads_service = client.get_service("GoogleAdsService")
-                        
-                        # Query for customer info including conversion tracking
-                        query = f"""
-                            SELECT 
-                                customer.id,
-                                customer.descriptive_name,
-                                customer.conversion_tracking_setting.conversion_tracking_id,
-                                customer.conversion_tracking_setting.cross_account_conversion_tracking_id
-                            FROM customer
-                            WHERE customer.id = {test_account_id}
-                        """
-                        
-                        response = google_ads_service.search(
-                            customer_id=test_account_id,
-                            query=query
-                        )
-                        
-                        customer_info = None
-                        for row in response:
-                            customer_info = row.customer
-                            break
-                        
-                        if customer_info:
-                            st.write(f"Account: {customer_info.descriptive_name} ({customer_info.id})")
-                            
-                            if hasattr(customer_info, 'conversion_tracking_setting') and customer_info.conversion_tracking_setting:
-                                st.write(f"Current conversion tracking ID: {customer_info.conversion_tracking_setting.conversion_tracking_id}")
-                                st.write(f"Current cross account conversion tracking ID: {customer_info.conversion_tracking_setting.cross_account_conversion_tracking_id}")
-                            else:
-                                st.write("No conversion tracking setting currently set")
-                        else:
-                            st.error("Could not retrieve customer information")
-                            return
-                        
-                        # Step 2: Try to set conversion tracking to MCC
-                        st.write("**Step 2: Attempting to set conversion tracking to 'This Manager'...**")
-                        
-                        # Try different approaches to update customer settings
-                        try:
-                            # Approach 1: Try using CustomerService directly
-                            customer_service = client.get_service("CustomerService")
-                            
-                            # Create customer operation
-                            customer_operation = client.get_type("CustomerOperation")
-                            customer_update = customer_operation.update
-                            customer_update.resource_name = f"customers/{test_account_id}"
-                            
-                            # Set conversion tracking to use MCC
-                            conversion_setting = client.get_type("ConversionTrackingSetting")
-                            conversion_setting.conversion_tracking_id = mcc_customer_id
-                            conversion_setting.cross_account_conversion_tracking_id = mcc_customer_id
-                            
-                            customer_update.conversion_tracking_setting = conversion_setting
-                            
-                            # Try to update using CustomerService
-                            try:
-                                response = customer_service.mutate_customers(
-                                    customer_id=test_account_id,
-                                    operations=[customer_operation]
-                                )
-                                st.success("✅ Successfully updated conversion tracking using CustomerService!")
-                                
-                            except Exception as customer_service_error:
-                                st.warning(f"CustomerService approach failed: {str(customer_service_error)}")
-                                
-                                # Approach 2: Try using GoogleAdsService with different method
-                                try:
-                                    # Try using mutate with different parameters
-                                    response = google_ads_service.mutate(
-                                        customer_id=test_account_id,
-                                        customer_operations=[customer_operation]
-                                    )
-                                    st.success("✅ Successfully updated conversion tracking using GoogleAdsService!")
-                                    
-                                except Exception as google_ads_error:
-                                    st.warning(f"GoogleAdsService approach failed: {str(google_ads_error)}")
-                                    
-                                    # Approach 3: Try using the correct mutate method
-                                    try:
-                                        response = google_ads_service.mutate(
-                                            customer_id=test_account_id,
-                                            mutate_operations=[customer_operation]
-                                        )
-                                        st.success("✅ Successfully updated conversion tracking!")
-                                        
-                                    except Exception as final_error:
-                                        st.error(f"❌ All approaches failed. Final error: {str(final_error)}")
-                                        st.info("The Google Ads API version you're using may not support updating conversion tracking via API, or requires different permissions.")
-                                        return
-                            
-                        except Exception as update_error:
-                            st.error(f"❌ Error updating conversion tracking: {str(update_error)}")
-                            st.info("This might indicate that the API approach needs to be adjusted or permissions are insufficient.")
-                            return
-                        
-                        # Step 3: Verify the change
-                        st.write("**Step 3: Verifying the change...**")
-                        
-                        # Query again to verify the change
-                        response = google_ads_service.search(
-                            customer_id=test_account_id,
-                            query=query
-                        )
-                        
-                        customer_info = None
-                        for row in response:
-                            customer_info = row.customer
-                            break
-                        
-                        if customer_info and hasattr(customer_info, 'conversion_tracking_setting') and customer_info.conversion_tracking_setting:
-                            st.write(f"Updated conversion tracking ID: {customer_info.conversion_tracking_setting.conversion_tracking_id}")
-                            st.write(f"Updated cross account conversion tracking ID: {customer_info.conversion_tracking_setting.cross_account_conversion_tracking_id}")
-                            
-                            if customer_info.conversion_tracking_setting.conversion_tracking_id == mcc_customer_id:
-                                st.success("🎉 SUCCESS: Conversion tracking is now set to use MCC account!")
-                                st.info("This should appear as 'This Manager' in the Google Ads UI")
-                            else:
-                                st.warning("⚠️ Conversion tracking ID doesn't match MCC ID")
-                        else:
-                            st.warning("⚠️ No conversion tracking setting found after update")
-                            
-                    except Exception as e:
-                        st.error(f"❌ Error during test: {str(e)}")
-                        st.info("This might indicate that the API approach needs to be adjusted or permissions are insufficient.")
-            
-            # Manual test section
-            st.subheader("Manual Test with Custom Customer ID")
-            manual_test_id = st.text_input("Enter Customer ID to Test (format: XXX-XXX-XXXX)", "")
-            
-            if manual_test_id:
-                if not validate_customer_id(manual_test_id):
-                    st.warning("Please enter a valid Customer ID (e.g., 123-456-7890)")
-                else:
-                    manual_test_id = format_customer_id(manual_test_id)
-                    
-                    if st.button("Test Custom Customer ID"):
-                        with st.spinner("Testing conversion tracking setup..."):
-                            try:
-                                customer_service = client.get_service("CustomerService")
-                                
-                                # Check current status
-                                google_ads_service = client.get_service("GoogleAdsService")
-                                
-                                query = f"""
-                                    SELECT 
-                                        customer.id,
-                                        customer.descriptive_name,
-                                        customer.conversion_tracking_setting.conversion_tracking_id,
-                                        customer.conversion_tracking_setting.cross_account_conversion_tracking_id
-                                    FROM customer
-                                    WHERE customer.id = {manual_test_id}
-                                """
-                                
-                                response = google_ads_service.search(
-                                    customer_id=manual_test_id,
-                                    query=query
-                                )
-                                
-                                customer_info = None
-                                for row in response:
-                                    customer_info = row.customer
-                                    break
-                                
-                                if customer_info:
-                                    st.write(f"Account: {customer_info.descriptive_name} ({customer_info.id})")
-                                    
-                                    if hasattr(customer_info, 'conversion_tracking_setting') and customer_info.conversion_tracking_setting:
-                                        st.write(f"Current conversion tracking ID: {customer_info.conversion_tracking_setting.conversion_tracking_id}")
-                                    else:
-                                        st.write("No conversion tracking setting currently set")
-                                else:
-                                    st.error("Could not retrieve customer information")
-                                    return
-                                
-                                # Try to update using multiple approaches
-                                try:
-                                    customer_service = client.get_service("CustomerService")
-                                    
-                                    customer_operation = client.get_type("CustomerOperation")
-                                    customer_update = customer_operation.update
-                                    customer_update.resource_name = f"customers/{manual_test_id}"
-                                    
-                                    conversion_setting = client.get_type("ConversionTrackingSetting")
-                                    conversion_setting.conversion_tracking_id = mcc_customer_id
-                                    conversion_setting.cross_account_conversion_tracking_id = mcc_customer_id
-                                    
-                                    customer_update.conversion_tracking_setting = conversion_setting
-                                    
-                                    # Try CustomerService first
-                                    try:
-                                        response = customer_service.mutate_customers(
-                                            customer_id=manual_test_id,
-                                            operations=[customer_operation]
-                                        )
-                                        st.success("✅ Successfully updated conversion tracking using CustomerService!")
-                                        
-                                    except Exception as customer_service_error:
-                                        st.warning(f"CustomerService approach failed: {str(customer_service_error)}")
-                                        
-                                        # Try GoogleAdsService
-                                        try:
-                                            response = google_ads_service.mutate(
-                                                customer_id=manual_test_id,
-                                                customer_operations=[customer_operation]
-                                            )
-                                            st.success("✅ Successfully updated conversion tracking using GoogleAdsService!")
-                                            
-                                        except Exception as google_ads_error:
-                                            st.warning(f"GoogleAdsService approach failed: {str(google_ads_error)}")
-                                            
-                                                                                # Try final approach with mutate_operations
-                                    try:
-                                        response = google_ads_service.mutate(
-                                            customer_id=manual_test_id,
-                                            mutate_operations=[customer_operation]
-                                        )
-                                        st.success("✅ Successfully updated conversion tracking!")
-                                        
-                                    except Exception as final_error:
-                                        st.error(f"❌ All approaches failed. Final error: {str(final_error)}")
-                                        st.info("The Google Ads API version you're using may not support updating conversion tracking via API, or requires different permissions.")
-                                        return
-                                    
-                                except Exception as update_error:
-                                    st.error(f"❌ Error updating conversion tracking: {str(update_error)}")
-                                    return
-                                
-                            except Exception as e:
-                                st.error(f"❌ Error: {str(e)}")
-            
-            # Information section
-            with st.expander("ℹ️ About Conversion Tracking Testing"):
-                st.markdown("""
-                **What this test does:**
-                
-                1. **Checks current status** - Shows the current conversion tracking settings
-                2. **Attempts to set** - Tries to set conversion tracking to use the MCC account
-                3. **Verifies the change** - Confirms if the setting was applied successfully
-                
-                **Expected Results:**
-                - If successful, the conversion tracking ID should match your MCC ID
-                - This should appear as "This Manager" in the Google Ads UI
-                - The account should be able to use MSL-MaxCon bidding strategies
-                
-                **Current Status Analysis:**
-                - Your test account currently has conversion tracking ID: 17413789793
-                - This is NOT your MCC ID (5022887746), so it's not set to "This Manager"
-                - The cross account conversion tracking ID is 0, indicating no cross-account setup
-                
-                **If it fails:**
-                - The Google Ads API may not support updating conversion tracking via API
-                - This setting might need to be done manually in the Google Ads UI
-                - Your API permissions might not include customer settings modification
-                - The account might need to be fully set up first
-                """)
-
-# Get keywords analysis across all sub-accounts
-@st.cache_data(ttl=3600)  # Cache for 1 hour to reduce API calls
+@st.cache_data(ttl=600)  # Cache for 10 minutes instead of 1 hour
 def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -> dict:
     """Get keywords and search terms performance data from all sub-accounts, grouped by account."""
     try:
+        # Track memory usage at start
+        memory_manager.log_memory_usage("get_keywords_analysis_start")
+        
         # Track API usage for the overall function call
         st.session_state.api_tracker.increment(1)
         
         all_accounts_keywords = {}
         google_ads_service = _client.get_service("GoogleAdsService")
         
-        # Query for keywords with performance metrics
+        # Query for keywords with performance metrics - limit results to prevent memory issues
         keywords_query = f"""
             SELECT
               campaign.id,
@@ -1466,10 +1270,10 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
             AND ad_group_criterion.status = 'ENABLED'
             AND campaign.status = 'ENABLED'
             ORDER BY metrics.cost_micros DESC
-            LIMIT 1000
+            LIMIT 500
         """
         
-        # Query for search terms with performance metrics
+        # Query for search terms with performance metrics - limit results
         search_terms_query = f"""
             SELECT
               campaign.id,
@@ -1485,7 +1289,7 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
             WHERE segments.date BETWEEN '{date_range[0]}' AND '{date_range[1]}'
             AND campaign.status = 'ENABLED'
             ORDER BY metrics.cost_micros DESC
-            LIMIT 1000
+            LIMIT 500
         """
         
         for sub_account in sub_accounts_list:
@@ -1630,7 +1434,7 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                 st.warning(f"⚠️ Could not fetch keywords for {sub_account['name']}: {str(sub_error)}")
                 continue
         
-        # Process each account and campaign
+        # Process each account and campaign with memory management
         processed_accounts = []
         for account_name, account_data in all_accounts_keywords.items():
             account_summary = {
@@ -1702,10 +1506,15 @@ def get_keywords_analysis(_client, sub_accounts_list: list, date_range: tuple) -
                 'summary': account_data['summary']
             })
         
-        return {
+        result = {
             'accounts': processed_accounts,
             'total_accounts': len(processed_accounts)
         }
+        
+        # Log memory usage at end
+        memory_manager.log_memory_usage("get_keywords_analysis_end")
+        
+        return result
         
     except Exception as e:
         st.error(f"Error getting keywords analysis: {str(e)}")
@@ -1717,6 +1526,9 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
     if not keywords_data or not keywords_data['accounts']:
         st.warning("No keyword data available for the selected date range.")
         return
+    
+    # Track memory usage
+    memory_manager.log_memory_usage("display_keywords_analysis_start")
     
     # Overall summary metrics
     st.subheader("📊 Account Performance Summary")
@@ -1830,6 +1642,9 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
             if campaign['keywords']:
                 keywords_df = pd.DataFrame(campaign['keywords'])
                 
+                # Limit DataFrame size to prevent memory issues
+                keywords_df = memory_manager.limit_dataframe_size(keywords_df, max_rows=100)
+                
                 # Sort based on selected metric
                 if sort_column == "cost":
                     keywords_df = keywords_df.sort_values('cost', ascending=False)
@@ -1864,6 +1679,9 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
                 display_df = display_df[['Keyword', 'Match Type', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost']]
                 
                 st.dataframe(display_df, use_container_width=True)
+                
+                # Clean up DataFrames to free memory
+                del keywords_df, display_df
             else:
                 st.info("No keyword data available for this campaign.")
             
@@ -1876,6 +1694,9 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
                 st.info(f"📊 Showing top 20 search terms by spend (out of {total_search_terms_in_campaign} total search terms in campaign)")
                 
                 search_terms_df = pd.DataFrame(campaign['search_terms'])
+                
+                # Limit DataFrame size to prevent memory issues
+                search_terms_df = memory_manager.limit_dataframe_size(search_terms_df, max_rows=200)
                 
                 # Sort based on selected metric (same as keywords)
                 if sort_column == "cost":
@@ -1910,10 +1731,17 @@ def display_keywords_analysis(keywords_data: dict, sort_by_option: str, date_ran
                 search_display_df = search_display_df[['Search Term', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'Cost/Conv.', 'Conv. Rate', 'Cost']]
                 
                 st.dataframe(search_display_df, use_container_width=True)
+                
+                # Clean up DataFrames to free memory
+                del search_terms_df, search_display_df
             else:
                 st.info("No search terms data available for this campaign.")
             
             st.divider()
+    
+    # Force garbage collection after processing
+    memory_manager.cleanup_dataframes()
+    memory_manager.log_memory_usage("display_keywords_analysis_end")
 
 def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_range: tuple) -> bytes:
     """Generate a modern PDF report with account campaign summary, keywords, and search terms tables."""
@@ -2258,7 +2086,7 @@ def generate_performance_pdf(keywords_data: dict, sort_by_option: str, date_rang
         return None
 
 # Get campaigns for a specific sub-account
-@st.cache_data(ttl=1800)  # Cache for 30 minutes
+@st.cache_data(ttl=300)  # Cache for 5 minutes instead of 30
 def get_campaigns_for_account(_client: GoogleAdsClient, customer_id: str) -> list[dict]:
     """Fetch all campaigns for a specific sub-account."""
     try:
