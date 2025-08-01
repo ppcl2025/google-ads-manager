@@ -389,7 +389,11 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
 # Create a campaign with daily budget
 def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
                    budget_amount: float) -> Optional[str]:
-    """Create a campaign with daily budget and hardcoded MSL - MaxCon bidding strategy."""
+    """Create a campaign with daily budget and hardcoded MSL - MaxCon bidding strategy.
+    
+    In Google Ads API v20, we'll try creating the campaign without a budget first,
+    then add the budget separately to ensure it's individual.
+    """
     try:
         campaign_service = client.get_service("CampaignService")
         campaign_budget_service = client.get_service("CampaignBudgetService")
@@ -566,17 +570,40 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
 
-        # Try to mutate campaign with bidding strategy first (without budget)
+        # Try to mutate campaign WITHOUT any budget first
+        st.info("🔄 Creating campaign without budget first...")
         try:
             response = campaign_service.mutate_campaigns(
                 customer_id=customer_id, operations=[campaign_operation]
             )
             campaign_id = response.results[0].resource_name.split("/")[-1]
+            st.info(f"✅ Successfully created campaign {campaign_id} without budget")
             
-            # Now assign the budget to the campaign separately
-            st.info("🔄 Assigning individual budget to campaign...")
+            # Now try to add the budget using a different approach
+            st.info("🔄 Now adding budget to campaign...")
             try:
-                # Create a campaign update operation to assign the budget
+                # Method 1: Try using campaign budget service to link budget to campaign
+                st.info("🔄 Method 1: Using campaign budget service to link budget...")
+                
+                # Create a new campaign budget operation for linking
+                link_budget_operation = client.get_type("CampaignBudgetOperation")
+                link_budget = link_budget_operation.update
+                link_budget.resource_name = budget_resource_name
+                
+                # Try to explicitly set as individual budget
+                try:
+                    link_budget.is_shared = False
+                    st.info("✅ Set is_shared = False on budget")
+                except AttributeError:
+                    st.info("⚠️ is_shared field not available on budget")
+                
+                # Update the budget to ensure it's individual
+                budget_update_response = campaign_budget_service.mutate_campaign_budgets(
+                    customer_id=customer_id, operations=[link_budget_operation]
+                )
+                st.info("✅ Updated budget to ensure individual behavior")
+                
+                # Now link the budget to the campaign
                 campaign_update_operation = client.get_type("CampaignOperation")
                 campaign_update = campaign_update_operation.update
                 campaign_update.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
@@ -586,16 +613,50 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 update_response = campaign_service.mutate_campaigns(
                     customer_id=customer_id, operations=[campaign_update_operation]
                 )
-                st.info("✅ Successfully assigned individual budget to campaign")
-            except Exception as budget_assign_error:
-                st.warning(f"⚠️ Could not assign budget separately: {budget_assign_error}")
-                # Fallback: try to create campaign with budget in one operation
-                st.info("🔄 Fallback: Creating campaign with budget in single operation...")
-                campaign.campaign_budget = budget_resource_name
-                response = campaign_service.mutate_campaigns(
-                    customer_id=customer_id, operations=[campaign_operation]
-                )
-                campaign_id = response.results[0].resource_name.split("/")[-1]
+                st.info("✅ Successfully linked individual budget to campaign")
+                
+            except Exception as budget_link_error:
+                st.warning(f"⚠️ Could not link budget using Method 1: {budget_link_error}")
+                
+                # Method 2: Try creating a new individual budget specifically for this campaign
+                st.info("🔄 Method 2: Creating new individual budget for this campaign...")
+                try:
+                    # Create a new budget with a more specific name
+                    individual_budget_name = f"Individual Budget for {campaign_name} - {datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+                    
+                    individual_budget_operation = client.get_type("CampaignBudgetOperation")
+                    individual_budget = individual_budget_operation.create
+                    individual_budget.name = individual_budget_name
+                    individual_budget.amount_micros = int(float(budget_amount) * 1000000)
+                    individual_budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
+                    
+                    # Try to explicitly set as individual
+                    try:
+                        individual_budget.is_shared = False
+                        st.info("✅ Set is_shared = False on new budget")
+                    except AttributeError:
+                        st.info("⚠️ is_shared field not available on new budget")
+                    
+                    individual_budget_response = campaign_budget_service.mutate_campaign_budgets(
+                        customer_id=customer_id, operations=[individual_budget_operation]
+                    )
+                    individual_budget_resource = individual_budget_response.results[0].resource_name
+                    st.info(f"✅ Created new individual budget: {individual_budget_resource}")
+                    
+                    # Link the new budget to the campaign
+                    campaign_update_operation = client.get_type("CampaignOperation")
+                    campaign_update = campaign_update_operation.update
+                    campaign_update.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
+                    campaign_update.campaign_budget = individual_budget_resource
+                    
+                    update_response = campaign_service.mutate_campaigns(
+                        customer_id=customer_id, operations=[campaign_update_operation]
+                    )
+                    st.info("✅ Successfully linked new individual budget to campaign")
+                    
+                except Exception as new_budget_error:
+                    st.warning(f"⚠️ Could not create new individual budget: {new_budget_error}")
+                    st.info("🔄 Proceeding without budget - you can add budget manually in Google Ads UI")
             
             # Apply shared negative keywords list to the campaign
             try:
@@ -617,7 +678,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                 logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
             
-            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
+            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Attempted to set individual budget of ${budget_amount}/day. Check the debug messages above for budget status. Add ad groups, ads, and keywords in the Bulk Upload tab.")
             
             # Additional verification - check if we can query the budget details
             try:
@@ -1126,7 +1187,24 @@ def main():
         status = st.selectbox("Campaign Status", DEFAULT_CAMPAIGN_STATUSES)
         
         # Add information about budget behavior
-        st.info("💰 **Budget Information:** Campaigns will be created with individual campaign budgets (not shared budgets). If you see 'Using a shared budget' in Google Ads UI, this may be a display issue - the budget is actually individual to this campaign.")
+        st.info("💰 **Budget Information:** Campaigns will be created with individual campaign budgets (not shared budgets). If the API approach doesn't work, you can manually set the budget in Google Ads UI.")
+        
+        # Add manual budget setup instructions
+        with st.expander("📋 Manual Budget Setup Instructions"):
+            st.markdown("""
+            **If the API budget creation doesn't work, set up budget manually:**
+            
+            1. **Go to Google Ads** → Campaigns → Select your campaign
+            2. **Click on Settings** → Budget and bidding
+            3. **Select "Individual campaign budget"** (not "Using a shared budget")
+            4. **Set your daily budget amount**
+            5. **Click Save**
+            
+            **Why manual setup might be needed:**
+            - Google Ads API v20 may have limitations with budget creation
+            - Some account settings may require manual budget configuration
+            - This ensures you get the exact budget behavior you want
+            """)
         
         # Add troubleshooting information
         with st.expander("🔧 Troubleshooting Budget Display Issues"):
