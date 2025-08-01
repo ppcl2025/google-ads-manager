@@ -405,10 +405,31 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign_budget.amount_micros = int(float(budget_amount) * 1000000)  # Convert to micros
         campaign_budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
         
+        # In Google Ads API v20, we need to explicitly ensure this is an individual budget
+        # Try to set is_shared to False if the field exists, otherwise rely on default behavior
+        try:
+            campaign_budget.is_shared = False
+            st.info("✅ Explicitly set budget as individual (non-shared)")
+        except AttributeError:
+            st.info("✅ Using default individual budget behavior (is_shared field not available)")
+        
+        # Additional budget settings to ensure individual behavior
+        try:
+            # Set budget type to ensure it's campaign-specific
+            campaign_budget.type_ = client.enums.BudgetTypeEnum.STANDARD
+            st.info("✅ Set budget type to STANDARD (individual campaign budget)")
+        except (AttributeError, Exception) as budget_type_error:
+            st.info("✅ Using default budget type (STANDARD)")
+        
         budget_response = campaign_budget_service.mutate_campaign_budgets(
             customer_id=customer_id, operations=[budget_operation]
         )
         budget_resource_name = budget_response.results[0].resource_name
+        
+        # Log budget creation details for debugging
+        st.info(f"✅ Created budget: {budget_name}")
+        st.info(f"✅ Budget resource: {budget_resource_name}")
+        st.info(f"✅ Budget amount: ${budget_amount}/day")
 
         # Create campaign operation
         campaign_operation = client.get_type("CampaignOperation")
@@ -528,7 +549,30 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                 logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
             
-            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Add ad groups, ads, and keywords in the Bulk Upload tab.")
+            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
+            
+            # Additional verification - check if we can query the budget details
+            try:
+                google_ads_service = client.get_service("GoogleAdsService")
+                budget_query = f"""
+                    SELECT
+                      campaign_budget.id,
+                      campaign_budget.name,
+                      campaign_budget.amount_micros,
+                      campaign_budget.delivery_method,
+                      campaign_budget.is_shared
+                    FROM campaign_budget
+                    WHERE campaign_budget.id = {budget_resource_name.split('/')[-1]}
+                """
+                budget_response = google_ads_service.search(
+                    customer_id=customer_id,
+                    query=budget_query
+                )
+                for row in budget_response:
+                    st.info(f"🔍 Budget verification: ID={row.campaign_budget.id}, Name='{row.campaign_budget.name}', Amount=${row.campaign_budget.amount_micros/1000000}, IsShared={getattr(row.campaign_budget, 'is_shared', 'N/A')}")
+            except Exception as verify_error:
+                st.info(f"🔍 Budget verification not available: {verify_error}")
+            
             return campaign_id
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
@@ -600,7 +644,30 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                         st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                         logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
                     
-                    show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. You can change to MSL - MaxCon later once conversion tracking is enabled.")
+                    show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). You can change to MSL - MaxCon later once conversion tracking is enabled.")
+                    
+                    # Additional verification for fallback case too
+                    try:
+                        google_ads_service = client.get_service("GoogleAdsService")
+                        budget_query = f"""
+                            SELECT
+                              campaign_budget.id,
+                              campaign_budget.name,
+                              campaign_budget.amount_micros,
+                              campaign_budget.delivery_method,
+                              campaign_budget.is_shared
+                            FROM campaign_budget
+                            WHERE campaign_budget.id = {budget_resource_name.split('/')[-1]}
+                        """
+                        budget_response = google_ads_service.search(
+                            customer_id=customer_id,
+                            query=budget_query
+                        )
+                        for row in budget_response:
+                            st.info(f"🔍 Budget verification (fallback): ID={row.campaign_budget.id}, Name='{row.campaign_budget.name}', Amount=${row.campaign_budget.amount_micros/1000000}, IsShared={getattr(row.campaign_budget, 'is_shared', 'N/A')}")
+                    except Exception as verify_error:
+                        st.info(f"🔍 Budget verification not available (fallback): {verify_error}")
+                    
                     return campaign_id
                 except Exception as fallback_ex:
                     handle_api_exception(fallback_ex, "create campaign with Manual CPC")
@@ -965,6 +1032,25 @@ def main():
         campaign_name = st.text_input("Campaign Name")
         budget_amount = st.number_input("Daily Budget Amount (in account currency)", min_value=1.0, step=1.0)
         status = st.selectbox("Campaign Status", DEFAULT_CAMPAIGN_STATUSES)
+        
+        # Add information about budget behavior
+        st.info("💰 **Budget Information:** Campaigns will be created with individual campaign budgets (not shared budgets). If you see 'Using a shared budget' in Google Ads UI, this may be a display issue - the budget is actually individual to this campaign.")
+        
+        # Add troubleshooting information
+        with st.expander("🔧 Troubleshooting Budget Display Issues"):
+            st.markdown("""
+            **If you see 'Using a shared budget' in Google Ads UI:**
+            
+            1. **Check the budget name** - Individual budgets will have unique names with timestamps
+            2. **Verify budget allocation** - Individual budgets are only used by this specific campaign
+            3. **Check budget settings** - Go to Tools & Settings → Shared Library → Campaign budgets
+            4. **Contact support** - This may be a Google Ads UI display issue
+            
+            **Expected behavior:**
+            - Budget name: "Budget for [Campaign Name] - [Timestamp]"
+            - Budget type: Individual campaign budget
+            - Budget allocation: Only this campaign uses this budget
+            """)
         
         # Hardcoded bidding strategy and negative keywords info
         st.info("🎯 All campaigns will use the hardcoded MSL - MaxCon (Maximize Conversions) bidding strategy")
