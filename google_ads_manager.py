@@ -405,21 +405,34 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign_budget.amount_micros = int(float(budget_amount) * 1000000)  # Convert to micros
         campaign_budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
         
-        # In Google Ads API v20, we need to explicitly ensure this is an individual budget
-        # Try to set is_shared to False if the field exists, otherwise rely on default behavior
-        try:
-            campaign_budget.is_shared = False
-            st.info("✅ Explicitly set budget as individual (non-shared)")
-        except AttributeError:
-            st.info("✅ Using default individual budget behavior (is_shared field not available)")
+        # In Google Ads API v20, we need to use a different approach for individual budgets
+        # The is_shared field might not be the correct way to specify individual budgets
+        # Let's try creating the budget without any shared budget settings
         
-        # Additional budget settings to ensure individual behavior
+        # Try to explicitly set as individual budget using different methods
         try:
-            # Set budget type to ensure it's campaign-specific
+            # Method 1: Try setting is_shared to False
+            campaign_budget.is_shared = False
+            st.info("✅ Method 1: Set is_shared = False")
+        except AttributeError:
+            st.info("⚠️ Method 1: is_shared field not available")
+        
+        try:
+            # Method 2: Try setting budget type to STANDARD
             campaign_budget.type_ = client.enums.BudgetTypeEnum.STANDARD
-            st.info("✅ Set budget type to STANDARD (individual campaign budget)")
+            st.info("✅ Method 2: Set budget type to STANDARD")
         except (AttributeError, Exception) as budget_type_error:
-            st.info("✅ Using default budget type (STANDARD)")
+            st.info("⚠️ Method 2: Budget type field not available")
+        
+        try:
+            # Method 3: Try setting explicit budget allocation
+            campaign_budget.explicit_budget_scope = client.enums.BudgetScopeEnum.CAMPAIGN
+            st.info("✅ Method 3: Set budget scope to CAMPAIGN")
+        except (AttributeError, Exception) as scope_error:
+            st.info("⚠️ Method 3: Budget scope field not available")
+        
+        # Method 4: Ensure no shared budget references
+        st.info("✅ Method 4: No shared budget references set")
         
         budget_response = campaign_budget_service.mutate_campaign_budgets(
             customer_id=customer_id, operations=[budget_operation]
@@ -430,14 +443,45 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         st.info(f"✅ Created budget: {budget_name}")
         st.info(f"✅ Budget resource: {budget_resource_name}")
         st.info(f"✅ Budget amount: ${budget_amount}/day")
+        
+        # Check for existing shared budgets that might interfere
+        try:
+            google_ads_service = client.get_service("GoogleAdsService")
+            shared_budgets_query = """
+                SELECT
+                  campaign_budget.id,
+                  campaign_budget.name,
+                  campaign_budget.amount_micros,
+                  campaign_budget.is_shared
+                FROM campaign_budget
+                WHERE campaign_budget.is_shared = true
+                ORDER BY campaign_budget.id DESC
+                LIMIT 5
+            """
+            shared_budgets_response = google_ads_service.search(
+                customer_id=customer_id,
+                query=shared_budgets_query
+            )
+            shared_budgets = list(shared_budgets_response)
+            if shared_budgets:
+                st.warning(f"⚠️ Found {len(shared_budgets)} existing shared budgets that might interfere:")
+                for budget in shared_budgets:
+                    st.info(f"   - Shared Budget ID: {budget.campaign_budget.id}, Name: '{budget.campaign_budget.name}', Amount: ${budget.campaign_budget.amount_micros/1000000}")
+            else:
+                st.info("✅ No existing shared budgets found")
+        except Exception as shared_check_error:
+            st.info(f"🔍 Could not check for existing shared budgets: {shared_check_error}")
 
         # Create campaign operation
         campaign_operation = client.get_type("CampaignOperation")
         campaign = campaign_operation.create
         campaign.name = campaign_name
         campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Set to PAUSED
-        campaign.campaign_budget = budget_resource_name
         campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
+        
+        # Try creating campaign WITHOUT budget first, then assign budget separately
+        # This might help ensure the budget is treated as individual
+        st.info("🔄 Creating campaign without budget first, then assigning budget separately...")
         
         # Hardcoded MSL - MaxCon bidding strategy
         # To find your bidding strategy ID, run: python find_bidding_strategy.py
@@ -522,12 +566,36 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
 
-        # Try to mutate campaign with bidding strategy first
+        # Try to mutate campaign with bidding strategy first (without budget)
         try:
             response = campaign_service.mutate_campaigns(
                 customer_id=customer_id, operations=[campaign_operation]
             )
             campaign_id = response.results[0].resource_name.split("/")[-1]
+            
+            # Now assign the budget to the campaign separately
+            st.info("🔄 Assigning individual budget to campaign...")
+            try:
+                # Create a campaign update operation to assign the budget
+                campaign_update_operation = client.get_type("CampaignOperation")
+                campaign_update = campaign_update_operation.update
+                campaign_update.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
+                campaign_update.campaign_budget = budget_resource_name
+                
+                # Update the campaign with the budget
+                update_response = campaign_service.mutate_campaigns(
+                    customer_id=customer_id, operations=[campaign_update_operation]
+                )
+                st.info("✅ Successfully assigned individual budget to campaign")
+            except Exception as budget_assign_error:
+                st.warning(f"⚠️ Could not assign budget separately: {budget_assign_error}")
+                # Fallback: try to create campaign with budget in one operation
+                st.info("🔄 Fallback: Creating campaign with budget in single operation...")
+                campaign.campaign_budget = budget_resource_name
+                response = campaign_service.mutate_campaigns(
+                    customer_id=customer_id, operations=[campaign_operation]
+                )
+                campaign_id = response.results[0].resource_name.split("/")[-1]
             
             # Apply shared negative keywords list to the campaign
             try:
@@ -580,12 +648,11 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             if "CONVERSION_TRACKING_NOT_ENABLED" in error_message or "REQUIRED" in error_message:
                 st.warning("⚠️ Conversion tracking is not enabled or bidding strategy field issue. Retrying with Manual CPC bidding strategy...")
                 
-                # Create a new campaign operation without the bidding strategy
+                # Create a new campaign operation without the bidding strategy (and without budget initially)
                 campaign_operation_fallback = client.get_type("CampaignOperation")
                 campaign_fallback = campaign_operation_fallback.create
                 campaign_fallback.name = campaign_name
                 campaign_fallback.status = client.enums.CampaignStatusEnum.PAUSED
-                campaign_fallback.campaign_budget = budget_resource_name
                 campaign_fallback.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
                 campaign_fallback.start_date = datetime.now().strftime("%Y-%m-%d")
                 
@@ -619,10 +686,35 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     logger.warning(f"Failed to configure location targeting: {location_error}")
                 
                 try:
+                    # Create campaign without budget first
                     response_fallback = campaign_service.mutate_campaigns(
                         customer_id=customer_id, operations=[campaign_operation_fallback]
                     )
                     campaign_id = response_fallback.results[0].resource_name.split("/")[-1]
+                    
+                    # Now assign the budget to the campaign separately (fallback case)
+                    st.info("🔄 Assigning individual budget to campaign (fallback)...")
+                    try:
+                        # Create a campaign update operation to assign the budget
+                        campaign_update_operation = client.get_type("CampaignOperation")
+                        campaign_update = campaign_update_operation.update
+                        campaign_update.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
+                        campaign_update.campaign_budget = budget_resource_name
+                        
+                        # Update the campaign with the budget
+                        update_response = campaign_service.mutate_campaigns(
+                            customer_id=customer_id, operations=[campaign_update_operation]
+                        )
+                        st.info("✅ Successfully assigned individual budget to campaign (fallback)")
+                    except Exception as budget_assign_error:
+                        st.warning(f"⚠️ Could not assign budget separately (fallback): {budget_assign_error}")
+                        # Fallback: try to create campaign with budget in one operation
+                        st.info("🔄 Fallback: Creating campaign with budget in single operation...")
+                        campaign_fallback.campaign_budget = budget_resource_name
+                        response_fallback = campaign_service.mutate_campaigns(
+                            customer_id=customer_id, operations=[campaign_operation_fallback]
+                        )
+                        campaign_id = response_fallback.results[0].resource_name.split("/")[-1]
                     
                     # Apply shared negative keywords list to the campaign (fallback case)
                     try:
