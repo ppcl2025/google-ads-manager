@@ -41,8 +41,7 @@ def main():
     try:
         # Define the scopes needed for Google Ads API
         scopes = [
-            "https://www.googleapis.com/auth/adwords",
-            "https://www.googleapis.com/auth/userinfo.email"
+            "https://www.googleapis.com/auth/adwords"
         ]
         
         # Create the OAuth flow
