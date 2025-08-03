@@ -183,6 +183,50 @@ def get_google_ads_client():
             # Fallback to environment variables for local development
             client = GoogleAdsClient.load_from_env()
         
+        # Test the client by making a simple API call
+        try:
+            # Try to get customer info to verify the token is valid
+            customer_service = client.get_service("CustomerService")
+            customer_service.get_customer(customer_id=st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"])
+        except Exception as test_error:
+            if "invalid_grant" in str(test_error).lower() or "token has been expired" in str(test_error).lower():
+                st.error("🔐 **Authentication Error: Refresh Token Expired or Revoked**")
+                st.error(f"Error details: {test_error}")
+                st.markdown("""
+                **Your Google Ads refresh token has expired or been revoked. This can happen when:**
+                - The token hasn't been used for 6+ months
+                - You've revoked access to the app
+                - The OAuth consent screen was modified
+                - Too many refresh tokens were issued
+                
+                **To fix this, you need to generate a new refresh token:**
+                
+                1. **Download your OAuth client credentials:**
+                   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+                   - Navigate to APIs & Services > Credentials
+                   - Find your OAuth 2.0 Client ID
+                   - Download the JSON file and save it as `client_secrets.json`
+                
+                2. **Run the refresh token script:**
+                   ```bash
+                   python get_refresh_token.py
+                   ```
+                
+                3. **Update your Streamlit Cloud secrets:**
+                   - Go to your Streamlit Cloud app settings
+                   - Update the `GOOGLE_ADS_REFRESH_TOKEN` secret with the new token
+                
+                4. **Redeploy your app**
+                
+                **Alternative: Use the script in this repository:**
+                - The `get_refresh_token.py` script will help you generate a new token
+                - Make sure you have `client_secrets.json` in your project directory
+                """)
+                return None
+            else:
+                # Other API errors - still return the client but log the warning
+                st.warning(f"⚠️ API test failed but continuing: {test_error}")
+        
         return client
     except Exception as e:
         st.error(f"Failed to load Google Ads credentials: {e}")

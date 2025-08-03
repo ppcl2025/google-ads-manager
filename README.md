@@ -1,177 +1,156 @@
-# Google Ads Manager
+# Google Ads Manager AI Agent
 
-A Streamlit-based web application for managing Google Ads campaigns, ad groups, ads, and keywords under an MCC (My Client Center) account.
+A comprehensive Streamlit application for managing Google Ads campaigns, ad groups, ads, and keywords under an MCC (Manager) account. Features include sub-account creation, campaign management, bulk uploads, and performance analysis.
 
 ## Features
 
-- **Create Sub-Accounts**: Automatically create new sub-accounts with conversion tracking (clients set up their own payment methods)
-- **Create Campaigns**: Set up campaigns with shared bidding strategies and negative keyword lists
-- **Bulk Upload**: Upload ad groups, ads, and keywords via CSV/Excel files
-- **Performance Analysis**: Analyze campaign and keyword performance across sub-accounts
-- **MCC Management**: Manage multiple sub-accounts from a single interface
+- **Sub-Account Management**: Create and manage sub-accounts under your MCC
+- **Campaign Creation**: Set up campaigns with MSL-MaxCon bidding strategy
+- **Bulk Upload**: Upload CSV/Excel files to create ad groups, ads, and keywords
+- **Performance Analysis**: Analyze keywords and search terms performance across accounts
+- **Memory Management**: Optimized for handling large datasets
+- **PDF Reports**: Generate comprehensive performance reports
 
-## Deployment to Streamlit Cloud
+## Authentication Issues & Troubleshooting
 
-### Prerequisites
+### Common Authentication Errors
 
-1. **Google Ads API Access**:
-   - Google Ads Developer Token
-   - OAuth2 Client ID and Secret
-   - Refresh Token
-   - MCC Customer ID
+#### "invalid_grant: Token has been expired or revoked"
 
-2. **GitHub Account**: For code hosting and Streamlit Cloud integration
+This error occurs when your Google Ads refresh token has expired or been revoked. This can happen when:
 
-### Step-by-Step Deployment Instructions
+- The token hasn't been used for 6+ months
+- You've revoked access to the app
+- The OAuth consent screen was modified
+- Too many refresh tokens were issued for the same client/user combination
 
-#### Step 1: Prepare Your Google Ads Credentials
+#### How to Fix Authentication Issues
 
-1. **Get your Google Ads API credentials**:
-   - Developer Token: From Google Ads API Center
-   - Client ID & Secret: From Google Cloud Console
-   - Refresh Token: Generated through OAuth2 flow
-   - MCC Customer ID: Your manager account ID (format: XXX-XXX-XXXX)
-
-#### Step 2: Set Up GitHub Repository
-
-1. **Create a new GitHub repository**:
-   - Go to [GitHub](https://github.com)
-   - Click "New repository"
-   - Name it `google-ads-manager`
-   - Make it public (required for Streamlit Cloud free tier)
-   - Don't initialize with README (we'll push our code)
-
-2. **Push your code to GitHub**:
+1. **Generate a New Refresh Token**:
    ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/google-ads-manager.git
-   git push -u origin main
+   # Make sure you have the required package
+   pip install google-auth-oauthlib
+   
+   # Run the refresh token generator
+   python get_refresh_token.py
    ```
 
-#### Step 3: Deploy to Streamlit Cloud
+2. **Download OAuth Credentials**:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Navigate to APIs & Services > Credentials
+   - Find your OAuth 2.0 Client ID
+   - Download the JSON file and save it as `client_secrets.json`
 
-1. **Go to Streamlit Cloud**:
-   - Visit [share.streamlit.io](https://share.streamlit.io)
-   - Sign in with your GitHub account
+3. **Update Streamlit Cloud Secrets**:
+   - Go to your Streamlit Cloud app settings
+   - Update the `GOOGLE_ADS_REFRESH_TOKEN` secret with the new token
+   - Redeploy your app
 
-2. **Create a new app**:
-   - Click "New app"
-   - Select your `google-ads-manager` repository
-   - Set the main file path to: `google_ads_manager.py`
-   - Click "Deploy!"
+#### Required Streamlit Cloud Secrets
 
-3. **Configure Environment Variables**:
-   - In your app settings, go to "Secrets"
-   - Add the following secrets:
-   ```toml
-   GOOGLE_ADS_CLIENT_ID = "your_client_id"
-   GOOGLE_ADS_CLIENT_SECRET = "your_client_secret"
-   GOOGLE_ADS_DEVELOPER_TOKEN = "your_developer_token"
-   GOOGLE_ADS_REFRESH_TOKEN = "your_refresh_token"
-   GOOGLE_ADS_LOGIN_CUSTOMER_ID = "your_mcc_customer_id"
+Ensure these secrets are configured in your Streamlit Cloud app:
+
+```toml
+GOOGLE_ADS_CLIENT_ID = "your_client_id"
+GOOGLE_ADS_CLIENT_SECRET = "your_client_secret"
+GOOGLE_ADS_DEVELOPER_TOKEN = "your_developer_token"
+GOOGLE_ADS_REFRESH_TOKEN = "your_refresh_token"
+GOOGLE_ADS_LOGIN_CUSTOMER_ID = "5022887746"
+```
+
+#### Local Development Setup
+
+For local development, you can use environment variables instead of Streamlit secrets:
+
+```bash
+export GOOGLE_ADS_CLIENT_ID="your_client_id"
+export GOOGLE_ADS_CLIENT_SECRET="your_client_secret"
+export GOOGLE_ADS_DEVELOPER_TOKEN="your_developer_token"
+export GOOGLE_ADS_REFRESH_TOKEN="your_refresh_token"
+export GOOGLE_ADS_LOGIN_CUSTOMER_ID="5022887746"
+```
+
+## Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd google-ads-manager
    ```
 
-4. **Redeploy the app**:
-   - Click "Redeploy" to apply the secrets
-
-#### Step 4: Test Your Deployment
-
-1. **Access your app**:
-   - Your app will be available at: `https://your-app-name.streamlit.app`
-   - Share this URL with your team
-
-2. **Verify functionality**:
-   - Test creating a sub-account
-   - Test creating a campaign
-   - Test bulk upload functionality
-   - Test performance analysis
-
-### Environment Variables Reference
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GOOGLE_ADS_CLIENT_ID` | OAuth2 Client ID | `123456789-abc123.apps.googleusercontent.com` |
-| `GOOGLE_ADS_CLIENT_SECRET` | OAuth2 Client Secret | `GOCSPX-abc123def456` |
-| `GOOGLE_ADS_DEVELOPER_TOKEN` | API Developer Token | `ABC123DEF456` |
-| `GOOGLE_ADS_REFRESH_TOKEN` | OAuth2 Refresh Token | `1//04abc123def456` |
-| `GOOGLE_ADS_LOGIN_CUSTOMER_ID` | MCC Customer ID | `502-288-7746` |
-
-### Security Best Practices
-
-1. **Never commit credentials**:
-   - Keep `google-ads.yaml` in `.gitignore`
-   - Use environment variables in production
-
-2. **Access Control**:
-   - Consider adding authentication to your app
-   - Monitor usage and API calls
-
-3. **Regular Updates**:
-   - Keep dependencies updated
-   - Monitor for security patches
-
-### Troubleshooting
-
-#### Common Issues
-
-1. **"Failed to load Google Ads credentials"**:
-   - Verify all environment variables are set correctly
-   - Check that your refresh token is valid
-
-2. **"Invalid customer ID"**:
-   - Ensure your MCC customer ID is in the correct format (XXX-XXX-XXXX)
-   - Verify you have access to the account
-
-3. **"Developer token not approved"**:
-   - Contact Google Ads support to approve your developer token
-   - Ensure your token has the necessary permissions
-
-#### Getting Help
-
-- Check the [Google Ads API documentation](https://developers.google.com/google-ads/api/docs)
-- Review [Streamlit Cloud documentation](https://docs.streamlit.io/streamlit-community-cloud)
-- Check the app logs in Streamlit Cloud dashboard
-
-### Client Payment Setup
-
-All sub-accounts are created without linking to your MCC payment profile:
-
-#### Sub-Account Creation
-- All new sub-accounts are created without MCC payment profile linking
-- Clients must set up their own payment methods in Google Ads UI
-- This ensures clients have full control over their billing
-
-#### Important Notes
-- Sub-accounts cannot run ads until clients set up payment methods
-- Conversion tracking is still set to 'This Manager' for bidding strategy compatibility
-- Clients need to add payment methods in their Google Ads account: Billing → Payment methods
-
-### Local Development
-
-To run the app locally:
-
-1. **Install dependencies**:
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Set up credentials**:
-   - Create a `google-ads.yaml` file with your credentials
-   - Or set environment variables
+3. **Set up authentication** (see Authentication section above)
 
-3. **Run the app**:
+4. **Run the application**:
    ```bash
    streamlit run google_ads_manager.py
    ```
 
+## Usage
 
+### Creating Sub-Accounts
+- Navigate to the "Create Sub-Account" tab
+- Enter account name, currency, and timezone
+- Sub-accounts are created without MCC payment profile linking
+- Conversion tracking is automatically set to "This Manager"
 
-### Support
+### Creating Campaigns
+- Use the "Create Campaign" tab
+- Campaigns use MSL-MaxCon bidding strategy
+- PPCL List negative keywords are automatically applied
+- Network settings: Core Google Search only
+- Location targeting: Presence Only
 
-For issues or questions:
-- Check the troubleshooting section above
-- Review the Google Ads API documentation
-- Contact your Google Ads representative for API access issues 
+### Bulk Upload
+- Prepare CSV/Excel file with required columns
+- Upload file in the "Bulk Upload" tab
+- All content is added to a single campaign
+- Keywords only need to be specified in the first row of each ad group
+
+### Performance Analysis
+- Select sub-accounts to analyze
+- Choose date range for analysis
+- View top keywords and search terms by spend
+- Download comprehensive PDF reports
+
+## File Structure
+
+```
+google-ads-manager/
+├── google_ads_manager.py      # Main application
+├── get_refresh_token.py       # Token generation script
+├── requirements.txt           # Python dependencies
+├── README.md                 # This file
+└── client_secrets.json       # OAuth credentials (not in repo)
+```
+
+## Memory Management
+
+The application includes comprehensive memory management features:
+- Automatic garbage collection
+- DataFrame size limiting
+- Session state cleanup
+- Memory usage monitoring
+
+## API Usage Tracking
+
+The app tracks Google Ads API usage to stay within monthly limits:
+- Default limit: 15,000 operations per month
+- Automatic monthly reset
+- Usage statistics display
+
+## Support
+
+For issues related to:
+- **Authentication**: See the Authentication section above
+- **API Limits**: Check your Google Ads API usage in the app
+- **Memory Issues**: Use the memory management features in the app
+- **General Issues**: Check the error messages and logs in the application
+
+## License
+
+This project is licensed under the MIT License. 
