@@ -13,7 +13,7 @@ import streamlit as st
 from typing import Optional, List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
-# Use client.get_type() instead of direct imports for better compatibility
+from google.ads.googleads.v20.resources.types import Campaign
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -186,10 +186,8 @@ def get_google_ads_client():
         # Test the client by making a simple API call
         try:
             # Try to get customer info to verify the token is valid
-            google_ads_service = client.get_service("GoogleAdsService")
-            # Use a simple query to test authentication
-            query = "SELECT customer.id FROM customer LIMIT 1"
-            google_ads_service.search(customer_id=st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"], query=query)
+            customer_service = client.get_service("CustomerService")
+            customer_service.get_customer(customer_id=st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"])
         except Exception as test_error:
             if "invalid_grant" in str(test_error).lower() or "token has been expired" in str(test_error).lower():
                 st.error("🔐 **Authentication Error: Refresh Token Expired or Revoked**")
@@ -375,7 +373,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         if new_customer_id and new_customer_id != "UNKNOWN":
             # Now set the conversion tracking to "This Manager" for the new account
             try:
-                # Try to set conversion tracking using the correct approach
+                # Try to set conversion tracking using the correct API v20 approach
                 # First, let's try to link the account to the MCC's conversion tracking
                 
                 # Use the CustomerService to update the customer settings
@@ -451,9 +449,9 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign_budget.amount_micros = int(float(budget_amount) * 1000000)  # Convert to micros
         campaign_budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
         
-        # Note: In Google Ads API v27+, is_shared field is deprecated
-        # Campaign budgets are now campaign-specific by default
-        # No need to set is_shared field
+        # Explicitly set this as a NON-SHARED budget (campaign-specific)
+        # This prevents it from becoming a shared budget across multiple campaigns
+        campaign_budget.is_shared = False
         
         budget_response = campaign_budget_service.mutate_campaign_budgets(
             customer_id=customer_id, operations=[budget_operation]
@@ -473,10 +471,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Or check in Google Ads UI: Tools & Settings > Shared Library > Bid Strategies
         msl_maxcon_strategy_id = "11481770709"  # MSL - MaxCon bidding strategy ID
         
-        # Set the shared bidding strategy using the correct field name
-        # We'll try different field names for compatibility
+        # Set the shared bidding strategy using the correct API v20 field name
+        # In API v20, we need to use the correct field name for bidding strategy
         try:
-            # Try the standard field name first
+            # Try the correct field name for API v20
             campaign.campaign_bidding_strategy = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
         except AttributeError:
             # Fallback to alternative field name
@@ -492,19 +490,11 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         ppcl_negative_list_id = "11404993599"  # PPCL List negative keywords ID
         st.info(f"✅ Will apply PPCL List negative keywords (ID: {ppcl_negative_list_id}) after campaign creation")
         
-        # Set required field for API v21
-        try:
-            campaign.contains_eu_political_advertising = False
-            st.info("✅ Set EU political advertising field to False")
-        except Exception as eu_error:
-            st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
-            logger.warning(f"Failed to set EU political advertising field: {eu_error}")
-        
         # Configure NetworkSettings to use only core Google Search Network
         # Exclude search partners and Display Network
         try:
-            # Use client.get_type() for better compatibility
-            campaign.network_settings = client.get_type("CampaignNetworkSettings")
+            # Use the correct API v20 approach with Campaign resource types
+            campaign.network_settings = Campaign.NetworkSettings()
             campaign.network_settings.target_google_search = True  # Enable core Google Search
             campaign.network_settings.target_search_network = False  # Disable search partners
             campaign.network_settings.target_content_network = False  # Disable Display Network
@@ -517,8 +507,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         
         # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
         try:
-            # Use client.get_type() for better compatibility
-            campaign.geo_target_type_setting = client.get_type("CampaignGeoTargetTypeSetting")
+            # Use the correct API v20 approach with Campaign resource types
+            campaign.geo_target_type_setting = Campaign.GeoTargetTypeSetting()
             campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
             campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
             st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
@@ -577,18 +567,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.manual_cpc = client.get_type("ManualCpc")
                 campaign_fallback.manual_cpc.enhanced_cpc_enabled = False
                 
-                # Set required field for API v21 (fallback case)
-                try:
-                    campaign_fallback.contains_eu_political_advertising = False
-                    st.info("✅ Set EU political advertising field to False (fallback)")
-                except Exception as eu_error:
-                    st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
-                    logger.warning(f"Failed to set EU political advertising field: {eu_error}")
-                
                 # Configure NetworkSettings for fallback case too
                 try:
-                    # Use client.get_type() for better compatibility
-                    campaign_fallback.network_settings = client.get_type("CampaignNetworkSettings")
+                    # Use the correct API v20 approach with Campaign resource types
+                    campaign_fallback.network_settings = Campaign.NetworkSettings()
                     campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search
                     campaign_fallback.network_settings.target_search_network = False  # Disable search partners
                     campaign_fallback.network_settings.target_content_network = False  # Disable Display Network
@@ -601,8 +583,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure Location Targeting for fallback case too
                 try:
-                    # Use client.get_type() for better compatibility
-                    campaign_fallback.geo_target_type_setting = client.get_type("CampaignGeoTargetTypeSetting")
+                    # Use the correct API v20 approach with Campaign resource types
+                    campaign_fallback.geo_target_type_setting = Campaign.GeoTargetTypeSetting()
                     campaign_fallback.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
                     campaign_fallback.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
                     st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
