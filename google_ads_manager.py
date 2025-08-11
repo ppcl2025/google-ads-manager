@@ -490,62 +490,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         ppcl_negative_list_id = "11404993599"  # PPCL List negative keywords ID
         st.info(f"✅ Will apply PPCL List negative keywords (ID: {ppcl_negative_list_id}) after campaign creation")
         
-        # Configure NetworkSettings to use only core Google Search Network
-        # Exclude search partners and Display Network
-        try:
-            # Try different possible field names for API v21
-            network_configured = False
-            
-            # Try common field names
-            field_mappings = [
-                ('target_google_search', True),
-                ('target_search_network', False),
-                ('target_content_network', False),
-                ('target_partner_search_network', False),
-                ('target_youtube', False)
-            ]
-            
-            for field_name, value in field_mappings:
-                if hasattr(campaign, field_name):
-                    setattr(campaign, field_name, value)
-                    network_configured = True
-            
-            if network_configured:
-                st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
-            else:
-                # Debug: show available fields
-                available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
-                st.warning(f"⚠️ Network settings fields not found. Available fields: {available_fields[:10]}...")
-                logger.warning(f"Network settings fields not found. Available fields: {available_fields}")
-                
-        except Exception as network_error:
-            st.warning(f"⚠️ Could not configure network settings: {network_error}")
-            logger.warning(f"Failed to configure network settings: {network_error}")
-        
-        # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
-        try:
-            # Try different possible field names for API v21
-            geo_configured = False
-            
-            # Try common field names
-            if hasattr(campaign, 'positive_geo_target_type'):
-                campaign.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-                geo_configured = True
-            if hasattr(campaign, 'negative_geo_target_type'):
-                campaign.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
-                geo_configured = True
-            
-            if geo_configured:
-                st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
-            else:
-                # Debug: show available fields
-                available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
-                st.warning(f"⚠️ Geo targeting fields not found. Available fields: {available_fields[:10]}...")
-                logger.warning(f"Geo targeting fields not found. Available fields: {available_fields}")
-                
-        except Exception as location_error:
-            st.warning(f"⚠️ Could not configure location targeting: {location_error}")
-            logger.warning(f"Failed to configure location targeting: {location_error}")
+        # Skip network and geo targeting configuration for now to avoid API v21 compatibility issues
+        # These settings can be configured manually in Google Ads UI after campaign creation
+        st.info("ℹ️ Network and location targeting will be set to defaults. Configure manually in Google Ads UI after creation.")
+        logger.info("Skipping network and geo targeting configuration to avoid API v21 compatibility issues")
         
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
@@ -634,61 +582,9 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.manual_cpc = client.get_type("ManualCpc")
                 campaign_fallback.manual_cpc.enhanced_cpc_enabled = False
                 
-                # Configure NetworkSettings for fallback case too
-                try:
-                    # Try different possible field names for API v21
-                    network_configured = False
-                    
-                    # Try common field names
-                    field_mappings = [
-                        ('target_google_search', True),
-                        ('target_search_network', False),
-                        ('target_content_network', False),
-                        ('target_partner_search_network', False),
-                        ('target_youtube', False)
-                    ]
-                    
-                    for field_name, value in field_mappings:
-                        if hasattr(campaign_fallback, field_name):
-                            setattr(campaign_fallback, field_name, value)
-                            network_configured = True
-                    
-                    if network_configured:
-                        st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
-                    else:
-                        # Debug: show available fields
-                        available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
-                        st.warning(f"⚠️ Network settings fields not found in fallback. Available fields: {available_fields[:10]}...")
-                        logger.warning(f"Network settings fields not found in fallback. Available fields: {available_fields}")
-                        
-                except Exception as network_error:
-                    st.warning(f"⚠️ Could not configure network settings: {network_error}")
-                    logger.warning(f"Failed to configure network settings: {network_error}")
-                
-                # Configure Location Targeting for fallback case too
-                try:
-                    # Try different possible field names for API v21
-                    geo_configured = False
-                    
-                    # Try common field names
-                    if hasattr(campaign_fallback, 'positive_geo_target_type'):
-                        campaign_fallback.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-                        geo_configured = True
-                    if hasattr(campaign_fallback, 'negative_geo_target_type'):
-                        campaign_fallback.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
-                        geo_configured = True
-                    
-                    if geo_configured:
-                        st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
-                    else:
-                        # Debug: show available fields
-                        available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
-                        st.warning(f"⚠️ Geo targeting fields not found in fallback. Available fields: {available_fields[:10]}...")
-                        logger.warning(f"Geo targeting fields not found in fallback. Available fields: {available_fields}")
-                        
-                except Exception as location_error:
-                    st.warning(f"⚠️ Could not configure location targeting: {location_error}")
-                    logger.warning(f"Failed to configure location targeting: {location_error}")
+                # Skip network and geo targeting configuration for fallback case too
+                st.info("ℹ️ Network and location targeting will be set to defaults for fallback campaign. Configure manually in Google Ads UI after creation.")
+                logger.info("Skipping network and geo targeting configuration for fallback campaign to avoid API v21 compatibility issues")
                 
                 try:
                     response_fallback = campaign_service.mutate_campaigns(
