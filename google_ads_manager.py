@@ -102,6 +102,25 @@ class CloudTokenManager:
                 st.error("❌ Streamlit secrets not available. This app must run on Streamlit Cloud.")
                 return None
             
+            # Check if all required secrets are present
+            required_secrets = [
+                "GOOGLE_ADS_CLIENT_ID",
+                "GOOGLE_ADS_CLIENT_SECRET", 
+                "GOOGLE_ADS_DEVELOPER_TOKEN",
+                "GOOGLE_ADS_REFRESH_TOKEN",
+                "GOOGLE_ADS_LOGIN_CUSTOMER_ID"
+            ]
+            
+            missing_secrets = []
+            for secret_name in required_secrets:
+                if secret_name not in st.secrets or not st.secrets[secret_name]:
+                    missing_secrets.append(secret_name)
+            
+            if missing_secrets:
+                st.error(f"❌ Missing or empty Streamlit secrets: {', '.join(missing_secrets)}")
+                st.info("Please configure all required secrets in your Streamlit Cloud app settings.")
+                return None
+            
             # Create client
             client = GoogleAdsClient.load_from_dict({
                 "client_id": st.secrets["GOOGLE_ADS_CLIENT_ID"],
@@ -116,6 +135,7 @@ class CloudTokenManager:
             
         except Exception as e:
             st.error(f"❌ Failed to create Google Ads client: {e}")
+            st.info("This usually means one of your Streamlit secrets is invalid or malformed.")
             return None
     
     def test_client_health(self, client: GoogleAdsClient) -> tuple[bool, str]:
@@ -301,6 +321,18 @@ GOOGLE_ADS_CLIENT_SECRET = "your_client_secret"
 GOOGLE_ADS_DEVELOPER_TOKEN = "your_developer_token"
 GOOGLE_ADS_REFRESH_TOKEN = "your_refresh_token"
 GOOGLE_ADS_LOGIN_CUSTOMER_ID = "5022887746"
+        """)
+        
+        # Additional troubleshooting help
+        st.markdown("""
+        **Troubleshooting Steps:**
+        
+        1. **Check your Streamlit Cloud secrets** - Make sure all 5 secrets are configured
+        2. **Verify your refresh token** - Run `python refresh_token_simple.py` locally to get a new one
+        3. **Check secret values** - Ensure no extra spaces or quotes in your secret values
+        4. **Redeploy after changes** - Update secrets and redeploy your app
+        
+        **Need help?** Check `TOKEN_TROUBLESHOOTING.md` for detailed guidance.
         """)
         return None
 
