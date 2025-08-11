@@ -4,6 +4,7 @@ google-ads.yaml
 *.yml
 client_secrets.json
 *.json
+refresh_token_backup.txt
 
 # Python
 __pycache__/
