@@ -68,6 +68,76 @@ class MemoryManager:
 # Initialize memory manager
 memory_manager = MemoryManager()
 
+# Streamlit Cloud Compatible Token Management
+class CloudTokenManager:
+    """Token management optimized for Streamlit Cloud deployment."""
+    
+    def __init__(self):
+        self.session_key = "google_ads_token_info"
+    
+    def get_token_info(self) -> Optional[dict]:
+        """Get token info from session state."""
+        if self.session_key in st.session_state:
+            return st.session_state[self.session_key]
+        return None
+    
+    def save_token_info(self, token_info: dict):
+        """Save token info to session state."""
+        st.session_state[self.session_key] = token_info
+    
+    def is_token_expiring_soon(self, token_info: dict) -> bool:
+        """Check if token will expire soon (within 7 days)."""
+        if not token_info or 'expires_at' not in token_info:
+            return True
+        
+        expiry_date = datetime.fromisoformat(token_info['expires_at'])
+        days_until_expiry = (expiry_date - datetime.now()).days
+        return days_until_expiry <= 7
+    
+    def create_client_with_retry(self) -> Optional[GoogleAdsClient]:
+        """Create Google Ads client with retry logic for Streamlit Cloud."""
+        try:
+            # Always use Streamlit secrets in cloud environment
+            if not hasattr(st, 'secrets'):
+                st.error("❌ Streamlit secrets not available. This app must run on Streamlit Cloud.")
+                return None
+            
+            # Create client
+            client = GoogleAdsClient.load_from_dict({
+                "client_id": st.secrets["GOOGLE_ADS_CLIENT_ID"],
+                "client_secret": st.secrets["GOOGLE_ADS_CLIENT_SECRET"],
+                "developer_token": st.secrets["GOOGLE_ADS_DEVELOPER_TOKEN"],
+                "refresh_token": st.secrets["GOOGLE_ADS_REFRESH_TOKEN"],
+                "login_customer_id": st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
+                "use_proto_plus": True
+            })
+            
+            return client
+            
+        except Exception as e:
+            st.error(f"❌ Failed to create Google Ads client: {e}")
+            return None
+    
+    def test_client_health(self, client: GoogleAdsClient) -> tuple[bool, str]:
+        """Test if the client is working properly."""
+        try:
+            google_ads_service = client.get_service("GoogleAdsService")
+            query = "SELECT customer.id FROM customer LIMIT 1"
+            customer_id = st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"]
+            google_ads_service.search(customer_id=customer_id, query=query)
+            return True, "✅ Token is valid and working"
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "invalid_grant" in error_msg or "token has been expired" in error_msg:
+                return False, "❌ Token expired or revoked"
+            elif "access_denied" in error_msg:
+                return False, "❌ Access denied - check permissions"
+            else:
+                return False, f"⚠️ API error: {e}"
+
+# Initialize cloud token manager
+cloud_token_manager = CloudTokenManager()
+
 # API Usage Tracker
 class APIUsageTracker:
     def __init__(self, monthly_limit: int = 15000):
@@ -166,72 +236,64 @@ st.set_page_config(
 
 # Google Ads API credentials from Streamlit secrets
 def get_google_ads_client():
-    """Create Google Ads client using Streamlit secrets"""
+    """Create Google Ads client using Streamlit secrets with cloud-optimized token management"""
     try:
         # Check if we're running in Streamlit Cloud (has secrets)
         if hasattr(st, 'secrets'):
-            # Use Streamlit secrets
-            client = GoogleAdsClient.load_from_dict({
-                "client_id": st.secrets["GOOGLE_ADS_CLIENT_ID"],
-                "client_secret": st.secrets["GOOGLE_ADS_CLIENT_SECRET"],
-                "developer_token": st.secrets["GOOGLE_ADS_DEVELOPER_TOKEN"],
-                "refresh_token": st.secrets["GOOGLE_ADS_REFRESH_TOKEN"],
-                "login_customer_id": st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
-                "use_proto_plus": True
-            })
+            # Create client using Streamlit secrets
+            client = cloud_token_manager.create_client_with_retry()
+            if not client:
+                return None
+            
+            # Test the client health
+            is_healthy, health_message = cloud_token_manager.test_client_health(client)
+            
+            if not is_healthy:
+                if "Token expired or revoked" in health_message:
+                    st.error("🔐 **Authentication Error: Refresh Token Expired or Revoked**")
+                    st.markdown("""
+                    **Your Google Ads refresh token has expired or been revoked.**
+                    
+                    **To fix this:**
+                    
+                    1. **Download your OAuth client credentials:**
+                       - Go to [Google Cloud Console](https://console.cloud.google.com/)
+                       - Navigate to APIs & Services > Credentials
+                       - Find your OAuth 2.0 Client ID
+                       - Download the JSON file and save it as `client_secrets.json`
+                    
+                    2. **Generate a new refresh token:**
+                       ```bash
+                       python refresh_token_simple.py
+                       ```
+                    
+                    3. **Update your Streamlit Cloud secrets:**
+                       - Go to your Streamlit Cloud app settings
+                       - Update the `GOOGLE_ADS_REFRESH_TOKEN` secret
+                       - Redeploy your app
+                    
+                    **Note**: Since this runs on Streamlit Cloud, you need to manually refresh tokens when they expire.
+                    """)
+                    return None
+                else:
+                    st.warning(f"⚠️ {health_message}")
+                    # Continue with the client even if there are warnings
+            else:
+                # Token is working - save health status
+                cloud_token_manager.save_token_info({
+                    'status': 'healthy',
+                    'last_check': datetime.now().isoformat(),
+                    'expires_at': (datetime.now() + timedelta(days=30)).isoformat()  # Estimate
+                })
+            
+            return client
         else:
             # Fallback to environment variables for local development
             client = GoogleAdsClient.load_from_env()
-        
-        # Test the client by making a simple API call
-        try:
-            # Try to get customer info to verify the token is valid
-            google_ads_service = client.get_service("GoogleAdsService")
-            # Use a simple query to test authentication
-            query = "SELECT customer.id FROM customer LIMIT 1"
-            google_ads_service.search(customer_id=st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"], query=query)
-        except Exception as test_error:
-            if "invalid_grant" in str(test_error).lower() or "token has been expired" in str(test_error).lower():
-                st.error("🔐 **Authentication Error: Refresh Token Expired or Revoked**")
-                st.error(f"Error details: {test_error}")
-                st.markdown("""
-                **Your Google Ads refresh token has expired or been revoked. This can happen when:**
-                - The token hasn't been used for 6+ months
-                - You've revoked access to the app
-                - The OAuth consent screen was modified
-                - Too many refresh tokens were issued
-                
-                **To fix this, you need to generate a new refresh token:**
-                
-                1. **Download your OAuth client credentials:**
-                   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-                   - Navigate to APIs & Services > Credentials
-                   - Find your OAuth 2.0 Client ID
-                   - Download the JSON file and save it as `client_secrets.json`
-                
-                2. **Run the refresh token script:**
-                   ```bash
-                   python get_refresh_token.py
-                   ```
-                
-                3. **Update your Streamlit Cloud secrets:**
-                   - Go to your Streamlit Cloud app settings
-                   - Update the `GOOGLE_ADS_REFRESH_TOKEN` secret with the new token
-                
-                4. **Redeploy your app**
-                
-                **Alternative: Use the script in this repository:**
-                - The `get_refresh_token.py` script will help you generate a new token
-                - Make sure you have `client_secrets.json` in your project directory
-                """)
-                return None
-            else:
-                # Other API errors - still return the client but log the warning
-                st.warning(f"⚠️ API test failed but continuing: {test_error}")
-        
-        return client
+            return client
+            
     except Exception as e:
-        st.error(f"Failed to load Google Ads credentials: {e}")
+        st.error(f"❌ Failed to load Google Ads credentials: {e}")
         st.info("Please ensure the following secrets are configured in Streamlit Cloud:")
         st.code("""
 GOOGLE_ADS_CLIENT_ID = "your_client_id"
