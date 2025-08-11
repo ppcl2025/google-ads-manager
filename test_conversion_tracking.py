@@ -31,20 +31,37 @@ def test_conversion_tracking_setup():
         # Get available services
         customer_service = client.get_service("CustomerService")
         
-        # Method 1: Try to get current customer info
-        print("\n=== Method 1: Get current customer info ===")
+        # Method 1: Try to get current customer info using search
+        print("\n=== Method 1: Get current customer info using search ===")
         try:
-            customer = customer_service.get_customer(customer_id=test_customer_id)
-            print(f"Customer name: {customer.descriptive_name}")
-            print(f"Customer ID: {customer.id}")
-            print(f"Manager: {customer.manager}")
-            print(f"Test account: {customer.test_account}")
+            google_ads_service = client.get_service("GoogleAdsService")
+            query = f"""
+                SELECT
+                  customer.id,
+                  customer.descriptive_name,
+                  customer.manager,
+                  customer.test_account
+                FROM customer
+                WHERE customer.id = {test_customer_id}
+            """
+            response = google_ads_service.search(
+                customer_id=test_customer_id,
+                query=query
+            )
             
-            if hasattr(customer, 'conversion_tracking_setting'):
-                print(f"Conversion tracking ID: {customer.conversion_tracking_setting.conversion_tracking_id}")
-                print(f"Cross account conversion tracking ID: {customer.conversion_tracking_setting.cross_account_conversion_tracking_id}")
-            else:
-                print("No conversion tracking setting found")
+            for row in response:
+                customer = row.customer
+                print(f"Customer name: {customer.descriptive_name}")
+                print(f"Customer ID: {customer.id}")
+                print(f"Manager: {customer.manager}")
+                print(f"Test account: {customer.test_account}")
+                
+                if hasattr(customer, 'conversion_tracking_setting'):
+                    print(f"Conversion tracking ID: {customer.conversion_tracking_setting.conversion_tracking_id}")
+                    print(f"Cross account conversion tracking ID: {customer.conversion_tracking_setting.cross_account_conversion_tracking_id}")
+                else:
+                    print("No conversion tracking setting found")
+                break
                 
         except Exception as e:
             print(f"Error getting customer info: {e}")
