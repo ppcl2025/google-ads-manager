@@ -449,9 +449,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign_budget.amount_micros = int(float(budget_amount) * 1000000)  # Convert to micros
         campaign_budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
         
-        # Explicitly set this as a NON-SHARED budget (campaign-specific)
-        # This prevents it from becoming a shared budget across multiple campaigns
-        campaign_budget.is_shared = False
+        # In API v21, campaign budgets are automatically campaign-specific by default
+        # No need to set is_shared field as it doesn't exist in this API version
         
         budget_response = campaign_budget_service.mutate_campaign_budgets(
             customer_id=customer_id, operations=[budget_operation]
