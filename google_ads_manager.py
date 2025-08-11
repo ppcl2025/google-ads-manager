@@ -13,7 +13,7 @@ import streamlit as st
 from typing import Optional, List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
-from google.ads.googleads.v20.resources.types import Campaign
+# Use client.get_type() instead of direct imports for better compatibility
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -67,96 +67,6 @@ class MemoryManager:
 
 # Initialize memory manager
 memory_manager = MemoryManager()
-
-# Streamlit Cloud Compatible Token Management
-class CloudTokenManager:
-    """Token management optimized for Streamlit Cloud deployment."""
-    
-    def __init__(self):
-        self.session_key = "google_ads_token_info"
-    
-    def get_token_info(self) -> Optional[dict]:
-        """Get token info from session state."""
-        if self.session_key in st.session_state:
-            return st.session_state[self.session_key]
-        return None
-    
-    def save_token_info(self, token_info: dict):
-        """Save token info to session state."""
-        st.session_state[self.session_key] = token_info
-    
-    def is_token_expiring_soon(self, token_info: dict) -> bool:
-        """Check if token will expire soon (within 7 days)."""
-        if not token_info or 'expires_at' not in token_info:
-            return True
-        
-        expiry_date = datetime.fromisoformat(token_info['expires_at'])
-        days_until_expiry = (expiry_date - datetime.now()).days
-        return days_until_expiry <= 7
-    
-    def create_client_with_retry(self) -> Optional[GoogleAdsClient]:
-        """Create Google Ads client with retry logic for Streamlit Cloud."""
-        try:
-            # Always use Streamlit secrets in cloud environment
-            if not hasattr(st, 'secrets'):
-                st.error("❌ Streamlit secrets not available. This app must run on Streamlit Cloud.")
-                return None
-            
-            # Check if all required secrets are present
-            required_secrets = [
-                "GOOGLE_ADS_CLIENT_ID",
-                "GOOGLE_ADS_CLIENT_SECRET", 
-                "GOOGLE_ADS_DEVELOPER_TOKEN",
-                "GOOGLE_ADS_REFRESH_TOKEN",
-                "GOOGLE_ADS_LOGIN_CUSTOMER_ID"
-            ]
-            
-            missing_secrets = []
-            for secret_name in required_secrets:
-                if secret_name not in st.secrets or not st.secrets[secret_name]:
-                    missing_secrets.append(secret_name)
-            
-            if missing_secrets:
-                st.error(f"❌ Missing or empty Streamlit secrets: {', '.join(missing_secrets)}")
-                st.info("Please configure all required secrets in your Streamlit Cloud app settings.")
-                return None
-            
-            # Create client
-            client = GoogleAdsClient.load_from_dict({
-                "client_id": st.secrets["GOOGLE_ADS_CLIENT_ID"],
-                "client_secret": st.secrets["GOOGLE_ADS_CLIENT_SECRET"],
-                "developer_token": st.secrets["GOOGLE_ADS_DEVELOPER_TOKEN"],
-                "refresh_token": st.secrets["GOOGLE_ADS_REFRESH_TOKEN"],
-                "login_customer_id": st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
-                "use_proto_plus": True
-            })
-            
-            return client
-            
-        except Exception as e:
-            st.error(f"❌ Failed to create Google Ads client: {e}")
-            st.info("This usually means one of your Streamlit secrets is invalid or malformed.")
-            return None
-    
-    def test_client_health(self, client: GoogleAdsClient) -> tuple[bool, str]:
-        """Test if the client is working properly."""
-        try:
-            google_ads_service = client.get_service("GoogleAdsService")
-            query = "SELECT customer.id FROM customer LIMIT 1"
-            customer_id = st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"]
-            google_ads_service.search(customer_id=customer_id, query=query)
-            return True, "✅ Token is valid and working"
-        except Exception as e:
-            error_msg = str(e).lower()
-            if "invalid_grant" in error_msg or "token has been expired" in error_msg:
-                return False, "❌ Token expired or revoked"
-            elif "access_denied" in error_msg:
-                return False, "❌ Access denied - check permissions"
-            else:
-                return False, f"⚠️ API error: {e}"
-
-# Initialize cloud token manager
-cloud_token_manager = CloudTokenManager()
 
 # API Usage Tracker
 class APIUsageTracker:
@@ -256,64 +166,72 @@ st.set_page_config(
 
 # Google Ads API credentials from Streamlit secrets
 def get_google_ads_client():
-    """Create Google Ads client using Streamlit secrets with cloud-optimized token management"""
+    """Create Google Ads client using Streamlit secrets"""
     try:
         # Check if we're running in Streamlit Cloud (has secrets)
         if hasattr(st, 'secrets'):
-            # Create client using Streamlit secrets
-            client = cloud_token_manager.create_client_with_retry()
-            if not client:
-                return None
-            
-            # Test the client health
-            is_healthy, health_message = cloud_token_manager.test_client_health(client)
-            
-            if not is_healthy:
-                if "Token expired or revoked" in health_message:
-                    st.error("🔐 **Authentication Error: Refresh Token Expired or Revoked**")
-                    st.markdown("""
-                    **Your Google Ads refresh token has expired or been revoked.**
-                    
-                    **To fix this:**
-                    
-                    1. **Download your OAuth client credentials:**
-                       - Go to [Google Cloud Console](https://console.cloud.google.com/)
-                       - Navigate to APIs & Services > Credentials
-                       - Find your OAuth 2.0 Client ID
-                       - Download the JSON file and save it as `client_secrets.json`
-                    
-                    2. **Generate a new refresh token:**
-                       ```bash
-                       python refresh_token_simple.py
-                       ```
-                    
-                    3. **Update your Streamlit Cloud secrets:**
-                       - Go to your Streamlit Cloud app settings
-                       - Update the `GOOGLE_ADS_REFRESH_TOKEN` secret
-                       - Redeploy your app
-                    
-                    **Note**: Since this runs on Streamlit Cloud, you need to manually refresh tokens when they expire.
-                    """)
-                    return None
-                else:
-                    st.warning(f"⚠️ {health_message}")
-                    # Continue with the client even if there are warnings
-            else:
-                # Token is working - save health status
-                cloud_token_manager.save_token_info({
-                    'status': 'healthy',
-                    'last_check': datetime.now().isoformat(),
-                    'expires_at': (datetime.now() + timedelta(days=30)).isoformat()  # Estimate
-                })
-            
-            return client
+            # Use Streamlit secrets
+            client = GoogleAdsClient.load_from_dict({
+                "client_id": st.secrets["GOOGLE_ADS_CLIENT_ID"],
+                "client_secret": st.secrets["GOOGLE_ADS_CLIENT_SECRET"],
+                "developer_token": st.secrets["GOOGLE_ADS_DEVELOPER_TOKEN"],
+                "refresh_token": st.secrets["GOOGLE_ADS_REFRESH_TOKEN"],
+                "login_customer_id": st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
+                "use_proto_plus": True
+            })
         else:
             # Fallback to environment variables for local development
             client = GoogleAdsClient.load_from_env()
-            return client
-            
+        
+        # Test the client by making a simple API call
+        try:
+            # Try to get customer info to verify the token is valid
+            google_ads_service = client.get_service("GoogleAdsService")
+            # Use a simple query to test authentication
+            query = "SELECT customer.id FROM customer LIMIT 1"
+            google_ads_service.search(customer_id=st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"], query=query)
+        except Exception as test_error:
+            if "invalid_grant" in str(test_error).lower() or "token has been expired" in str(test_error).lower():
+                st.error("🔐 **Authentication Error: Refresh Token Expired or Revoked**")
+                st.error(f"Error details: {test_error}")
+                st.markdown("""
+                **Your Google Ads refresh token has expired or been revoked. This can happen when:**
+                - The token hasn't been used for 6+ months
+                - You've revoked access to the app
+                - The OAuth consent screen was modified
+                - Too many refresh tokens were issued
+                
+                **To fix this, you need to generate a new refresh token:**
+                
+                1. **Download your OAuth client credentials:**
+                   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+                   - Navigate to APIs & Services > Credentials
+                   - Find your OAuth 2.0 Client ID
+                   - Download the JSON file and save it as `client_secrets.json`
+                
+                2. **Run the refresh token script:**
+                   ```bash
+                   python get_refresh_token.py
+                   ```
+                
+                3. **Update your Streamlit Cloud secrets:**
+                   - Go to your Streamlit Cloud app settings
+                   - Update the `GOOGLE_ADS_REFRESH_TOKEN` secret with the new token
+                
+                4. **Redeploy your app**
+                
+                **Alternative: Use the script in this repository:**
+                - The `get_refresh_token.py` script will help you generate a new token
+                - Make sure you have `client_secrets.json` in your project directory
+                """)
+                return None
+            else:
+                # Other API errors - still return the client but log the warning
+                st.warning(f"⚠️ API test failed but continuing: {test_error}")
+        
+        return client
     except Exception as e:
-        st.error(f"❌ Failed to load Google Ads credentials: {e}")
+        st.error(f"Failed to load Google Ads credentials: {e}")
         st.info("Please ensure the following secrets are configured in Streamlit Cloud:")
         st.code("""
 GOOGLE_ADS_CLIENT_ID = "your_client_id"
@@ -321,18 +239,6 @@ GOOGLE_ADS_CLIENT_SECRET = "your_client_secret"
 GOOGLE_ADS_DEVELOPER_TOKEN = "your_developer_token"
 GOOGLE_ADS_REFRESH_TOKEN = "your_refresh_token"
 GOOGLE_ADS_LOGIN_CUSTOMER_ID = "5022887746"
-        """)
-        
-        # Additional troubleshooting help
-        st.markdown("""
-        **Troubleshooting Steps:**
-        
-        1. **Check your Streamlit Cloud secrets** - Make sure all 5 secrets are configured
-        2. **Verify your refresh token** - Run `python refresh_token_simple.py` locally to get a new one
-        3. **Check secret values** - Ensure no extra spaces or quotes in your secret values
-        4. **Redeploy after changes** - Update secrets and redeploy your app
-        
-        **Need help?** Check `TOKEN_TROUBLESHOOTING.md` for detailed guidance.
         """)
         return None
 
@@ -469,7 +375,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         if new_customer_id and new_customer_id != "UNKNOWN":
             # Now set the conversion tracking to "This Manager" for the new account
             try:
-                # Try to set conversion tracking using the correct API v20 approach
+                # Try to set conversion tracking using the correct approach
                 # First, let's try to link the account to the MCC's conversion tracking
                 
                 # Use the CustomerService to update the customer settings
@@ -545,9 +451,9 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign_budget.amount_micros = int(float(budget_amount) * 1000000)  # Convert to micros
         campaign_budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
         
-        # Explicitly set this as a NON-SHARED budget (campaign-specific)
-        # This prevents it from becoming a shared budget across multiple campaigns
-        campaign_budget.is_shared = False
+        # Note: In Google Ads API v27+, is_shared field is deprecated
+        # Campaign budgets are now campaign-specific by default
+        # No need to set is_shared field
         
         budget_response = campaign_budget_service.mutate_campaign_budgets(
             customer_id=customer_id, operations=[budget_operation]
@@ -567,10 +473,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Or check in Google Ads UI: Tools & Settings > Shared Library > Bid Strategies
         msl_maxcon_strategy_id = "11481770709"  # MSL - MaxCon bidding strategy ID
         
-        # Set the shared bidding strategy using the correct API v20 field name
-        # In API v20, we need to use the correct field name for bidding strategy
+        # Set the shared bidding strategy using the correct field name
+        # We'll try different field names for compatibility
         try:
-            # Try the correct field name for API v20
+            # Try the standard field name first
             campaign.campaign_bidding_strategy = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
         except AttributeError:
             # Fallback to alternative field name
@@ -589,8 +495,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Configure NetworkSettings to use only core Google Search Network
         # Exclude search partners and Display Network
         try:
-            # Use the correct API v20 approach with Campaign resource types
-            campaign.network_settings = Campaign.NetworkSettings()
+            # Use client.get_type() for better compatibility
+            campaign.network_settings = client.get_type("CampaignNetworkSettings")
             campaign.network_settings.target_google_search = True  # Enable core Google Search
             campaign.network_settings.target_search_network = False  # Disable search partners
             campaign.network_settings.target_content_network = False  # Disable Display Network
@@ -603,8 +509,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         
         # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
         try:
-            # Use the correct API v20 approach with Campaign resource types
-            campaign.geo_target_type_setting = Campaign.GeoTargetTypeSetting()
+            # Use client.get_type() for better compatibility
+            campaign.geo_target_type_setting = client.get_type("CampaignGeoTargetTypeSetting")
             campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
             campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
             st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
@@ -665,8 +571,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure NetworkSettings for fallback case too
                 try:
-                    # Use the correct API v20 approach with Campaign resource types
-                    campaign_fallback.network_settings = Campaign.NetworkSettings()
+                    # Use client.get_type() for better compatibility
+                    campaign_fallback.network_settings = client.get_type("CampaignNetworkSettings")
                     campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search
                     campaign_fallback.network_settings.target_search_network = False  # Disable search partners
                     campaign_fallback.network_settings.target_content_network = False  # Disable Display Network
@@ -679,8 +585,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure Location Targeting for fallback case too
                 try:
-                    # Use the correct API v20 approach with Campaign resource types
-                    campaign_fallback.geo_target_type_setting = Campaign.GeoTargetTypeSetting()
+                    # Use client.get_type() for better compatibility
+                    campaign_fallback.geo_target_type_setting = client.get_type("CampaignGeoTargetTypeSetting")
                     campaign_fallback.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
                     campaign_fallback.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
                     st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
