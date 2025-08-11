@@ -185,9 +185,20 @@ def get_google_ads_client():
         
         # Test the client by making a simple API call
         try:
-            # Try to get customer info to verify the token is valid
-            customer_service = client.get_service("CustomerService")
-            customer_service.get_customer(customer_id=st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"])
+            # Try to make a simple search query to verify the token is valid
+            google_ads_service = client.get_service("GoogleAdsService")
+            # Use a simple query to test the connection
+            test_query = """
+                SELECT
+                  customer.id,
+                  customer.descriptive_name
+                FROM customer
+                LIMIT 1
+            """
+            google_ads_service.search(
+                customer_id=st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
+                query=test_query
+            )
         except Exception as test_error:
             if "invalid_grant" in str(test_error).lower() or "token has been expired" in str(test_error).lower():
                 st.error("🔐 **Authentication Error: Refresh Token Expired or Revoked**")
