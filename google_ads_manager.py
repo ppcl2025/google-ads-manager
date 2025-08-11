@@ -13,7 +13,7 @@ import streamlit as st
 from typing import Optional, List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
-from google.ads.googleads.v20.resources.types import Campaign
+# Removed Campaign import as it's not compatible with API v21
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -493,8 +493,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Configure NetworkSettings to use only core Google Search Network
         # Exclude search partners and Display Network
         try:
-            # Use the correct API v20 approach with Campaign resource types
-            campaign.network_settings = Campaign.NetworkSettings()
+            # Use API v21 compatible approach
+            campaign.network_settings = client.get_type("CampaignNetworkSettings")
             campaign.network_settings.target_google_search = True  # Enable core Google Search
             campaign.network_settings.target_search_network = False  # Disable search partners
             campaign.network_settings.target_content_network = False  # Disable Display Network
@@ -507,8 +507,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         
         # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
         try:
-            # Use the correct API v20 approach with Campaign resource types
-            campaign.geo_target_type_setting = Campaign.GeoTargetTypeSetting()
+            # Use API v21 compatible approach
+            campaign.geo_target_type_setting = client.get_type("CampaignGeoTargetTypeSetting")
             campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
             campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
             st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
@@ -518,6 +518,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
+        
+        # Set EU political advertising field (required in API v21)
+        try:
+            campaign.contains_eu_political_advertising = False
+            st.info("✅ Set EU political advertising field to False")
+        except Exception as eu_error:
+            st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
+            logger.warning(f"Failed to set EU political advertising field: {eu_error}")
 
         # Try to mutate campaign with bidding strategy first
         try:
@@ -563,14 +571,22 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
                 campaign_fallback.start_date = datetime.now().strftime("%Y-%m-%d")
                 
+                # Set EU political advertising field (required in API v21)
+                try:
+                    campaign_fallback.contains_eu_political_advertising = False
+                    st.info("✅ Set EU political advertising field to False (fallback)")
+                except Exception as eu_error:
+                    st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
+                    logger.warning(f"Failed to set EU political advertising field: {eu_error}")
+                
                 # Set Manual CPC bidding strategy
                 campaign_fallback.manual_cpc = client.get_type("ManualCpc")
                 campaign_fallback.manual_cpc.enhanced_cpc_enabled = False
                 
                 # Configure NetworkSettings for fallback case too
                 try:
-                    # Use the correct API v20 approach with Campaign resource types
-                    campaign_fallback.network_settings = Campaign.NetworkSettings()
+                    # Use API v21 compatible approach
+                    campaign_fallback.network_settings = client.get_type("CampaignNetworkSettings")
                     campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search
                     campaign_fallback.network_settings.target_search_network = False  # Disable search partners
                     campaign_fallback.network_settings.target_content_network = False  # Disable Display Network
@@ -583,8 +599,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure Location Targeting for fallback case too
                 try:
-                    # Use the correct API v20 approach with Campaign resource types
-                    campaign_fallback.geo_target_type_setting = Campaign.GeoTargetTypeSetting()
+                    # Use API v21 compatible approach
+                    campaign_fallback.geo_target_type_setting = client.get_type("CampaignGeoTargetTypeSetting")
                     campaign_fallback.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
                     campaign_fallback.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
                     st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
