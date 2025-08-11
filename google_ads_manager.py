@@ -493,13 +493,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Configure NetworkSettings to use only core Google Search Network
         # Exclude search partners and Display Network
         try:
-            # Use API v21 compatible approach
-            campaign.network_settings = client.get_type("CampaignNetworkSettings")
-            campaign.network_settings.target_google_search = True  # Enable core Google Search
-            campaign.network_settings.target_search_network = False  # Disable search partners
-            campaign.network_settings.target_content_network = False  # Disable Display Network
-            campaign.network_settings.target_partner_search_network = False  # Disable partner search network
-            campaign.network_settings.target_youtube = False  # Disable YouTube
+            # Use API v21 compatible approach - set individual network fields directly
+            campaign.target_google_search = True  # Enable core Google Search
+            campaign.target_search_network = False  # Disable search partners
+            campaign.target_content_network = False  # Disable Display Network
+            campaign.target_partner_search_network = False  # Disable partner search network
+            campaign.target_youtube = False  # Disable YouTube
             st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
         except Exception as network_error:
             st.warning(f"⚠️ Could not configure network settings: {network_error}")
@@ -507,10 +506,9 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         
         # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
         try:
-            # Use API v21 compatible approach
-            campaign.geo_target_type_setting = client.get_type("CampaignGeoTargetTypeSetting")
-            campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-            campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+            # Use API v21 compatible approach - set individual geo targeting fields directly
+            campaign.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+            campaign.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
             st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
         except Exception as location_error:
             st.warning(f"⚠️ Could not configure location targeting: {location_error}")
@@ -521,8 +519,18 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         
         # Set EU political advertising field (required in API v21)
         try:
-            campaign.contains_eu_political_advertising = False
-            st.info("✅ Set EU political advertising field to False")
+            # Try different possible field names for API v21
+            if hasattr(campaign, 'contains_eu_political_advertising'):
+                campaign.contains_eu_political_advertising = False
+                st.info("✅ Set EU political advertising field to False")
+            elif hasattr(campaign, 'eu_political_advertising'):
+                campaign.eu_political_advertising = False
+                st.info("✅ Set EU political advertising field to False (alternative field name)")
+            else:
+                # Debug: show available fields
+                available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
+                st.warning(f"⚠️ EU political advertising field not found. Available fields: {available_fields[:10]}...")
+                logger.warning(f"EU political advertising field not found. Available fields: {available_fields}")
         except Exception as eu_error:
             st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
             logger.warning(f"Failed to set EU political advertising field: {eu_error}")
@@ -573,8 +581,18 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Set EU political advertising field (required in API v21)
                 try:
-                    campaign_fallback.contains_eu_political_advertising = False
-                    st.info("✅ Set EU political advertising field to False (fallback)")
+                    # Try different possible field names for API v21
+                    if hasattr(campaign_fallback, 'contains_eu_political_advertising'):
+                        campaign_fallback.contains_eu_political_advertising = False
+                        st.info("✅ Set EU political advertising field to False (fallback)")
+                    elif hasattr(campaign_fallback, 'eu_political_advertising'):
+                        campaign_fallback.eu_political_advertising = False
+                        st.info("✅ Set EU political advertising field to False (fallback, alternative field name)")
+                    else:
+                        # Debug: show available fields
+                        available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
+                        st.warning(f"⚠️ EU political advertising field not found in fallback. Available fields: {available_fields[:10]}...")
+                        logger.warning(f"EU political advertising field not found in fallback. Available fields: {available_fields}")
                 except Exception as eu_error:
                     st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
                     logger.warning(f"Failed to set EU political advertising field: {eu_error}")
@@ -585,13 +603,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure NetworkSettings for fallback case too
                 try:
-                    # Use API v21 compatible approach
-                    campaign_fallback.network_settings = client.get_type("CampaignNetworkSettings")
-                    campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search
-                    campaign_fallback.network_settings.target_search_network = False  # Disable search partners
-                    campaign_fallback.network_settings.target_content_network = False  # Disable Display Network
-                    campaign_fallback.network_settings.target_partner_search_network = False  # Disable partner search network
-                    campaign_fallback.network_settings.target_youtube = False  # Disable YouTube
+                    # Use API v21 compatible approach - set individual network fields directly
+                    campaign_fallback.target_google_search = True  # Enable core Google Search
+                    campaign_fallback.target_search_network = False  # Disable search partners
+                    campaign_fallback.target_content_network = False  # Disable Display Network
+                    campaign_fallback.target_partner_search_network = False  # Disable partner search network
+                    campaign_fallback.target_youtube = False  # Disable YouTube
                     st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
                 except Exception as network_error:
                     st.warning(f"⚠️ Could not configure network settings: {network_error}")
@@ -599,10 +616,9 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # Configure Location Targeting for fallback case too
                 try:
-                    # Use API v21 compatible approach
-                    campaign_fallback.geo_target_type_setting = client.get_type("CampaignGeoTargetTypeSetting")
-                    campaign_fallback.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-                    campaign_fallback.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+                    # Use API v21 compatible approach - set individual geo targeting fields directly
+                    campaign_fallback.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                    campaign_fallback.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
                     st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
                 except Exception as location_error:
                     st.warning(f"⚠️ Could not configure location targeting: {location_error}")
