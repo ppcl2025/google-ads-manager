@@ -527,6 +527,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
                 st.warning(f"⚠️ Network settings fields not found. Available fields: {available_fields[:10]}...")
                 logger.warning(f"Network settings fields not found. Available fields: {available_fields}")
+                st.info("ℹ️ Network settings will use default values (this is normal for some API versions)")
                 
         except Exception as network_error:
             st.warning(f"⚠️ Could not configure network settings: {network_error}")
@@ -552,6 +553,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
                 st.warning(f"⚠️ Geo targeting fields not found. Available fields: {available_fields[:10]}...")
                 logger.warning(f"Geo targeting fields not found. Available fields: {available_fields}")
+                st.info("ℹ️ Location targeting will use default values (this is normal for some API versions)")
                 
         except Exception as location_error:
             st.warning(f"⚠️ Could not configure location targeting: {location_error}")
@@ -679,6 +681,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                         available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
                         st.warning(f"⚠️ Network settings fields not found in fallback. Available fields: {available_fields[:10]}...")
                         logger.warning(f"Network settings fields not found in fallback. Available fields: {available_fields}")
+                        st.info("ℹ️ Network settings will use default values (this is normal for some API versions)")
                         
                 except Exception as network_error:
                     st.warning(f"⚠️ Could not configure network settings: {network_error}")
@@ -704,6 +707,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                         available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
                         st.warning(f"⚠️ Geo targeting fields not found in fallback. Available fields: {available_fields[:10]}...")
                         logger.warning(f"Geo targeting fields not found in fallback. Available fields: {available_fields}")
+                        st.info("ℹ️ Location targeting will use default values (this is normal for some API versions)")
                         
                 except Exception as location_error:
                     st.warning(f"⚠️ Could not configure location targeting: {location_error}")
