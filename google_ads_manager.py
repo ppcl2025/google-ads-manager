@@ -630,8 +630,17 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     logger.warning(f"Failed to set EU political advertising field: {eu_error}")
                 
                 # Set Manual CPC bidding strategy
-                campaign_fallback.manual_cpc = client.get_type("ManualCpc")
-                campaign_fallback.manual_cpc.enhanced_cpc_enabled = False
+                try:
+                    campaign_fallback.manual_cpc = client.get_type("ManualCpc")
+                    # Try to set enhanced CPC if the field exists
+                    if hasattr(campaign_fallback.manual_cpc, 'enhanced_cpc_enabled'):
+                        campaign_fallback.manual_cpc.enhanced_cpc_enabled = False
+                        st.info("✅ Manual CPC bidding strategy configured with enhanced CPC disabled")
+                    else:
+                        st.info("✅ Manual CPC bidding strategy configured (enhanced CPC field not available)")
+                except Exception as cpc_error:
+                    st.warning(f"⚠️ Could not configure Manual CPC bidding strategy: {cpc_error}")
+                    logger.warning(f"Failed to configure Manual CPC bidding strategy: {cpc_error}")
                 
                 # Configure NetworkSettings for fallback case too
                 try:
