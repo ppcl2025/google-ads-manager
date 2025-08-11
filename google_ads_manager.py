@@ -373,7 +373,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
         if new_customer_id and new_customer_id != "UNKNOWN":
             # Now set the conversion tracking to "This Manager" for the new account
             try:
-                # Try to set conversion tracking using the correct API v20 approach
+                # Try to set conversion tracking using the correct API v21 approach
                 # First, let's try to link the account to the MCC's conversion tracking
                 
                 # Use the CustomerService to update the customer settings
@@ -471,10 +471,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Or check in Google Ads UI: Tools & Settings > Shared Library > Bid Strategies
         msl_maxcon_strategy_id = "11481770709"  # MSL - MaxCon bidding strategy ID
         
-        # Set the shared bidding strategy using the correct API v20 field name
-        # In API v20, we need to use the correct field name for bidding strategy
+        # Set the shared bidding strategy using the correct API v21 field name
+        # In API v21, we need to use the correct field name for bidding strategy
         try:
-            # Try the correct field name for API v20
+            # Try the correct field name for API v21
             campaign.campaign_bidding_strategy = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
         except AttributeError:
             # Fallback to alternative field name
