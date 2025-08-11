@@ -565,17 +565,36 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Set EU political advertising field (required in API v21)
         try:
             # Try different possible field names for API v21
-            if hasattr(campaign, 'contains_eu_political_advertising'):
-                campaign.contains_eu_political_advertising = False
-                st.info("✅ Set EU political advertising field to False")
-            elif hasattr(campaign, 'eu_political_advertising'):
-                campaign.eu_political_advertising = False
-                st.info("✅ Set EU political advertising field to False (alternative field name)")
-            else:
-                # Debug: show available fields
+            eu_field_set = False
+            
+            # Try common field names for EU political advertising
+            eu_field_names = [
+                'contains_eu_political_advertising',
+                'eu_political_advertising',
+                'eu_political_content',
+                'political_advertising',
+                'political_content'
+            ]
+            
+            for field_name in eu_field_names:
+                if hasattr(campaign, field_name):
+                    setattr(campaign, field_name, False)
+                    st.info(f"✅ Set EU political advertising field '{field_name}' to False")
+                    eu_field_set = True
+                    break
+            
+            if not eu_field_set:
+                # Debug: show available fields and search for similar ones
                 available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
                 st.warning(f"⚠️ EU political advertising field not found. Available fields: {available_fields[:10]}...")
                 logger.warning(f"EU political advertising field not found. Available fields: {available_fields}")
+                
+                # Search for fields that might be related
+                related_fields = [field for field in available_fields if any(keyword in field.lower() for keyword in ['eu', 'political', 'advertising', 'content'])]
+                if related_fields:
+                    st.info(f"🔍 Found potentially related fields: {related_fields}")
+                    logger.info(f"Potentially related fields: {related_fields}")
+                
         except Exception as eu_error:
             st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
             logger.warning(f"Failed to set EU political advertising field: {eu_error}")
@@ -627,17 +646,36 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 # Set EU political advertising field (required in API v21)
                 try:
                     # Try different possible field names for API v21
-                    if hasattr(campaign_fallback, 'contains_eu_political_advertising'):
-                        campaign_fallback.contains_eu_political_advertising = False
-                        st.info("✅ Set EU political advertising field to False (fallback)")
-                    elif hasattr(campaign_fallback, 'eu_political_advertising'):
-                        campaign_fallback.eu_political_advertising = False
-                        st.info("✅ Set EU political advertising field to False (fallback, alternative field name)")
-                    else:
-                        # Debug: show available fields
+                    eu_field_set = False
+                    
+                    # Try common field names for EU political advertising
+                    eu_field_names = [
+                        'contains_eu_political_advertising',
+                        'eu_political_advertising',
+                        'eu_political_content',
+                        'political_advertising',
+                        'political_content'
+                    ]
+                    
+                    for field_name in eu_field_names:
+                        if hasattr(campaign_fallback, field_name):
+                            setattr(campaign_fallback, field_name, False)
+                            st.info(f"✅ Set EU political advertising field '{field_name}' to False (fallback)")
+                            eu_field_set = True
+                            break
+                    
+                    if not eu_field_set:
+                        # Debug: show available fields and search for similar ones
                         available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
                         st.warning(f"⚠️ EU political advertising field not found in fallback. Available fields: {available_fields[:10]}...")
                         logger.warning(f"EU political advertising field not found in fallback. Available fields: {available_fields}")
+                        
+                        # Search for fields that might be related
+                        related_fields = [field for field in available_fields if any(keyword in field.lower() for keyword in ['eu', 'political', 'advertising', 'content'])]
+                        if related_fields:
+                            st.info(f"🔍 Found potentially related fields in fallback: {related_fields}")
+                            logger.info(f"Potentially related fields in fallback: {related_fields}")
+                    
                 except Exception as eu_error:
                     st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
                     logger.warning(f"Failed to set EU political advertising field: {eu_error}")
