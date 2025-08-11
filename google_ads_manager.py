@@ -960,6 +960,13 @@ def main():
         memory_manager.clear_session_data()
         st.session_state.memory_cleanup_done = True
     
+    # Clear all caches to ensure fresh execution and prevent API v21 compatibility issues
+    if 'cache_cleared' not in st.session_state:
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.session_state.cache_cleared = True
+        st.info("🔄 Cache cleared to ensure API v21 compatibility")
+    
     st.title("Google Ads Manager AI Agent")
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
 
