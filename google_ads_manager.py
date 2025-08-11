@@ -500,9 +500,57 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
             logger.warning(f"Failed to set EU political advertising field: {eu_error}")
         
-        # Note: Network and geo targeting settings may not be available in API v21
-        # These will be configured through the Google Ads UI after campaign creation
-        st.info("ℹ️ Network and location targeting will be configured through Google Ads UI after campaign creation")
+        # Configure NetworkSettings to use only core Google Search Network
+        # Exclude search partners and Display Network
+        try:
+            # Try different possible type names for compatibility
+            network_settings = None
+            for type_name in ["CampaignNetworkSettings", "NetworkSettings"]:
+                try:
+                    network_settings = client.get_type(type_name)
+                    st.info(f"✅ Found network settings type: {type_name}")
+                    break
+                except Exception:
+                    continue
+            
+            if network_settings:
+                campaign.network_settings = network_settings
+                campaign.network_settings.target_google_search = True  # Enable core Google Search
+                campaign.network_settings.target_search_network = False  # Disable search partners
+                campaign.network_settings.target_content_network = False  # Disable Display Network
+                campaign.network_settings.target_partner_search_network = False  # Disable partner search network
+                campaign.network_settings.target_youtube = False  # Disable YouTube
+                st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
+            else:
+                st.warning("⚠️ Could not find network settings type - will configure through Google Ads UI")
+        except Exception as network_error:
+            st.warning(f"⚠️ Could not configure network settings: {network_error}")
+            logger.warning(f"Failed to configure network settings: {network_error}")
+            st.info("ℹ️ Network settings will be configured through Google Ads UI after campaign creation")
+        
+        # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
+        try:
+            # Try different possible type names for compatibility
+            geo_settings = None
+            for type_name in ["CampaignGeoTargetTypeSetting", "GeoTargetTypeSetting"]:
+                try:
+                    geo_settings = client.get_type(type_name)
+                    st.info(f"✅ Found geo targeting type: {type_name}")
+                    break
+                except Exception:
+                    continue
+            
+            if geo_settings:
+                campaign.geo_target_type_setting = geo_settings
+                campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+                st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
+            else:
+                st.warning("⚠️ Could not find geo targeting type - will configure through Google Ads UI")
+        except Exception as location_error:
+            st.warning(f"⚠️ Could not configure location targeting: {location_error}")
+            logger.warning(f"Failed to configure location targeting: {location_error}")
+            st.info("ℹ️ Location targeting will be configured through Google Ads UI after campaign creation")
         
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
@@ -563,9 +611,56 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
                     logger.warning(f"Failed to set EU political advertising field: {eu_error}")
                 
-                # Note: Network and geo targeting settings may not be available in API v21
-                # These will be configured through the Google Ads UI after campaign creation
-                st.info("ℹ️ Network and location targeting will be configured through Google Ads UI after campaign creation (fallback)")
+                # Configure NetworkSettings for fallback case too
+                try:
+                    # Try different possible type names for compatibility
+                    network_settings = None
+                    for type_name in ["CampaignNetworkSettings", "NetworkSettings"]:
+                        try:
+                            network_settings = client.get_type(type_name)
+                            st.info(f"✅ Found network settings type (fallback): {type_name}")
+                            break
+                        except Exception:
+                            continue
+                    
+                    if network_settings:
+                        campaign_fallback.network_settings = network_settings
+                        campaign_fallback.network_settings.target_google_search = True  # Enable core Google Search
+                        campaign_fallback.network_settings.target_search_network = False  # Disable search partners
+                        campaign_fallback.network_settings.target_content_network = False  # Disable Display Network
+                        campaign_fallback.network_settings.target_partner_search_network = False  # Disable partner search network
+                        campaign_fallback.network_settings.target_youtube = False  # Disable YouTube
+                        st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
+                    else:
+                        st.warning("⚠️ Could not find network settings type (fallback) - will configure through Google Ads UI")
+                except Exception as network_error:
+                    st.warning(f"⚠️ Could not configure network settings (fallback): {network_error}")
+                    logger.warning(f"Failed to configure network settings (fallback): {network_error}")
+                    st.info("ℹ️ Network settings will be configured through Google Ads UI after campaign creation (fallback)")
+                
+                # Configure Location Targeting for fallback case too
+                try:
+                    # Try different possible type names for compatibility
+                    geo_settings = None
+                    for type_name in ["CampaignGeoTargetTypeSetting", "GeoTargetTypeSetting"]:
+                        try:
+                            geo_settings = client.get_type(type_name)
+                            st.info(f"✅ Found geo targeting type (fallback): {type_name}")
+                            break
+                        except Exception:
+                            continue
+                    
+                    if geo_settings:
+                        campaign_fallback.geo_target_type_setting = geo_settings
+                        campaign_fallback.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                        campaign_fallback.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+                        st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
+                    else:
+                        st.warning("⚠️ Could not find geo targeting type (fallback) - will configure through Google Ads UI")
+                except Exception as location_error:
+                    st.warning(f"⚠️ Could not configure location targeting (fallback): {location_error}")
+                    logger.warning(f"Failed to configure location targeting (fallback): {location_error}")
+                    st.info("ℹ️ Location targeting will be configured through Google Ads UI after campaign creation (fallback)")
                 
                 try:
                     response_fallback = campaign_service.mutate_campaigns(
