@@ -632,22 +632,13 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
         st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
-        # Set location targeting to "Presence Only" during campaign creation
-        # The debug tools showed that geo_target_type_setting field exists directly on Campaign
-        if hasattr(campaign, 'geo_target_type_setting'):
-            # Set the field directly - it's a direct field, not a separate type
-            campaign.geo_target_type_setting = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-            st.success("✅ Location targeting set to 'Presence Only' during campaign creation")
-            st.info("ℹ️ This ensures users are only targeted when physically in the location")
-        else:
-            st.warning("⚠️ geo_target_type_setting field not found - location targeting will use defaults")
-        
         # For API v21, SEARCH campaigns automatically use Google Search Network
         # Network targeting is controlled by the campaign type, not individual fields
         st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
         st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
-        # Location targeting for specific locations will be configured after campaign creation using CampaignCriterion
+        # Note: We'll configure location targeting after campaign creation using CampaignCriterion
+        # This avoids initialization errors with campaign fields during creation
         
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
@@ -740,13 +731,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 # For API v21, SEARCH campaigns automatically use Google Search Network
                 st.info("ℹ️ Fallback SEARCH campaign type automatically uses Google Search Network")
                 
-                # Set location targeting to "Presence Only" during fallback campaign creation
-                if hasattr(campaign_fallback, 'geo_target_type_setting'):
-                    # Set the field directly - it's a direct field, not a separate type
-                    campaign_fallback.geo_target_type_setting = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-                    st.success("✅ Fallback campaign location targeting set to 'Presence Only'")
-                else:
-                    st.warning("⚠️ geo_target_type_setting field not found in fallback - location targeting will use defaults")
+
                 
 
                 
