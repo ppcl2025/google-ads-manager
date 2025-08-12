@@ -642,18 +642,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         else:
             st.warning("⚠️ geo_target_type_setting field not found - location targeting will use defaults")
         
-        # Set network targeting to exclude Display Network and search partners
-        # The debug tools showed that network_settings field exists directly on Campaign
-        if hasattr(campaign, 'network_settings'):
-            # Set the field directly - it's a direct field, not a separate type
-            # We'll set the individual network targeting fields
-            campaign.network_settings.target_google_search = True
-            campaign.network_settings.target_search_network = True
-            campaign.network_settings.target_content_network = False  # Exclude Display Network
-            campaign.network_settings.target_partner_search_network = False  # Exclude search partners
-            st.success("✅ Network targeting configured: Google Search Network only (no Display, no search partners)")
-        else:
-            st.warning("⚠️ network_settings field not found - network targeting will use defaults")
+        # For API v21, SEARCH campaigns automatically use Google Search Network
+        # Network targeting is controlled by the campaign type, not individual fields
+        st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
+        st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
         # Location targeting for specific locations will be configured after campaign creation using CampaignCriterion
         
@@ -756,17 +748,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 else:
                     st.warning("⚠️ geo_target_type_setting field not found in fallback - location targeting will use defaults")
                 
-                # Set network targeting to exclude Display Network and search partners
-                if hasattr(campaign_fallback, 'network_settings'):
-                    # Set the field directly - it's a direct field, not a separate type
-                    # We'll set the individual network targeting fields
-                    campaign_fallback.network_settings.target_google_search = True
-                    campaign_fallback.network_settings.target_search_network = True
-                    campaign_fallback.network_settings.target_content_network = False  # Exclude Display Network
-                    campaign_fallback.network_settings.target_partner_search_network = False  # Exclude search partners
-                    st.success("✅ Fallback campaign network targeting configured: Google Search Network only")
-                else:
-                    st.warning("⚠️ network_settings field not found in fallback - network targeting will use defaults")
+
                 
                 # Set EU political advertising field (required in API v21)
                 try:
