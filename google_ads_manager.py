@@ -579,7 +579,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             for field_name in eu_field_names:
                 if hasattr(campaign, field_name):
                     setattr(campaign, field_name, False)
-                    st.info(f"✅ Set EU political advertising field '{field_name}' to False")
+                    # Debug: show the exact value and type
+                    try:
+                        value = getattr(campaign, field_name)
+                        st.info(f"✅ Set EU political advertising field '{field_name}' to {value} (type: {type(value).__name__})")
+                    except:
+                        st.info(f"✅ Set EU political advertising field '{field_name}' to False")
                     eu_field_set = True
                     break
             
@@ -674,7 +679,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     for field_name in eu_field_names:
                         if hasattr(campaign_fallback, field_name):
                             setattr(campaign_fallback, field_name, False)
-                            st.info(f"✅ Set EU political advertising field '{field_name}' to False (fallback)")
+                            # Debug: show the exact value and type
+                            try:
+                                value = getattr(campaign_fallback, field_name)
+                                st.info(f"✅ Set EU political advertising field '{field_name}' to {value} (type: {type(value).__name__}) (fallback)")
+                            except:
+                                st.info(f"✅ Set EU political advertising field '{field_name}' to False (fallback)")
                             eu_field_set = True
                             break
                     
