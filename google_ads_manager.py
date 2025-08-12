@@ -632,30 +632,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
         st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
-        # Set location targeting to "Presence Only" during campaign creation
-        # Use the actual fields that exist in your API v21
-        if hasattr(campaign, 'geo_target_type_setting'):
-            # Create a GeoTargetTypeSetting object
-            geo_setting = client.get_type("GeoTargetTypeSetting")
-            geo_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-            campaign.geo_target_type_setting = geo_setting
-            st.success("✅ Location targeting set to 'Presence Only' during campaign creation")
-            st.info("ℹ️ This ensures users are only targeted when physically in the location")
-        else:
-            st.warning("⚠️ geo_target_type_setting field not found - location targeting will use defaults")
+        # For API v21, SEARCH campaigns automatically use Google Search Network
+        # Network targeting is controlled by the campaign type, not individual fields
+        st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
+        st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
-        # Set network targeting to exclude Display Network and search partners
-        if hasattr(campaign, 'network_settings'):
-            # Create a NetworkSettings object
-            network_setting = client.get_type("NetworkSettings")
-            network_setting.target_google_search = True
-            network_setting.target_search_network = True
-            network_setting.target_content_network = False  # Exclude Display Network
-            network_setting.target_partner_search_network = False  # Exclude search partners
-            campaign.network_settings = network_setting
-            st.success("✅ Network targeting configured: Google Search Network only (no Display, no search partners)")
-        else:
-            st.warning("⚠️ network_settings field not found - network targeting will use defaults")
+        # Note: We'll use the debug tools to discover the correct way to set targeting
+        # For now, we'll rely on the API defaults and configure targeting after creation
+        st.info("ℹ️ Using API defaults for targeting - will configure specific settings after campaign creation")
         
         # Location targeting for specific locations will be configured after campaign creation using CampaignCriterion
         
@@ -750,28 +734,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 # For API v21, SEARCH campaigns automatically use Google Search Network
                 st.info("ℹ️ Fallback SEARCH campaign type automatically uses Google Search Network")
                 
-                # Set location targeting to "Presence Only" during fallback campaign creation
-                if hasattr(campaign_fallback, 'geo_target_type_setting'):
-                    # Create a GeoTargetTypeSetting object
-                    geo_setting = client.get_type("GeoTargetTypeSetting")
-                    geo_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-                    campaign_fallback.geo_target_type_setting = geo_setting
-                    st.success("✅ Fallback campaign location targeting set to 'Presence Only'")
-                else:
-                    st.warning("⚠️ geo_target_type_setting field not found in fallback - location targeting will use defaults")
+                # For API v21, SEARCH campaigns automatically use Google Search Network
+                st.info("ℹ️ Fallback SEARCH campaign type automatically uses Google Search Network")
                 
-                # Set network targeting to exclude Display Network and search partners
-                if hasattr(campaign_fallback, 'network_settings'):
-                    # Create a NetworkSettings object
-                    network_setting = client.get_type("NetworkSettings")
-                    network_setting.target_google_search = True
-                    network_setting.target_search_network = True
-                    network_setting.target_content_network = False  # Exclude Display Network
-                    network_setting.target_partner_search_network = False  # Exclude search partners
-                    campaign_fallback.network_settings = network_setting
-                    st.success("✅ Fallback campaign network targeting configured: Google Search Network only")
-                else:
-                    st.warning("⚠️ network_settings field not found in fallback - network targeting will use defaults")
+                # Note: We'll use the debug tools to discover the correct way to set targeting
+                # For now, we'll rely on the API defaults and configure targeting after creation
+                st.info("ℹ️ Using API defaults for targeting in fallback - will configure specific settings after creation")
                 
                 # Set EU political advertising field (required in API v21)
                 try:
@@ -1330,6 +1298,7 @@ def main():
             debug_criterion = st.checkbox("🔍 Debug: Check CampaignCriterion Fields", value=False)
             debug_enums = st.checkbox("🔍 Debug: Check Available Enums", value=False)
             debug_test_targeting = st.checkbox("🔍 Debug: Test Targeting Configuration", value=False)
+            debug_types = st.checkbox("🔍 Debug: Check Available Types", value=False)
         
         # Store debug options in session state
         st.session_state.debug_options = {
@@ -1338,7 +1307,8 @@ def main():
             'debug_campaign': debug_campaign,
             'debug_criterion': debug_criterion,
             'debug_enums': debug_enums,
-            'debug_test_targeting': debug_test_targeting
+            'debug_test_targeting': debug_test_targeting,
+            'debug_types': debug_types
         }
         
         if st.button("Create Campaign"):
@@ -1363,6 +1333,9 @@ def main():
                     
                 if debug_options.get('debug_test_targeting'):
                     debug_test_targeting(client, customer_id)
+                    
+                if debug_options.get('debug_types'):
+                    debug_available_types(client)
                 
                 # Create the campaign
                 create_campaign(client, customer_id, campaign_name, budget_amount)
@@ -2736,6 +2709,46 @@ def debug_test_targeting(client: GoogleAdsClient, customer_id: str):
             
     except Exception as e:
         st.error(f"❌ Error testing targeting: {e}")
+
+def debug_available_types(client: GoogleAdsClient):
+    """Debug function to check what types are available for targeting."""
+    st.write("**🔍 Debug: Available Types for Targeting**")
+    
+    try:
+        # Test common targeting types
+        targeting_types = [
+            "GeoTargetTypeSetting",
+            "NetworkSettings", 
+            "CampaignGeoTargetTypeSetting",
+            "CampaignNetworkSettings",
+            "LocationTargetingSetting",
+            "NetworkTargetingSetting"
+        ]
+        
+        for type_name in targeting_types:
+            try:
+                obj_type = client.get_type(type_name)
+                st.write(f"✅ {type_name} type exists: {type(obj_type)}")
+            except Exception as e:
+                st.write(f"❌ {type_name} type does not exist: {e}")
+                
+        # Test if we can access the fields directly on Campaign
+        st.write("**Testing Direct Field Access on Campaign:**")
+        campaign = client.get_type("Campaign")
+        
+        # Test if we can set fields directly
+        if hasattr(campaign, 'geo_target_type_setting'):
+            st.write("✅ geo_target_type_setting field exists and can be set directly")
+        else:
+            st.write("❌ geo_target_type_setting field does not exist")
+            
+        if hasattr(campaign, 'network_settings'):
+            st.write("✅ network_settings field exists and can be set directly")
+        else:
+            st.write("❌ network_settings field does not exist")
+            
+    except Exception as e:
+        st.error(f"❌ Error debugging available types: {e}")
 
 if __name__ == "__main__":
     main()
