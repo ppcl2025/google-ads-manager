@@ -501,8 +501,8 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
                 # Set the targeting type to PRESENCE (Presence Only)
                 # This ensures users are only targeted when they're physically in the location
                 # rather than when they show interest in the location
-                if hasattr(location_criterion.location, 'geo_target_type'):
-                    location_criterion.location.geo_target_type = client.enums.GeoTargetTypeEnum.PRESENCE
+                # Note: geo_target_type field doesn't exist in this API version, so we rely on
+                # the campaign-level geo_target_type_setting for "Presence Only" behavior
                 
                 operation = client.get_type("CampaignCriterionOperation")
                 operation.create = location_criterion
@@ -633,13 +633,29 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
         # Set location targeting to "Presence Only" during campaign creation
-        # This is the key field we discovered exists in your API v21
-        if hasattr(campaign, 'positive_geo_target_type'):
-            campaign.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+        # Use the actual fields that exist in your API v21
+        if hasattr(campaign, 'geo_target_type_setting'):
+            # Create a GeoTargetTypeSetting object
+            geo_setting = client.get_type("GeoTargetTypeSetting")
+            geo_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+            campaign.geo_target_type_setting = geo_setting
             st.success("✅ Location targeting set to 'Presence Only' during campaign creation")
             st.info("ℹ️ This ensures users are only targeted when physically in the location")
         else:
-            st.warning("⚠️ positive_geo_target_type field not found - location targeting will use defaults")
+            st.warning("⚠️ geo_target_type_setting field not found - location targeting will use defaults")
+        
+        # Set network targeting to exclude Display Network and search partners
+        if hasattr(campaign, 'network_settings'):
+            # Create a NetworkSettings object
+            network_setting = client.get_type("NetworkSettings")
+            network_setting.target_google_search = True
+            network_setting.target_search_network = True
+            network_setting.target_content_network = False  # Exclude Display Network
+            network_setting.target_partner_search_network = False  # Exclude search partners
+            campaign.network_settings = network_setting
+            st.success("✅ Network targeting configured: Google Search Network only (no Display, no search partners)")
+        else:
+            st.warning("⚠️ network_settings field not found - network targeting will use defaults")
         
         # Location targeting for specific locations will be configured after campaign creation using CampaignCriterion
         
@@ -735,11 +751,27 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 st.info("ℹ️ Fallback SEARCH campaign type automatically uses Google Search Network")
                 
                 # Set location targeting to "Presence Only" during fallback campaign creation
-                if hasattr(campaign_fallback, 'positive_geo_target_type'):
-                    campaign_fallback.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                if hasattr(campaign_fallback, 'geo_target_type_setting'):
+                    # Create a GeoTargetTypeSetting object
+                    geo_setting = client.get_type("GeoTargetTypeSetting")
+                    geo_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                    campaign_fallback.geo_target_type_setting = geo_setting
                     st.success("✅ Fallback campaign location targeting set to 'Presence Only'")
                 else:
-                    st.warning("⚠️ positive_geo_target_type field not found in fallback - location targeting will use defaults")
+                    st.warning("⚠️ geo_target_type_setting field not found in fallback - location targeting will use defaults")
+                
+                # Set network targeting to exclude Display Network and search partners
+                if hasattr(campaign_fallback, 'network_settings'):
+                    # Create a NetworkSettings object
+                    network_setting = client.get_type("NetworkSettings")
+                    network_setting.target_google_search = True
+                    network_setting.target_search_network = True
+                    network_setting.target_content_network = False  # Exclude Display Network
+                    network_setting.target_partner_search_network = False  # Exclude search partners
+                    campaign_fallback.network_settings = network_setting
+                    st.success("✅ Fallback campaign network targeting configured: Google Search Network only")
+                else:
+                    st.warning("⚠️ network_settings field not found in fallback - network targeting will use defaults")
                 
                 # Set EU political advertising field (required in API v21)
                 try:
