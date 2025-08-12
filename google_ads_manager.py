@@ -7,6 +7,7 @@ import os
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import GoogleAPICallError
+from google.protobuf.field_mask_pb2 import FieldMask
 
 from datetime import datetime, timedelta
 import streamlit as st
@@ -535,6 +536,75 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
         logger.warning(f"Failed to configure location targeting for campaign {campaign_id}: {e}")
         return False
 
+# Update campaign targeting after creation (API v21 compatible approach)
+def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
+    """Update campaign targeting after creation using the correct API v21 approach."""
+    try:
+        st.info("🔧 Updating campaign targeting settings...")
+        
+        # Get the campaign service
+        campaign_service = client.get_service("CampaignService")
+        
+        # Create a campaign update operation
+        campaign_operation = client.get_type("CampaignOperation")
+        campaign = campaign_operation.update
+        campaign.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
+        
+        # Try to set location targeting behavior to "Presence Only"
+        # This is the field we discovered exists in the debug output
+        if hasattr(campaign, 'geo_target_type_setting'):
+            try:
+                # Set the field directly - this should work for updates
+                campaign.geo_target_type_setting = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                st.success("✅ Campaign location targeting updated to 'Presence Only'")
+            except Exception as geo_error:
+                st.warning(f"⚠️ Could not update location targeting: {geo_error}")
+        
+        # Try to set network targeting to exclude Display Network and search partners
+        if hasattr(campaign, 'network_settings'):
+            try:
+                # Try to set individual network targeting fields
+                if hasattr(campaign.network_settings, 'target_google_search'):
+                    campaign.network_settings.target_google_search = True
+                if hasattr(campaign.network_settings, 'target_search_network'):
+                    campaign.network_settings.target_search_network = True
+                if hasattr(campaign.network_settings, 'target_content_network'):
+                    campaign.network_settings.target_content_network = False
+                if hasattr(campaign.network_settings, 'target_partner_search_network'):
+                    campaign.network_settings.target_partner_search_network = False
+                st.success("✅ Campaign network targeting updated: Google Search Network only")
+            except Exception as network_error:
+                st.warning(f"⚠️ Could not update network targeting: {network_error}")
+        
+        # Create the update operation
+        operation = client.get_type("CampaignOperation")
+        operation.update = campaign
+        
+        # Set the field mask to only update the targeting fields
+        from google.protobuf.field_mask_pb2 import FieldMask
+        field_mask = FieldMask()
+        
+        if hasattr(campaign, 'geo_target_type_setting'):
+            field_mask.paths.append("geo_target_type_setting")
+        if hasattr(campaign, 'network_settings'):
+            field_mask.paths.append("network_settings")
+        
+        operation.update_mask.CopyFrom(field_mask)
+        
+        # Apply the update
+        response = campaign_service.mutate_campaigns(
+            customer_id=customer_id,
+            operations=[operation]
+        )
+        
+        st.success("✅ Campaign targeting updated successfully!")
+        return True
+        
+    except Exception as e:
+        st.warning(f"⚠️ Could not update campaign targeting: {e}")
+        logger.warning(f"Failed to update campaign targeting for campaign {campaign_id}: {e}")
+        return False
+
 # Get location IDs for targeting
 def get_location_ids(client: GoogleAdsClient, customer_id: str, location_names: List[str]) -> dict:
     """Get location IDs for specified location names."""
@@ -699,6 +769,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                 logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
             
+            # Update campaign targeting settings after creation
+            st.info("🔧 Updating campaign targeting settings...")
+            targeting_success = update_campaign_targeting(client, customer_id, campaign_id)
+            
             # Apply location targeting if specific locations were selected
             target_locations = st.session_state.get('selected_locations', [])
             if target_locations:
@@ -854,6 +928,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     except Exception as shared_set_error:
                         st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                         logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
+                    
+                    # Update campaign targeting settings after creation (fallback case)
+                    st.info("🔧 Updating fallback campaign targeting settings...")
+                    targeting_success = update_campaign_targeting(client, customer_id, campaign_id)
                     
                     # Apply location targeting if specific locations were selected (fallback case)
                     target_locations = st.session_state.get('selected_locations', [])
