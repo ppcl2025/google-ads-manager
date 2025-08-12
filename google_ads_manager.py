@@ -601,6 +601,20 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
 
         # Try to mutate campaign with bidding strategy first
         try:
+            # Debug: show what fields are set on the campaign before mutation
+            st.info("🔍 Debug: Campaign fields before mutation:")
+            available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
+            eu_fields = [field for field in available_fields if any(keyword in field.lower() for keyword in ['eu', 'political', 'advertising'])]
+            if eu_fields:
+                for field in eu_fields:
+                    try:
+                        value = getattr(campaign, field)
+                        st.info(f"  {field}: {value}")
+                    except:
+                        st.info(f"  {field}: <error getting value>")
+            else:
+                st.info("  No EU political advertising fields found")
+            
             response = campaign_service.mutate_campaigns(
                 customer_id=customer_id, operations=[campaign_operation]
             )
