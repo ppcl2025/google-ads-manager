@@ -632,8 +632,16 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
         st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
-        # Location targeting will be configured after campaign creation using CampaignCriterion
-        # This ensures proper "Presence Only" targeting and specific location restrictions
+        # Set location targeting to "Presence Only" during campaign creation
+        # This is the key field we discovered exists in your API v21
+        if hasattr(campaign, 'positive_geo_target_type'):
+            campaign.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+            st.success("✅ Location targeting set to 'Presence Only' during campaign creation")
+            st.info("ℹ️ This ensures users are only targeted when physically in the location")
+        else:
+            st.warning("⚠️ positive_geo_target_type field not found - location targeting will use defaults")
+        
+        # Location targeting for specific locations will be configured after campaign creation using CampaignCriterion
         
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
@@ -725,6 +733,13 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 # For API v21, SEARCH campaigns automatically use Google Search Network
                 st.info("ℹ️ Fallback SEARCH campaign type automatically uses Google Search Network")
+                
+                # Set location targeting to "Presence Only" during fallback campaign creation
+                if hasattr(campaign_fallback, 'positive_geo_target_type'):
+                    campaign_fallback.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                    st.success("✅ Fallback campaign location targeting set to 'Presence Only'")
+                else:
+                    st.warning("⚠️ positive_geo_target_type field not found in fallback - location targeting will use defaults")
                 
                 # Set EU political advertising field (required in API v21)
                 try:
@@ -2486,12 +2501,12 @@ def debug_network_fields(client: GoogleAdsClient):
         campaign = client.get_type("Campaign")
         st.write(f"Campaign type: {type(campaign)}")
         
-        # Check for network-related fields
+        # Check for network-related fields using dir() instead of DESCRIPTOR
+        campaign_attrs = dir(campaign)
         network_fields = []
-        for field in campaign.DESCRIPTOR.fields:
-            field_name = field.name
-            if any(keyword in field_name.lower() for keyword in ['network', 'target', 'search', 'content', 'youtube', 'partner']):
-                network_fields.append(field_name)
+        for attr in campaign_attrs:
+            if not attr.startswith('_') and any(keyword in attr.lower() for keyword in ['network', 'target', 'search', 'content', 'youtube', 'partner']):
+                network_fields.append(attr)
         
         if network_fields:
             st.write("✅ Found network-related fields:")
@@ -2519,12 +2534,12 @@ def debug_location_fields(client: GoogleAdsClient):
         campaign = client.get_type("Campaign")
         st.write(f"Campaign type: {type(campaign)}")
         
-        # Check for location-related fields
+        # Check for location-related fields using dir() instead of DESCRIPTOR
+        campaign_attrs = dir(campaign)
         location_fields = []
-        for field in campaign.DESCRIPTOR.fields:
-            field_name = field.name
-            if any(keyword in field_name.lower() for keyword in ['geo', 'location', 'positive', 'negative', 'target']):
-                location_fields.append(field_name)
+        for attr in campaign_attrs:
+            if not attr.startswith('_') and any(keyword in attr.lower() for keyword in ['geo', 'location', 'positive', 'negative', 'target']):
+                location_fields.append(attr)
         
         if location_fields:
             st.write("✅ Found location-related fields:")
@@ -2552,8 +2567,9 @@ def debug_campaign_fields(client: GoogleAdsClient):
         campaign = client.get_type("Campaign")
         st.write(f"Campaign type: {type(campaign)}")
         
-        # Get all available fields
-        all_fields = [field.name for field in campaign.DESCRIPTOR.fields]
+        # Get all available fields using dir() instead of DESCRIPTOR
+        campaign_attrs = dir(campaign)
+        all_fields = [attr for attr in campaign_attrs if not attr.startswith('_')]
         st.write(f"Total fields available: {len(all_fields)}")
         
         # Show first 50 fields
@@ -2575,8 +2591,9 @@ def debug_criterion_fields(client: GoogleAdsClient):
         criterion = client.get_type("CampaignCriterion")
         st.write(f"CampaignCriterion type: {type(criterion)}")
         
-        # Get all available fields
-        all_fields = [field.name for field in criterion.DESCRIPTOR.fields]
+        # Get all available fields using dir() instead of DESCRIPTOR
+        criterion_attrs = dir(criterion)
+        all_fields = [attr for attr in criterion_attrs if not attr.startswith('_')]
         st.write(f"Total fields available: {len(all_fields)}")
         
         # Check specific targeting fields
@@ -2588,11 +2605,6 @@ def debug_criterion_fields(client: GoogleAdsClient):
         if hasattr(criterion, 'location'):
             st.write("✅ location field exists")
             # Check location sub-fields
-            if hasattr(criterion.location, 'geo_target_constant'):
-                st.write("✅ location.geo_target_constant field exists")
-            else:
-                st.write("❌ location.geo_target_constant field does not exist")
-                
             if hasattr(criterion.location, 'geo_target_type'):
                 st.write("✅ location.geo_target_type field exists")
             else:
@@ -2625,7 +2637,8 @@ def debug_available_enums(client: GoogleAdsClient):
             search_network_enum = client.enums.SearchNetworkEnum
             st.write(f"✅ SearchNetworkEnum found: {search_network_enum}")
             for name, value in search_network_enum.__dict__.items():
-                st.write(f"  - {name}: {value}")
+                if not name.startswith('_'):
+                    st.write(f"  - {name}: {value}")
         except AttributeError as e:
             st.write(f"❌ SearchNetworkEnum not found: {e}")
         
@@ -2638,7 +2651,7 @@ def debug_available_enums(client: GoogleAdsClient):
                 if not name.startswith('_'):
                     st.write(f"  - {name}: {value}")
         except AttributeError as e:
-            st.write(f"❌ GeoTargetTypeEnum not found: {e}")
+            st.write(f"❌ GeoTargetTypeEnum found: {e}")
             
         # Check positive geo target type enums
         st.write("**Positive Geo Target Type Enums:**")
