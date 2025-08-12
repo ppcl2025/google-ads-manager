@@ -441,6 +441,137 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
 
 
 
+# Configure network targeting for API v21
+def configure_network_targeting(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
+    """Configure network targeting to use only Google Search Network (exclude search partners)."""
+    try:
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
+        
+        # Configure to use only Google Search Network (exclude search partners)
+        network_criterion = client.get_type("CampaignCriterion")
+        network_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+        network_criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
+        
+        # Set search network targeting - exclude search partners
+        # This ensures we only use core Google Search, not search partner sites
+        network_criterion.search_network = client.enums.SearchNetworkEnum.GOOGLE_SEARCH
+        
+        # Create and apply the criterion
+        operation = client.get_type("CampaignCriterionOperation")
+        operation.create = network_criterion
+        
+        response = campaign_criterion_service.mutate_campaign_criteria(
+            customer_id=customer_id,
+            operations=[operation]
+        )
+        
+        st.info("✅ Network targeting configured: Core Google Search only (no search partners)")
+        logger.info(f"Network targeting configured for campaign {campaign_id}")
+        return True
+        
+    except Exception as e:
+        st.warning(f"⚠️ Could not configure network targeting: {e}")
+        logger.warning(f"Failed to configure network targeting for campaign {campaign_id}: {e}")
+        return False
+
+# Configure location targeting for API v21
+def configure_location_targeting(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
+    """Configure location targeting to use 'Presence Only' instead of 'Presence or Interest'."""
+    try:
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
+        
+        # Get the campaign to check if it has location targeting
+        google_ads_service = client.get_service("GoogleAdsService")
+        query = f"""
+            SELECT
+              campaign.id,
+              campaign.name
+            FROM campaign
+            WHERE campaign.id = {campaign_id}
+        """
+        
+        response = google_ads_service.search(
+            customer_id=customer_id,
+            query=query
+        )
+        
+        if not response:
+            st.warning("⚠️ Campaign not found for location targeting configuration")
+            return False
+        
+        # For API v21, location targeting is typically configured through campaign criteria
+        # We'll set the geo target type to PRESENCE (Presence Only)
+        # This is done by creating a campaign criterion that specifies the targeting behavior
+        
+        # Create a location targeting criterion
+        location_criterion = client.get_type("CampaignCriterion")
+        location_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+        location_criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
+        
+        # Set the geo target type to PRESENCE (Presence Only)
+        # This ensures users are only targeted when they're physically in the location
+        # rather than when they show interest in the location
+        if hasattr(location_criterion, 'location'):
+            if hasattr(location_criterion.location, 'geo_target_type'):
+                location_criterion.location.geo_target_type = client.enums.GeoTargetTypeEnum.PRESENCE
+                
+                # Create and apply the criterion
+                operation = client.get_type("CampaignCriterionOperation")
+                operation.create = location_criterion
+                
+                response = campaign_criterion_service.mutate_campaign_criteria(
+                    customer_id=customer_id,
+                    operations=[operation]
+                )
+                
+                st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
+                logger.info(f"Location targeting configured for campaign {campaign_id}")
+                return True
+            else:
+                st.info("ℹ️ Geo target type field not available in this API version")
+                return False
+        else:
+            st.info("ℹ️ Location field not available in this API version")
+            return False
+            
+    except Exception as e:
+        st.warning(f"⚠️ Could not configure location targeting: {e}")
+        logger.warning(f"Failed to configure location targeting for campaign {campaign_id}: {e}")
+        return False
+
+# Get location IDs for targeting
+def get_location_ids(client: GoogleAdsClient, customer_id: str, location_names: List[str]) -> dict:
+    """Get location IDs for specified location names."""
+    try:
+        google_ads_service = client.get_service("GoogleAdsService")
+        
+        # Build the query for the specified locations
+        location_list = "', '".join(location_names)
+        query = f"""
+            SELECT
+              geo_target_constant.id,
+              geo_target_constant.name,
+              geo_target_constant.country_code
+            FROM geo_target_constant
+            WHERE geo_target_constant.name IN ('{location_list}')
+        """
+        
+        response = google_ads_service.search(
+            customer_id=customer_id,
+            query=query
+        )
+        
+        locations = {}
+        for row in response:
+            locations[row.geo_target_constant.name] = row.geo_target_constant.id
+        
+        return locations
+        
+    except Exception as e:
+        st.error(f"❌ Error getting location IDs: {e}")
+        logger.error(f"Failed to get location IDs: {e}")
+        return {}
+
 # Create a campaign with daily budget
 def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
                    budget_amount: float) -> Optional[str]:
@@ -646,6 +777,22 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                 logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
             
+            # Configure network and location targeting using the new API v21 approach
+            st.info("🔧 Configuring network and location targeting...")
+            
+            # Configure network targeting
+            network_success = configure_network_targeting(client, customer_id, campaign_id)
+            
+            # Configure location targeting
+            location_success = configure_location_targeting(client, customer_id, campaign_id)
+            
+            if network_success and location_success:
+                st.success("✅ Campaign targeting fully configured!")
+            elif network_success or location_success:
+                st.warning("⚠️ Partial targeting configuration completed")
+            else:
+                st.warning("⚠️ Targeting configuration failed, but campaign was created successfully")
+            
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
             return campaign_id
         except Exception as ex:
@@ -816,6 +963,22 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     except Exception as shared_set_error:
                         st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                         logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
+                    
+                    # Configure network and location targeting using the new API v21 approach (fallback case)
+                    st.info("🔧 Configuring network and location targeting for fallback campaign...")
+                    
+                    # Configure network targeting
+                    network_success = configure_network_targeting(client, customer_id, campaign_id)
+                    
+                    # Configure location targeting
+                    location_success = configure_location_targeting(client, customer_id, campaign_id)
+                    
+                    if network_success and location_success:
+                        st.success("✅ Fallback campaign targeting fully configured!")
+                    elif network_success or location_success:
+                        st.warning("⚠️ Partial targeting configuration completed for fallback campaign")
+                    else:
+                        st.warning("⚠️ Targeting configuration failed for fallback campaign, but campaign was created successfully")
                     
                     show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). You can change to MSL - MaxCon later once conversion tracking is enabled.")
                     return campaign_id
@@ -1102,6 +1265,49 @@ def main():
                             st.write(f"  - {value_name}: ❌ Not found")
         except Exception as e:
             st.error(f"❌ Error in debug section: {e}")
+    
+    # Debug section to discover location IDs for targeting
+    if st.checkbox("🔍 Debug: Discover Location IDs for Targeting"):
+        try:
+            client = get_google_ads_client()
+            if client:
+                st.info("**Location ID Discovery Tool**")
+                st.write("This tool helps you find location IDs for targeting specific countries, states, or cities.")
+                
+                # Common locations to check
+                common_locations = ['United States', 'Canada', 'United Kingdom', 'Australia', 'Germany', 'France']
+                
+                if st.button("🔍 Get Common Location IDs"):
+                    location_ids = get_location_ids(client, st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"], common_locations)
+                    
+                    if location_ids:
+                        st.success("**Common Location IDs Found:**")
+                        for name, location_id in location_ids.items():
+                            st.write(f"  - **{name}**: `{location_id}`")
+                        st.info("💡 Use these IDs in your targeting configuration")
+                    else:
+                        st.warning("❌ No location IDs found. Check your API access.")
+                
+                # Custom location search
+                st.write("**Search for Custom Locations:**")
+                custom_locations = st.text_input("Enter location names (comma-separated):", "New York, California, Texas")
+                
+                if st.button("🔍 Search Custom Locations"):
+                    if custom_locations.strip():
+                        location_list = [loc.strip() for loc in custom_locations.split(',')]
+                        location_ids = get_location_ids(client, st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"], location_list)
+                        
+                        if location_ids:
+                            st.success("**Custom Location IDs Found:**")
+                            for name, location_id in location_ids.items():
+                                st.write(f"  - **{name}**: `{location_id}`")
+                        else:
+                            st.warning("❌ No custom location IDs found.")
+                    else:
+                        st.warning("⚠️ Please enter location names to search.")
+                        
+        except Exception as e:
+            st.error(f"❌ Error in location discovery: {e}")
     
     st.title("Google Ads Manager AI Agent")
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
