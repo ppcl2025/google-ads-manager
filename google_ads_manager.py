@@ -694,10 +694,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             if network_configured:
                 st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
             else:
-                # Debug: show available fields
-                available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
-                st.warning(f"⚠️ Network settings fields not found. Available fields: {available_fields[:10]}...")
-                logger.warning(f"Network settings fields not found. Available fields: {available_fields}")
                 st.info("ℹ️ Network settings will use default values (this is normal for some API versions)")
                 
         except Exception as network_error:
@@ -720,10 +716,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             if geo_configured:
                 st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
             else:
-                # Debug: show available fields
-                available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
-                st.warning(f"⚠️ Geo targeting fields not found. Available fields: {available_fields[:10]}...")
-                logger.warning(f"Geo targeting fields not found. Available fields: {available_fields}")
                 st.info("ℹ️ Location targeting will use default values (this is normal for some API versions)")
                 
         except Exception as location_error:
@@ -751,26 +743,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 if hasattr(campaign, field_name):
                     # Use the proper enum value instead of False
                     setattr(campaign, field_name, client.enums.EuPoliticalAdvertisingStatusEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING)
-                    # Debug: show the exact value and type
-                    try:
-                        value = getattr(campaign, field_name)
-                        st.info(f"✅ Set EU political advertising field '{field_name}' to {value} (type: {type(value).__name__})")
-                    except:
-                        st.info(f"✅ Set EU political advertising field '{field_name}' to NOT_EU_POLITICAL_ADVERTISING")
+                    st.info(f"✅ Set EU political advertising field '{field_name}' to False")
                     eu_field_set = True
                     break
             
             if not eu_field_set:
-                # Debug: show available fields and search for similar ones
-                available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
-                st.warning(f"⚠️ EU political advertising field not found. Available fields: {available_fields[:10]}...")
-                logger.warning(f"EU political advertising field not found. Available fields: {available_fields}")
-                
-                # Search for fields that might be related
-                related_fields = [field for field in available_fields if any(keyword in field.lower() for keyword in ['eu', 'political', 'advertising', 'content'])]
-                if related_fields:
-                    st.info(f"🔍 Found potentially related fields: {related_fields}")
-                    logger.info(f"Potentially related fields: {related_fields}")
+                st.warning("⚠️ EU political advertising field not found")
                 
         except Exception as eu_error:
             st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
@@ -778,20 +756,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
 
         # Try to mutate campaign with bidding strategy first
         try:
-            # Debug: show what fields are set on the campaign before mutation
-            st.info("🔍 Debug: Campaign fields before mutation:")
-            available_fields = [attr for attr in dir(campaign) if not attr.startswith('_')]
-            eu_fields = [field for field in available_fields if any(keyword in field.lower() for keyword in ['eu', 'political', 'advertising'])]
-            if eu_fields:
-                for field in eu_fields:
-                    try:
-                        value = getattr(campaign, field)
-                        st.info(f"  {field}: {value}")
-                    except:
-                        st.info(f"  {field}: <error getting value>")
-            else:
-                st.info("  No EU political advertising fields found")
-            
             response = campaign_service.mutate_campaigns(
                 customer_id=customer_id, operations=[campaign_operation]
             )
@@ -868,40 +832,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                         if hasattr(campaign_fallback, field_name):
                             # Use the proper enum value instead of False
                             setattr(campaign_fallback, field_name, client.enums.EuPoliticalAdvertisingStatusEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING)
-                            # Debug: show the exact value and type
-                            try:
-                                value = getattr(campaign_fallback, field_name)
-                                st.info(f"✅ Set EU political advertising field '{field_name}' to {value} (type: {type(value).__name__}) (fallback)")
-                            except:
-                                st.info(f"✅ Set EU political advertising field '{field_name}' to NOT_EU_POLITICAL_ADVERTISING (fallback)")
+                            st.info(f"✅ Set EU political advertising field '{field_name}' to False (fallback)")
                             eu_field_set = True
                             break
                     
                     if not eu_field_set:
-                        # Debug: show available fields and search for similar ones
-                        available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
-                        st.warning(f"⚠️ EU political advertising field not found in fallback. Available fields: {available_fields[:10]}...")
-                        logger.warning(f"EU political advertising field not found in fallback. Available fields: {available_fields}")
-                        
-                        # Search for fields that might be related
-                        related_fields = [field for field in available_fields if any(keyword in field.lower() for keyword in ['eu', 'political', 'advertising', 'content'])]
-                        if related_fields:
-                            st.info(f"🔍 Found potentially related fields in fallback: {related_fields}")
-                            logger.info(f"Potentially related fields in fallback: {related_fields}")
+                        st.warning("⚠️ EU political advertising field not found in fallback")
                     
-                    # Debug: show what fields are set on the fallback campaign before mutation
-                    st.info("🔍 Debug: Fallback campaign fields before mutation:")
-                    available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
-                    eu_fields = [field for field in available_fields if any(keyword in field.lower() for keyword in ['eu', 'political', 'advertising'])]
-                    if eu_fields:
-                        for field in eu_fields:
-                            try:
-                                value = getattr(campaign_fallback, field)
-                                st.info(f"  {field}: {value}")
-                            except:
-                                st.info(f"  {field}: <error getting value>")
-                    else:
-                        st.info("  No EU political advertising fields found")
+
                     
                 except Exception as eu_error:
                     st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
@@ -942,10 +880,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     if network_configured:
                         st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
                     else:
-                        # Debug: show available fields
-                        available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
-                        st.warning(f"⚠️ Network settings fields not found in fallback. Available fields: {available_fields[:10]}...")
-                        logger.warning(f"Network settings fields not found in fallback. Available fields: {available_fields}")
                         st.info("ℹ️ Network settings will use default values (this is normal for some API versions)")
                         
                 except Exception as network_error:
@@ -968,10 +902,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     if geo_configured:
                         st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
                     else:
-                        # Debug: show available fields
-                        available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
-                        st.warning(f"⚠️ Geo targeting fields not found in fallback. Available fields: {available_fields[:10]}...")
-                        logger.warning(f"Geo targeting fields not found in fallback. Available fields: {available_fields}")
                         st.info("ℹ️ Location targeting will use default values (this is normal for some API versions)")
                         
                 except Exception as location_error:
@@ -1271,155 +1201,7 @@ def main():
         st.session_state.cache_cleared = True
         st.info("🔄 Cache cleared to ensure API v21 compatibility")
     
-    # Debug section to show available enum values
-    if st.checkbox("🔍 Debug: Show EU Political Advertising Enum Values"):
-        try:
-            client = get_google_ads_client()
-            if client:
-                eu_enum = client.enums.EuPoliticalAdvertisingStatusEnum
-                st.info(f"**EuPoliticalAdvertisingStatus Enum Class:** {eu_enum}")
-                st.info(f"**Type:** {type(eu_enum)}")
-                
-                # Try to discover available values
-                if hasattr(eu_enum, '__members__'):
-                    st.success("**Available Enum Values:**")
-                    for name, value in eu_enum.__members__.items():
-                        st.write(f"  - {name}: {value}")
-                else:
-                    st.warning("**Enum members not accessible via __members__**")
-                    
-                    # Try alternative methods
-                    if hasattr(eu_enum, 'values'):
-                        st.info("**Values attribute found:**")
-                        for value in eu_enum.values():
-                            st.write(f"  - {value}")
-                    
-                    # Check common enum patterns
-                    common_values = ['UNSPECIFIED', 'UNKNOWN', 'TRUE', 'FALSE', 'YES', 'NO', 'CONTAINS', 'NOT_CONTAINS']
-                    st.info("**Checking common enum values:**")
-                    for value_name in common_values:
-                        if hasattr(eu_enum, value_name):
-                            value = getattr(eu_enum, value_name)
-                            st.write(f"  - {value_name}: {value}")
-                        else:
-                            st.write(f"  - {value_name}: ❌ Not found")
-        except Exception as e:
-            st.error(f"❌ Error in debug section: {e}")
-    
-    # Debug section to discover location IDs for targeting
-    if st.checkbox("🔍 Debug: Discover Location IDs for Targeting"):
-        try:
-            client = get_google_ads_client()
-            if client:
-                st.info("**Location ID Discovery Tool**")
-                st.write("This tool helps you find location IDs for targeting specific countries, states, or cities.")
-                
-                # Common locations to check
-                common_locations = ['United States', 'Canada', 'United Kingdom', 'Australia', 'Germany', 'France']
-                
-                if st.button("🔍 Get Common Location IDs"):
-                    location_ids = get_location_ids(client, st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"], common_locations)
-                    
-                    if location_ids:
-                        st.success("**Common Location IDs Found:**")
-                        for name, location_id in location_ids.items():
-                            st.write(f"  - **{name}**: `{location_id}`")
-                        st.info("💡 Use these IDs in your targeting configuration")
-                    else:
-                        st.warning("❌ No location IDs found. Check your API access.")
-                
-                # Custom location search
-                st.write("**Search for Custom Locations:**")
-                custom_locations = st.text_input("Enter location names (comma-separated):", "New York, California, Texas")
-                
-                if st.button("🔍 Search Custom Locations"):
-                    if custom_locations.strip():
-                        location_list = [loc.strip() for loc in custom_locations.split(',')]
-                        location_ids = get_location_ids(client, st.secrets["GOOGLE_ADS_LOGIN_CUSTOMER_ID"], location_list)
-                        
-                        if location_ids:
-                            st.success("**Custom Location IDs Found:**")
-                            for name, location_id in location_ids.items():
-                                st.write(f"  - **{name}**: `{location_id}`")
-                        else:
-                            st.warning("❌ No custom location IDs found.")
-                    else:
-                        st.warning("⚠️ Please enter location names to search.")
-                        
-        except Exception as e:
-            st.error(f"❌ Error in location discovery: {e}")
-    
-    # Debug section to discover available enum values for targeting
-    if st.checkbox("🔍 Debug: Discover Available Enum Values for Targeting"):
-        try:
-            client = get_google_ads_client()
-            if client:
-                st.info("**Enum Discovery Tool for Targeting**")
-                st.write("This tool helps discover what enum values are available for network and location targeting.")
-                
-                # Check for network-related enums
-                st.write("**🌐 Network Targeting Enums:**")
-                network_enums = ['SearchNetworkEnum', 'SearchNetwork', 'NetworkEnum', 'Network']
-                for enum_name in network_enums:
-                    if hasattr(client.enums, enum_name):
-                        enum_class = getattr(client.enums, enum_name)
-                        st.success(f"✅ **{enum_name}** found")
-                        
-                        # Try to discover available values
-                        if hasattr(enum_class, '__members__'):
-                            st.write(f"  Available values: {list(enum_class.__members__.keys())}")
-                        elif hasattr(enum_class, 'values'):
-                            st.write(f"  Available values: {list(enum_class.values())}")
-                        else:
-                            st.write(f"  Values not accessible via standard methods")
-                    else:
-                        st.write(f"❌ **{enum_name}** not found")
-                
-                # Check for location-related enums
-                st.write("**📍 Location Targeting Enums:**")
-                location_enums = ['GeoTargetTypeEnum', 'GeoTargetType', 'LocationTargetTypeEnum', 'LocationTargetType']
-                for enum_name in location_enums:
-                    if hasattr(client.enums, enum_name):
-                        enum_class = getattr(client.enums, enum_name)
-                        st.success(f"✅ **{enum_name}** found")
-                        
-                        # Try to discover available values
-                        if hasattr(enum_class, '__members__'):
-                            st.write(f"  Available values: {list(enum_class.__members__.keys())}")
-                        elif hasattr(enum_class, 'values'):
-                            st.write(f"  Available values: {list(enum_class.values())}")
-                        else:
-                            st.write(f"  Values not accessible via standard methods")
-                    else:
-                        st.write(f"❌ **{enum_name}** not found")
-                
-                # Check CampaignCriterion fields
-                st.write("**🔧 CampaignCriterion Fields:**")
-                try:
-                    criterion_type = client.get_type("CampaignCriterion")
-                    criterion_fields = [attr for attr in dir(criterion_type) if not attr.startswith('_')]
-                    st.write(f"Available fields: {criterion_fields[:10]}...")
-                    
-                    # Look for specific fields
-                    if hasattr(criterion_type, 'search_network'):
-                        st.success("✅ search_network field found")
-                    else:
-                        st.warning("⚠️ search_network field not found")
-                    
-                    if hasattr(criterion_type, 'location'):
-                        st.success("✅ location field found")
-                        if hasattr(criterion_type.location, 'geo_target_type'):
-                            st.success("✅ location.geo_target_type field found")
-                        else:
-                            st.warning("⚠️ location.geo_target_type field not found")
-                    else:
-                        st.warning("⚠️ location field not found")
-                        
-                except Exception as e:
-                    st.error(f"❌ Error checking CampaignCriterion fields: {e}")
-                        
-        except Exception as e:
-            st.error(f"❌ Error in enum discovery: {e}")
+
     
     st.title("Google Ads Manager AI Agent")
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
