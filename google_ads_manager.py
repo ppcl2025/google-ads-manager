@@ -546,7 +546,8 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
                 location_criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
                 
                 # Set the location using the geo target constant ID
-                location_criterion.location.geo_target_constant = f"customers/{customer_id}/geoTargetConstants/{location['id']}"
+                # In API v21, the format should be just the ID, not the full resource name
+                location_criterion.location.geo_target_constant = location['id']
                 
                 operation = client.get_type("CampaignCriterionOperation")
                 operation.create = location_criterion
