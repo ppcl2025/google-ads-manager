@@ -1068,6 +1068,41 @@ def main():
         st.session_state.cache_cleared = True
         st.info("🔄 Cache cleared to ensure API v21 compatibility")
     
+    # Debug section to show available enum values
+    if st.checkbox("🔍 Debug: Show EU Political Advertising Enum Values"):
+        try:
+            client = get_google_ads_client()
+            if client:
+                eu_enum = client.enums.EuPoliticalAdvertisingStatusEnum
+                st.info(f"**EuPoliticalAdvertisingStatus Enum Class:** {eu_enum}")
+                st.info(f"**Type:** {type(eu_enum)}")
+                
+                # Try to discover available values
+                if hasattr(eu_enum, '__members__'):
+                    st.success("**Available Enum Values:**")
+                    for name, value in eu_enum.__members__.items():
+                        st.write(f"  - {name}: {value}")
+                else:
+                    st.warning("**Enum members not accessible via __members__**")
+                    
+                    # Try alternative methods
+                    if hasattr(eu_enum, 'values'):
+                        st.info("**Values attribute found:**")
+                        for value in eu_enum.values():
+                            st.write(f"  - {value}")
+                    
+                    # Check common enum patterns
+                    common_values = ['UNSPECIFIED', 'UNKNOWN', 'TRUE', 'FALSE', 'YES', 'NO', 'CONTAINS', 'NOT_CONTAINS']
+                    st.info("**Checking common enum values:**")
+                    for value_name in common_values:
+                        if hasattr(eu_enum, value_name):
+                            value = getattr(eu_enum, value_name)
+                            st.write(f"  - {value_name}: {value}")
+                        else:
+                            st.write(f"  - {value_name}: ❌ Not found")
+        except Exception as e:
+            st.error(f"❌ Error in debug section: {e}")
+    
     st.title("Google Ads Manager AI Agent")
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
 
