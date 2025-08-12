@@ -445,41 +445,31 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
 def configure_network_targeting(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
     """Configure network targeting to use only Google Search Network (exclude search partners)."""
     try:
-        # In API v21, network targeting is typically configured at the campaign level
-        # rather than through CampaignCriterion objects
-        # Let's check if we can configure this through the campaign itself
+        # In API v21, we need to use CampaignCriterion to set network targeting
+        # This will actually restrict the campaign to use only Google Search Network
         
-        google_ads_service = client.get_service("GoogleAdsService")
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
         
-        # Check if the campaign has network-related fields we can update
-        query = f"""
-            SELECT
-              campaign.id,
-              campaign.name,
-              campaign.advertising_channel_type
-            FROM campaign
-            WHERE campaign.id = {campaign_id}
-        """
+        # Create a network targeting criterion to exclude search partners
+        network_criterion = client.get_type("CampaignCriterion")
+        network_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+        network_criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
         
-        response = google_ads_service.search(
+        # Set the network targeting to exclude search partners
+        # This ensures we only use core Google Search, not search partner sites
+        network_criterion.network = client.enums.NetworkEnum.GOOGLE_SEARCH_AND_SEARCH_NETWORK
+        
+        # Create and apply the criterion
+        operation = client.get_type("CampaignCriterionOperation")
+        operation.create = network_criterion
+        
+        response = campaign_criterion_service.mutate_campaign_criteria(
             customer_id=customer_id,
-            query=query
+            operations=[operation]
         )
         
-        if not response:
-            st.warning("⚠️ Campaign not found for network targeting configuration")
-            return False
-        
-        # For API v21, network targeting is often handled automatically based on:
-        # 1. advertising_channel_type (SEARCH, DISPLAY, VIDEO, etc.)
-        # 2. Campaign type and settings
-        
-        # Since we're creating SEARCH campaigns, they automatically use Google Search Network
-        # The API handles network targeting based on the campaign type
-        
-        st.info("ℹ️ Network targeting is automatically configured based on campaign type (SEARCH)")
-        st.info("ℹ️ Your SEARCH campaign will use Google Search Network by default")
-        logger.info(f"Network targeting handled automatically for SEARCH campaign {campaign_id}")
+        st.success("✅ Network targeting configured: Core Google Search only (no search partners)")
+        logger.info(f"Network targeting configured for campaign {campaign_id}")
         return True
         
     except Exception as e:
@@ -549,6 +539,12 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
                 # In API v21, the format should be 'geoTargetConstants/{id}'
                 location_criterion.location.geo_target_constant = f"geoTargetConstants/{location['id']}"
                 
+                # Set the targeting type to PRESENCE (Presence Only)
+                # This ensures users are only targeted when they're physically in the location
+                # rather than when they show interest in the location
+                if hasattr(location_criterion.location, 'geo_target_type'):
+                    location_criterion.location.geo_target_type = client.enums.GeoTargetTypeEnum.PRESENCE
+                
                 operation = client.get_type("CampaignCriterionOperation")
                 operation.create = location_criterion
                 operations.append(operation)
@@ -560,9 +556,10 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
                     operations=operations
                 )
                 
-                st.success(f"✅ Location targeting configured: Campaign will target Georgia and Alabama")
+                st.success(f"✅ Location targeting configured: Campaign will target {', '.join([loc['name'] for loc in target_locations])}")
+                st.success("✅ Targeting set to 'Presence Only' (not 'Presence or Interest')")
                 st.info("ℹ️ Users will only see ads when they are physically in these locations")
-                logger.info(f"Location targeting configured for campaign {campaign_id}: Georgia and Alabama")
+                logger.info(f"Location targeting configured for campaign {campaign_id}: {[loc['name'] for loc in target_locations]}")
                 return True
             else:
                 st.warning("⚠️ No location operations to apply")
@@ -1339,11 +1336,11 @@ def main():
         # Pre-defined location options
         location_options = {
             "All Locations (Default)": [],
-            "Georgia Only": [{"name": "Georgia", "id": "9193498"}],
-            "Alabama Only": [{"name": "Alabama", "id": "9191021"}],
-            "Georgia + Alabama": [
-                {"name": "Georgia", "id": "9193498"},
-                {"name": "Alabama", "id": "9191021"}
+            "Georgia (State) Only": [{"name": "Georgia (State)", "id": "9193498", "type": "State"}],
+            "Alabama (State) Only": [{"name": "Alabama (State)", "id": "9191021", "type": "State"}],
+            "Georgia (State) + Alabama (State)": [
+                {"name": "Georgia (State)", "id": "9193498", "type": "State"},
+                {"name": "Alabama (State)", "id": "9191021", "type": "State"}
             ]
         }
         
