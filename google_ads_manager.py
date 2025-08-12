@@ -525,9 +525,53 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
         
         st.info("ℹ️ Location targeting behavior is automatically configured for SEARCH campaigns")
         st.info("ℹ️ SEARCH campaigns default to 'Presence Only' targeting (not 'Presence or Interest')")
-        st.info("ℹ️ To add specific location targeting, use the location criteria in the UI or API")
-        logger.info(f"Location targeting handled automatically for SEARCH campaign {campaign_id}")
-        return True
+        
+        # Now let's add specific location targeting using CampaignCriterion
+        # This will actually restrict the campaign to target specific locations
+        try:
+            campaign_criterion_service = client.get_service("CampaignCriterionService")
+            
+            # Get the user's selected locations from session state
+            target_locations = st.session_state.get('selected_locations', [])
+            
+            # If no specific locations selected, use default behavior
+            if not target_locations:
+                st.info("ℹ️ No specific locations selected - campaign will target all locations")
+                return True
+            
+            operations = []
+            for location in target_locations:
+                location_criterion = client.get_type("CampaignCriterion")
+                location_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+                location_criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
+                
+                # Set the location using the geo target constant ID
+                location_criterion.location.geo_target_constant = f"customers/{customer_id}/geoTargetConstants/{location['id']}"
+                
+                operation = client.get_type("CampaignCriterionOperation")
+                operation.create = location_criterion
+                operations.append(operation)
+            
+            if operations:
+                # Apply the location targeting criteria
+                response = campaign_criterion_service.mutate_campaign_criteria(
+                    customer_id=customer_id,
+                    operations=operations
+                )
+                
+                st.success(f"✅ Location targeting configured: Campaign will target Georgia and Alabama")
+                st.info("ℹ️ Users will only see ads when they are physically in these locations")
+                logger.info(f"Location targeting configured for campaign {campaign_id}: Georgia and Alabama")
+                return True
+            else:
+                st.warning("⚠️ No location operations to apply")
+                return False
+                
+        except Exception as location_error:
+            st.warning(f"⚠️ Could not add specific location targeting: {location_error}")
+            st.info("ℹ️ Campaign will still use default location targeting (all locations)")
+            logger.warning(f"Failed to add specific location targeting for campaign {campaign_id}: {location_error}")
+            return False
             
     except Exception as e:
         st.warning(f"⚠️ Could not configure location targeting: {e}")
@@ -1504,6 +1548,35 @@ def main():
         st.info("✅ All campaigns will use the hardcoded PPCL List shared negative keywords list")
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
+        
+        # Location targeting configuration
+        st.write("**📍 Location Targeting Configuration:**")
+        st.write("Choose which locations to target for this campaign:")
+        
+        # Pre-defined location options
+        location_options = {
+            "All Locations (Default)": [],
+            "Georgia Only": [{"name": "Georgia", "id": "9193498"}],
+            "Alabama Only": [{"name": "Alabama", "id": "9191021"}],
+            "Georgia + Alabama": [
+                {"name": "Georgia", "id": "9193498"},
+                {"name": "Alabama", "id": "9191021"}
+            ]
+        }
+        
+        selected_location_option = st.selectbox(
+            "Select Location Targeting:",
+            list(location_options.keys()),
+            index=0
+        )
+        
+        # Store the selected locations in session state
+        st.session_state.selected_locations = location_options[selected_location_option]
+        
+        if st.session_state.selected_locations:
+            st.success(f"✅ Campaign will target: {', '.join([loc['name'] for loc in st.session_state.selected_locations])}")
+        else:
+            st.info("ℹ️ Campaign will target all locations (default behavior)")
         
         if st.button("Create Campaign"):
             if customer_id and campaign_name and budget_amount:
