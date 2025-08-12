@@ -550,8 +550,15 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
         campaign = campaign_operation.update
         campaign.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
         
+        # Debug: Let's see what fields are actually available on the campaign object
+        st.info(f"🔍 Debug: Available fields on campaign update object: {[attr for attr in dir(campaign) if not attr.startswith('_')]}")
+        
         # Try to set location targeting behavior to "Presence Only"
-        # This is the field we discovered exists in the debug output
+        # Let's check what location-related fields are actually available
+        location_fields = [attr for attr in dir(campaign) if 'geo' in attr.lower() or 'location' in attr.lower()]
+        st.info(f"🔍 Debug: Location-related fields found: {location_fields}")
+        
+        # Try the field we discovered exists in the debug output
         if hasattr(campaign, 'geo_target_type_setting'):
             try:
                 # Set the field directly - this should work for updates
@@ -559,6 +566,8 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
                 st.success("✅ Campaign location targeting updated to 'Presence Only'")
             except Exception as geo_error:
                 st.warning(f"⚠️ Could not update location targeting: {geo_error}")
+        else:
+            st.info("ℹ️ geo_target_type_setting field not found on campaign update object")
         
         # Try to set network targeting to exclude Display Network and search partners
         # We need to update individual subfields, not the parent network_settings field
@@ -585,6 +594,8 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
                     st.info("ℹ️ No network targeting fields found to update")
             except Exception as network_error:
                 st.warning(f"⚠️ Could not update network targeting: {network_error}")
+        else:
+            st.info("ℹ️ network_settings field not found on campaign update object")
         
         # Create the update operation
         operation = client.get_type("CampaignOperation")
@@ -607,6 +618,8 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
                 field_mask.paths.append("network_settings.target_content_network")
             if hasattr(campaign.network_settings, 'target_partner_search_network'):
                 field_mask.paths.append("network_settings.target_partner_search_network")
+        
+        st.info(f"🔍 Debug: Field mask paths: {list(field_mask.paths)}")
         
         operation.update_mask.CopyFrom(field_mask)
         
