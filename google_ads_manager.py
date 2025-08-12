@@ -690,6 +690,20 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                             st.info(f"🔍 Found potentially related fields in fallback: {related_fields}")
                             logger.info(f"Potentially related fields in fallback: {related_fields}")
                     
+                    # Debug: show what fields are set on the fallback campaign before mutation
+                    st.info("🔍 Debug: Fallback campaign fields before mutation:")
+                    available_fields = [attr for attr in dir(campaign_fallback) if not attr.startswith('_')]
+                    eu_fields = [field for field in available_fields if any(keyword in field.lower() for keyword in ['eu', 'political', 'advertising'])]
+                    if eu_fields:
+                        for field in eu_fields:
+                            try:
+                                value = getattr(campaign_fallback, field)
+                                st.info(f"  {field}: {value}")
+                            except:
+                                st.info(f"  {field}: <error getting value>")
+                    else:
+                        st.info("  No EU political advertising fields found")
+                    
                 except Exception as eu_error:
                     st.warning(f"⚠️ Could not set EU political advertising field: {eu_error}")
                     logger.warning(f"Failed to set EU political advertising field: {eu_error}")
