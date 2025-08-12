@@ -1269,8 +1269,55 @@ def main():
         else:
             st.info("ℹ️ Campaign will target all locations (default behavior)")
         
+        # Debug tools for targeting issues
+        st.write("**🔧 Debug Tools for Targeting Issues:**")
+        
+        debug_col1, debug_col2 = st.columns(2)
+        
+        with debug_col1:
+            debug_network = st.checkbox("🔍 Debug: Check Available Network Fields", value=False)
+            debug_location = st.checkbox("🔍 Debug: Check Available Location Fields", value=False)
+            debug_campaign = st.checkbox("🔍 Debug: Check Campaign Object Fields", value=False)
+        
+        with debug_col2:
+            debug_criterion = st.checkbox("🔍 Debug: Check CampaignCriterion Fields", value=False)
+            debug_enums = st.checkbox("🔍 Debug: Check Available Enums", value=False)
+            debug_test_targeting = st.checkbox("🔍 Debug: Test Targeting Configuration", value=False)
+        
+        # Store debug options in session state
+        st.session_state.debug_options = {
+            'debug_network': debug_network,
+            'debug_location': debug_location,
+            'debug_campaign': debug_campaign,
+            'debug_criterion': debug_criterion,
+            'debug_enums': debug_enums,
+            'debug_test_targeting': debug_test_targeting
+        }
+        
         if st.button("Create Campaign"):
             if customer_id and campaign_name and budget_amount:
+                # Run debug functions if requested
+                debug_options = st.session_state.get('debug_options', {})
+                
+                if debug_options.get('debug_network'):
+                    debug_network_fields(client)
+                    
+                if debug_options.get('debug_location'):
+                    debug_location_fields(client)
+                    
+                if debug_options.get('debug_campaign'):
+                    debug_campaign_fields(client)
+                    
+                if debug_options.get('debug_criterion'):
+                    debug_criterion_fields(client)
+                    
+                if debug_options.get('debug_enums'):
+                    debug_available_enums(client)
+                    
+                if debug_options.get('debug_test_targeting'):
+                    debug_test_targeting(client, customer_id)
+                
+                # Create the campaign
                 create_campaign(client, customer_id, campaign_name, budget_amount)
             else:
                 show_message("Please fill in all required fields.", False)
@@ -2429,6 +2476,221 @@ def get_campaigns_for_account(_client: GoogleAdsClient, customer_id: str) -> lis
         st.error(f"💥 Error fetching campaigns: {str(ex)}")
         handle_api_exception(ex, "fetch campaigns")
         return []
+
+# Debug functions for targeting issues
+def debug_network_fields(client: GoogleAdsClient):
+    """Debug function to check available network targeting fields."""
+    st.write("**🔍 Debug: Network Targeting Fields**")
+    
+    try:
+        campaign = client.get_type("Campaign")
+        st.write(f"Campaign type: {type(campaign)}")
+        
+        # Check for network-related fields
+        network_fields = []
+        for field in campaign.DESCRIPTOR.fields:
+            field_name = field.name
+            if any(keyword in field_name.lower() for keyword in ['network', 'target', 'search', 'content', 'youtube', 'partner']):
+                network_fields.append(field_name)
+        
+        if network_fields:
+            st.write("✅ Found network-related fields:")
+            for field in network_fields:
+                st.write(f"  - {field}")
+        else:
+            st.write("❌ No network-related fields found")
+            
+        # Check specific fields we need
+        specific_fields = ['target_google_search', 'target_search_network', 'target_content_network', 'target_partner_search_network']
+        for field in specific_fields:
+            if hasattr(campaign, field):
+                st.write(f"✅ {field} field exists")
+            else:
+                st.write(f"❌ {field} field does not exist")
+                
+    except Exception as e:
+        st.error(f"❌ Error debugging network fields: {e}")
+
+def debug_location_fields(client: GoogleAdsClient):
+    """Debug function to check available location targeting fields."""
+    st.write("**🔍 Debug: Location Targeting Fields**")
+    
+    try:
+        campaign = client.get_type("Campaign")
+        st.write(f"Campaign type: {type(campaign)}")
+        
+        # Check for location-related fields
+        location_fields = []
+        for field in campaign.DESCRIPTOR.fields:
+            field_name = field.name
+            if any(keyword in field_name.lower() for keyword in ['geo', 'location', 'positive', 'negative', 'target']):
+                location_fields.append(field_name)
+        
+        if location_fields:
+            st.write("✅ Found location-related fields:")
+            for field in location_fields:
+                st.write(f"  - {field}")
+        else:
+            st.write("❌ No location-related fields found")
+            
+        # Check specific fields we need
+        specific_fields = ['positive_geo_target_type', 'negative_geo_target_type', 'geoTargetTypeSetting']
+        for field in specific_fields:
+            if hasattr(campaign, field):
+                st.write(f"✅ {field} field exists")
+            else:
+                st.write(f"❌ {field} field does not exist")
+                
+    except Exception as e:
+        st.error(f"❌ Error debugging location fields: {e}")
+
+def debug_campaign_fields(client: GoogleAdsClient):
+    """Debug function to check all available campaign fields."""
+    st.write("**🔍 Debug: Campaign Object Fields**")
+    
+    try:
+        campaign = client.get_type("Campaign")
+        st.write(f"Campaign type: {type(campaign)}")
+        
+        # Get all available fields
+        all_fields = [field.name for field in campaign.DESCRIPTOR.fields]
+        st.write(f"Total fields available: {len(all_fields)}")
+        
+        # Show first 50 fields
+        st.write("First 50 fields:")
+        for i, field in enumerate(all_fields[:50]):
+            st.write(f"  {i+1:2d}. {field}")
+            
+        if len(all_fields) > 50:
+            st.write(f"... and {len(all_fields) - 50} more fields")
+            
+    except Exception as e:
+        st.error(f"❌ Error debugging campaign fields: {e}")
+
+def debug_criterion_fields(client: GoogleAdsClient):
+    """Debug function to check CampaignCriterion fields."""
+    st.write("**🔍 Debug: CampaignCriterion Fields**")
+    
+    try:
+        criterion = client.get_type("CampaignCriterion")
+        st.write(f"CampaignCriterion type: {type(criterion)}")
+        
+        # Get all available fields
+        all_fields = [field.name for field in criterion.DESCRIPTOR.fields]
+        st.write(f"Total fields available: {len(all_fields)}")
+        
+        # Check specific targeting fields
+        if hasattr(criterion, 'network'):
+            st.write("✅ network field exists")
+        else:
+            st.write("❌ network field does not exist")
+            
+        if hasattr(criterion, 'location'):
+            st.write("✅ location field exists")
+            # Check location sub-fields
+            if hasattr(criterion.location, 'geo_target_constant'):
+                st.write("✅ location.geo_target_constant field exists")
+            else:
+                st.write("❌ location.geo_target_constant field does not exist")
+                
+            if hasattr(criterion.location, 'geo_target_type'):
+                st.write("✅ location.geo_target_type field exists")
+            else:
+                st.write("❌ location.geo_target_type field does not exist")
+        else:
+            st.write("❌ location field does not exist")
+            
+    except Exception as e:
+        st.error(f"❌ Error debugging criterion fields: {e}")
+
+def debug_available_enums(client: GoogleAdsClient):
+    """Debug function to check available enums."""
+    st.write("**🔍 Debug: Available Enums**")
+    
+    try:
+        # Check network-related enums
+        st.write("**Network Enums:**")
+        try:
+            network_enum = client.enums.NetworkEnum
+            st.write(f"✅ NetworkEnum found: {network_enum}")
+            for name, value in network_enum.__dict__.items():
+                if not name.startswith('_'):
+                    st.write(f"  - {name}: {value}")
+        except AttributeError as e:
+            st.write(f"❌ NetworkEnum not found: {e}")
+        
+        # Check search network enums
+        st.write("**Search Network Enums:**")
+        try:
+            search_network_enum = client.enums.SearchNetworkEnum
+            st.write(f"✅ SearchNetworkEnum found: {search_network_enum}")
+            for name, value in search_network_enum.__dict__.items():
+                st.write(f"  - {name}: {value}")
+        except AttributeError as e:
+            st.write(f"❌ SearchNetworkEnum not found: {e}")
+        
+        # Check geo target type enums
+        st.write("**Geo Target Type Enums:**")
+        try:
+            geo_target_enum = client.enums.GeoTargetTypeEnum
+            st.write(f"✅ GeoTargetTypeEnum found: {geo_target_enum}")
+            for name, value in geo_target_enum.__dict__.items():
+                if not name.startswith('_'):
+                    st.write(f"  - {name}: {value}")
+        except AttributeError as e:
+            st.write(f"❌ GeoTargetTypeEnum not found: {e}")
+            
+        # Check positive geo target type enums
+        st.write("**Positive Geo Target Type Enums:**")
+        try:
+            positive_geo_enum = client.enums.PositiveGeoTargetTypeEnum
+            st.write(f"✅ PositiveGeoTargetTypeEnum found: {positive_geo_enum}")
+            for name, value in positive_geo_enum.__dict__.items():
+                if not name.startswith('_'):
+                    st.write(f"  - {name}: {value}")
+        except AttributeError as e:
+            st.write(f"❌ PositiveGeoTargetTypeEnum not found: {e}")
+            
+    except Exception as e:
+        st.error(f"❌ Error debugging enums: {e}")
+
+def debug_test_targeting(client: GoogleAdsClient, customer_id: str):
+    """Debug function to test targeting configuration."""
+    st.write("**🔍 Debug: Test Targeting Configuration**")
+    
+    try:
+        # Test creating a campaign object
+        st.write("**Testing Campaign Creation:**")
+        campaign = client.get_type("Campaign")
+        campaign.name = "DEBUG_TEST_CAMPAIGN"
+        campaign.status = client.enums.CampaignStatusEnum.PAUSED
+        campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
+        
+        st.write("✅ Campaign object created successfully")
+        st.write(f"  - Name: {campaign.name}")
+        st.write(f"  - Status: {campaign.status}")
+        st.write(f"  - Channel Type: {campaign.advertising_channel_type}")
+        
+        # Test creating a campaign criterion
+        st.write("**Testing CampaignCriterion Creation:**")
+        criterion = client.get_type("CampaignCriterion")
+        criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
+        
+        st.write("✅ CampaignCriterion object created successfully")
+        st.write(f"  - Status: {criterion.status}")
+        
+        # Test location targeting
+        if hasattr(criterion, 'location'):
+            st.write("✅ location field exists in CampaignCriterion")
+            if hasattr(criterion.location, 'geo_target_constant'):
+                st.write("✅ location.geo_target_constant field exists")
+            if hasattr(criterion.location, 'geo_target_type'):
+                st.write("✅ location.geo_target_type field exists")
+        else:
+            st.write("❌ location field does not exist in CampaignCriterion")
+            
+    except Exception as e:
+        st.error(f"❌ Error testing targeting: {e}")
 
 if __name__ == "__main__":
     main()
