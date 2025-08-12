@@ -561,18 +561,28 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
                 st.warning(f"⚠️ Could not update location targeting: {geo_error}")
         
         # Try to set network targeting to exclude Display Network and search partners
+        # We need to update individual subfields, not the parent network_settings field
+        network_fields_updated = False
         if hasattr(campaign, 'network_settings'):
             try:
                 # Try to set individual network targeting fields
                 if hasattr(campaign.network_settings, 'target_google_search'):
                     campaign.network_settings.target_google_search = True
+                    network_fields_updated = True
                 if hasattr(campaign.network_settings, 'target_search_network'):
                     campaign.network_settings.target_search_network = True
+                    network_fields_updated = True
                 if hasattr(campaign.network_settings, 'target_content_network'):
                     campaign.network_settings.target_content_network = False
+                    network_fields_updated = True
                 if hasattr(campaign.network_settings, 'target_partner_search_network'):
                     campaign.network_settings.target_partner_search_network = False
-                st.success("✅ Campaign network targeting updated: Google Search Network only")
+                    network_fields_updated = True
+                
+                if network_fields_updated:
+                    st.success("✅ Campaign network targeting updated: Google Search Network only")
+                else:
+                    st.info("ℹ️ No network targeting fields found to update")
             except Exception as network_error:
                 st.warning(f"⚠️ Could not update network targeting: {network_error}")
         
@@ -581,13 +591,22 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
         operation.update = campaign
         
         # Set the field mask to only update the targeting fields
-        from google.protobuf.field_mask_pb2 import FieldMask
+        # For fields with subfields, we need to specify the individual subfields
         field_mask = FieldMask()
         
         if hasattr(campaign, 'geo_target_type_setting'):
             field_mask.paths.append("geo_target_type_setting")
-        if hasattr(campaign, 'network_settings'):
-            field_mask.paths.append("network_settings")
+        
+        # For network_settings, we need to specify individual subfields
+        if hasattr(campaign, 'network_settings') and network_fields_updated:
+            if hasattr(campaign.network_settings, 'target_google_search'):
+                field_mask.paths.append("network_settings.target_google_search")
+            if hasattr(campaign.network_settings, 'target_search_network'):
+                field_mask.paths.append("network_settings.target_search_network")
+            if hasattr(campaign.network_settings, 'target_content_network'):
+                field_mask.paths.append("network_settings.target_content_network")
+            if hasattr(campaign.network_settings, 'target_partner_search_network'):
+                field_mask.paths.append("network_settings.target_partner_search_network")
         
         operation.update_mask.CopyFrom(field_mask)
         
