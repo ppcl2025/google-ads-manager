@@ -632,14 +632,28 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
         st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
-        # For API v21, SEARCH campaigns automatically use Google Search Network
-        # Network targeting is controlled by the campaign type, not individual fields
-        st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
-        st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
+        # Set location targeting to "Presence Only" during campaign creation
+        # The debug tools showed that geo_target_type_setting field exists directly on Campaign
+        if hasattr(campaign, 'geo_target_type_setting'):
+            # Set the field directly - it's a direct field, not a separate type
+            campaign.geo_target_type_setting = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+            st.success("✅ Location targeting set to 'Presence Only' during campaign creation")
+            st.info("ℹ️ This ensures users are only targeted when physically in the location")
+        else:
+            st.warning("⚠️ geo_target_type_setting field not found - location targeting will use defaults")
         
-        # Note: We'll use the debug tools to discover the correct way to set targeting
-        # For now, we'll rely on the API defaults and configure targeting after creation
-        st.info("ℹ️ Using API defaults for targeting - will configure specific settings after campaign creation")
+        # Set network targeting to exclude Display Network and search partners
+        # The debug tools showed that network_settings field exists directly on Campaign
+        if hasattr(campaign, 'network_settings'):
+            # Set the field directly - it's a direct field, not a separate type
+            # We'll set the individual network targeting fields
+            campaign.network_settings.target_google_search = True
+            campaign.network_settings.target_search_network = True
+            campaign.network_settings.target_content_network = False  # Exclude Display Network
+            campaign.network_settings.target_partner_search_network = False  # Exclude search partners
+            st.success("✅ Network targeting configured: Google Search Network only (no Display, no search partners)")
+        else:
+            st.warning("⚠️ network_settings field not found - network targeting will use defaults")
         
         # Location targeting for specific locations will be configured after campaign creation using CampaignCriterion
         
@@ -734,12 +748,25 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 # For API v21, SEARCH campaigns automatically use Google Search Network
                 st.info("ℹ️ Fallback SEARCH campaign type automatically uses Google Search Network")
                 
-                # For API v21, SEARCH campaigns automatically use Google Search Network
-                st.info("ℹ️ Fallback SEARCH campaign type automatically uses Google Search Network")
+                # Set location targeting to "Presence Only" during fallback campaign creation
+                if hasattr(campaign_fallback, 'geo_target_type_setting'):
+                    # Set the field directly - it's a direct field, not a separate type
+                    campaign_fallback.geo_target_type_setting = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                    st.success("✅ Fallback campaign location targeting set to 'Presence Only'")
+                else:
+                    st.warning("⚠️ geo_target_type_setting field not found in fallback - location targeting will use defaults")
                 
-                # Note: We'll use the debug tools to discover the correct way to set targeting
-                # For now, we'll rely on the API defaults and configure targeting after creation
-                st.info("ℹ️ Using API defaults for targeting in fallback - will configure specific settings after creation")
+                # Set network targeting to exclude Display Network and search partners
+                if hasattr(campaign_fallback, 'network_settings'):
+                    # Set the field directly - it's a direct field, not a separate type
+                    # We'll set the individual network targeting fields
+                    campaign_fallback.network_settings.target_google_search = True
+                    campaign_fallback.network_settings.target_search_network = True
+                    campaign_fallback.network_settings.target_content_network = False  # Exclude Display Network
+                    campaign_fallback.network_settings.target_partner_search_network = False  # Exclude search partners
+                    st.success("✅ Fallback campaign network targeting configured: Google Search Network only")
+                else:
+                    st.warning("⚠️ network_settings field not found in fallback - network targeting will use defaults")
                 
                 # Set EU political advertising field (required in API v21)
                 try:
