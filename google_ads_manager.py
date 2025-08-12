@@ -579,7 +579,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             for field_name in eu_field_names:
                 if hasattr(campaign, field_name):
                     # Use the proper enum value instead of False
-                    setattr(campaign, field_name, client.enums.EuPoliticalAdvertisingStatusEnum.NOT_EU_POLITICAL_ADVERTISING)
+                    setattr(campaign, field_name, client.enums.EuPoliticalAdvertisingStatusEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING)
                     # Debug: show the exact value and type
                     try:
                         value = getattr(campaign, field_name)
@@ -680,7 +680,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     for field_name in eu_field_names:
                         if hasattr(campaign_fallback, field_name):
                             # Use the proper enum value instead of False
-                            setattr(campaign_fallback, field_name, client.enums.EuPoliticalAdvertisingStatusEnum.NOT_EU_POLITICAL_ADVERTISING)
+                            setattr(campaign_fallback, field_name, client.enums.EuPoliticalAdvertisingStatusEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING)
                             # Debug: show the exact value and type
                             try:
                                 value = getattr(campaign_fallback, field_name)
