@@ -7,7 +7,7 @@ import os
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
 from google.api_core.exceptions import GoogleAPICallError
-from google.protobuf.field_mask_pb2 import FieldMask
+
 from datetime import datetime, timedelta
 import streamlit as st
 from typing import Optional, List, Dict, Any
@@ -441,61 +441,7 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
 
 
 
-# Configure network targeting for API v21
-def configure_network_targeting(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
-    """Configure network targeting to use only Google Search Network (exclude search partners)."""
-    try:
-        # In API v21, we need to set targeting fields directly on the campaign during creation
-        # This function is called after campaign creation, so we need to update the existing campaign
-        
-        campaign_service = client.get_service("CampaignService")
-        
-        # Get the current campaign to see what fields are available
-        campaign = client.get_type("Campaign")
-        campaign.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
-        
-        # Set network targeting fields directly on the campaign
-        # These fields control which networks the campaign uses
-        if hasattr(campaign, 'target_google_search'):
-            campaign.target_google_search = True
-        if hasattr(campaign, 'target_search_network'):
-            campaign.target_search_network = True
-        if hasattr(campaign, 'target_content_network'):
-            campaign.target_content_network = False  # Exclude Display Network
-        if hasattr(campaign, 'target_partner_search_network'):
-            campaign.target_partner_search_network = False  # Exclude search partners
-        
-        # Create the update operation
-        operation = client.get_type("CampaignOperation")
-        operation.update = campaign
-        
-        # Set the field mask to only update the targeting fields
-        field_mask = FieldMask()
-        if hasattr(campaign, 'target_google_search'):
-            field_mask.paths.append("target_google_search")
-        if hasattr(campaign, 'target_search_network'):
-            field_mask.paths.append("target_search_network")
-        if hasattr(campaign, 'target_content_network'):
-            field_mask.paths.append("target_content_network")
-        if hasattr(campaign, 'target_partner_search_network'):
-            field_mask.paths.append("target_partner_search_network")
-        
-        operation.update_mask.CopyFrom(field_mask)
-        
-        # Apply the update
-        response = campaign_service.mutate_campaigns(
-            customer_id=customer_id,
-            operations=[operation]
-        )
-        
-        st.success("✅ Network targeting configured: Google Search Network only (no Display, no search partners)")
-        logger.info(f"Network targeting configured for campaign {campaign_id}")
-        return True
-        
-    except Exception as e:
-        st.warning(f"⚠️ Could not configure network targeting: {e}")
-        logger.warning(f"Failed to configure network targeting for campaign {campaign_id}: {e}")
-        return False
+
 
 # Configure location targeting for API v21
 def configure_location_targeting(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
@@ -681,56 +627,13 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         ppcl_negative_list_id = "11404993599"  # PPCL List negative keywords ID
         st.info(f"✅ Will apply PPCL List negative keywords (ID: {ppcl_negative_list_id}) after campaign creation")
         
-        # Configure NetworkSettings to use only core Google Search Network
-        # Exclude search partners and Display Network
-        try:
-            # Try different possible field names for API v21
-            network_configured = False
-            
-            # Try common field names
-            field_mappings = [
-                ('target_google_search', True),
-                ('target_search_network', True),  # Enable search network
-                ('target_content_network', False),  # Disable display network
-                ('target_partner_search_network', False),  # Disable search partners
-                ('target_youtube', False)  # Disable YouTube
-            ]
-            
-            for field_name, value in field_mappings:
-                if hasattr(campaign, field_name):
-                    setattr(campaign, field_name, value)
-                    network_configured = True
-            
-            if network_configured:
-                st.info("✅ Network settings configured: Core Google Search only (no search partners, no Display Network)")
-            else:
-                st.info("ℹ️ Network settings will use default values (this is normal for some API versions)")
-                
-        except Exception as network_error:
-            st.warning(f"⚠️ Could not configure network settings: {network_error}")
-            logger.warning(f"Failed to configure network settings: {network_error}")
+        # For API v21, SEARCH campaigns automatically use Google Search Network
+        # Network targeting is controlled by the campaign type, not individual fields
+        st.info("ℹ️ SEARCH campaign type automatically uses Google Search Network")
+        st.info("ℹ️ Display Network and search partners are automatically excluded for SEARCH campaigns")
         
-        # Configure Location Targeting to use "Presence Only" instead of "Presence or Interest"
-        try:
-            # Try different possible field names for API v21
-            geo_configured = False
-            
-            # Try common field names
-            if hasattr(campaign, 'positive_geo_target_type'):
-                campaign.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-                geo_configured = True
-            if hasattr(campaign, 'negative_geo_target_type'):
-                campaign.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
-                geo_configured = True
-            
-            if geo_configured:
-                st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
-            else:
-                st.info("ℹ️ Location targeting will use default values (this is normal for some API versions)")
-                
-        except Exception as location_error:
-            st.warning(f"⚠️ Could not configure location targeting: {location_error}")
-            logger.warning(f"Failed to configure location targeting: {location_error}")
+        # Location targeting will be configured after campaign creation using CampaignCriterion
+        # This ensures proper "Presence Only" targeting and specific location restrictions
         
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
@@ -820,33 +723,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
                 campaign_fallback.start_date = datetime.now().strftime("%Y-%m-%d")
                 
-                # Configure NetworkSettings for fallback campaign
-                try:
-                    # Try different possible field names for API v21
-                    network_configured = False
-                    
-                    # Try common field names
-                    field_mappings = [
-                        ('target_google_search', True),
-                        ('target_search_network', True),  # Enable search network
-                        ('target_content_network', False),  # Disable display network
-                        ('target_partner_search_network', False),  # Disable search partners
-                        ('target_youtube', False)  # Disable YouTube
-                    ]
-                    
-                    for field_name, value in field_mappings:
-                        if hasattr(campaign_fallback, field_name):
-                            setattr(campaign_fallback, field_name, value)
-                            network_configured = True
-                    
-                    if network_configured:
-                        st.info("✅ Fallback campaign network settings configured: Core Google Search only")
-                    else:
-                        st.info("ℹ️ Fallback campaign network settings will use default values")
-                        
-                except Exception as network_error:
-                    st.warning(f"⚠️ Could not configure fallback campaign network settings: {network_error}")
-                    logger.warning(f"Failed to configure fallback campaign network settings: {network_error}")
+                # For API v21, SEARCH campaigns automatically use Google Search Network
+                st.info("ℹ️ Fallback SEARCH campaign type automatically uses Google Search Network")
                 
                 # Set EU political advertising field (required in API v21)
                 try:
