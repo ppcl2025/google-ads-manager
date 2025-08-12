@@ -452,9 +452,34 @@ def configure_network_targeting(client: GoogleAdsClient, customer_id: str, campa
         network_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
         network_criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
         
-        # Set search network targeting - exclude search partners
-        # This ensures we only use core Google Search, not search partner sites
-        network_criterion.search_network = client.enums.SearchNetworkEnum.GOOGLE_SEARCH
+        # Try different possible enum names for search network targeting
+        search_network_configured = False
+        
+        # Try common enum names for search network
+        search_network_enums = [
+            'SearchNetworkEnum',
+            'SearchNetwork',
+            'NetworkEnum',
+            'Network'
+        ]
+        
+        for enum_name in search_network_enums:
+            if hasattr(client.enums, enum_name):
+                enum_class = getattr(client.enums, enum_name)
+                # Try to find the GOOGLE_SEARCH value
+                if hasattr(enum_class, 'GOOGLE_SEARCH'):
+                    network_criterion.search_network = enum_class.GOOGLE_SEARCH
+                    search_network_configured = True
+                    break
+                elif hasattr(enum_class, 'SEARCH'):
+                    network_criterion.search_network = enum_class.SEARCH
+                    search_network_configured = True
+                    break
+        
+        if not search_network_configured:
+            st.info("ℹ️ Search network enum not found, skipping network targeting configuration")
+            logger.info(f"Search network enum not available for campaign {campaign_id}")
+            return False
         
         # Create and apply the criterion
         operation = client.get_type("CampaignCriterionOperation")
@@ -508,31 +533,55 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
         location_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
         location_criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
         
-        # Set the geo target type to PRESENCE (Presence Only)
-        # This ensures users are only targeted when they're physically in the location
-        # rather than when they show interest in the location
-        if hasattr(location_criterion, 'location'):
-            if hasattr(location_criterion.location, 'geo_target_type'):
-                location_criterion.location.geo_target_type = client.enums.GeoTargetTypeEnum.PRESENCE
-                
-                # Create and apply the criterion
-                operation = client.get_type("CampaignCriterionOperation")
-                operation.create = location_criterion
-                
-                response = campaign_criterion_service.mutate_campaign_criteria(
-                    customer_id=customer_id,
-                    operations=[operation]
-                )
-                
-                st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
-                logger.info(f"Location targeting configured for campaign {campaign_id}")
-                return True
-            else:
-                st.info("ℹ️ Geo target type field not available in this API version")
-                return False
-        else:
-            st.info("ℹ️ Location field not available in this API version")
+        # Try different possible enum names for geo target type
+        geo_target_configured = False
+        
+        # Try common enum names for geo target type
+        geo_target_enums = [
+            'GeoTargetTypeEnum',
+            'GeoTargetType',
+            'LocationTargetTypeEnum',
+            'LocationTargetType'
+        ]
+        
+        # Try to find the PRESENCE value
+        for enum_name in geo_target_enums:
+            if hasattr(client.enums, enum_name):
+                enum_class = getattr(client.enums, enum_name)
+                if hasattr(enum_class, 'PRESENCE'):
+                    if hasattr(location_criterion, 'location'):
+                        if hasattr(location_criterion.location, 'geo_target_type'):
+                            location_criterion.location.geo_target_type = enum_class.PRESENCE
+                            geo_target_configured = True
+                            break
+                        else:
+                            # Try alternative field names
+                            alternative_fields = ['target_type', 'type', 'geo_type']
+                            for field_name in alternative_fields:
+                                if hasattr(location_criterion.location, field_name):
+                                    setattr(location_criterion.location, field_name, enum_class.PRESENCE)
+                                    geo_target_configured = True
+                                    break
+                            if geo_target_configured:
+                                break
+        
+        if not geo_target_configured:
+            st.info("ℹ️ Geo target type configuration not available in this API version")
+            logger.info(f"Geo target type not available for campaign {campaign_id}")
             return False
+        
+        # Create and apply the criterion
+        operation = client.get_type("CampaignCriterionOperation")
+        operation.create = location_criterion
+        
+        response = campaign_criterion_service.mutate_campaign_criteria(
+            customer_id=customer_id,
+            operations=[operation]
+        )
+        
+        st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
+        logger.info(f"Location targeting configured for campaign {campaign_id}")
+        return True
             
     except Exception as e:
         st.warning(f"⚠️ Could not configure location targeting: {e}")
@@ -1308,6 +1357,78 @@ def main():
                         
         except Exception as e:
             st.error(f"❌ Error in location discovery: {e}")
+    
+    # Debug section to discover available enum values for targeting
+    if st.checkbox("🔍 Debug: Discover Available Enum Values for Targeting"):
+        try:
+            client = get_google_ads_client()
+            if client:
+                st.info("**Enum Discovery Tool for Targeting**")
+                st.write("This tool helps discover what enum values are available for network and location targeting.")
+                
+                # Check for network-related enums
+                st.write("**🌐 Network Targeting Enums:**")
+                network_enums = ['SearchNetworkEnum', 'SearchNetwork', 'NetworkEnum', 'Network']
+                for enum_name in network_enums:
+                    if hasattr(client.enums, enum_name):
+                        enum_class = getattr(client.enums, enum_name)
+                        st.success(f"✅ **{enum_name}** found")
+                        
+                        # Try to discover available values
+                        if hasattr(enum_class, '__members__'):
+                            st.write(f"  Available values: {list(enum_class.__members__.keys())}")
+                        elif hasattr(enum_class, 'values'):
+                            st.write(f"  Available values: {list(enum_class.values())}")
+                        else:
+                            st.write(f"  Values not accessible via standard methods")
+                    else:
+                        st.write(f"❌ **{enum_name}** not found")
+                
+                # Check for location-related enums
+                st.write("**📍 Location Targeting Enums:**")
+                location_enums = ['GeoTargetTypeEnum', 'GeoTargetType', 'LocationTargetTypeEnum', 'LocationTargetType']
+                for enum_name in location_enums:
+                    if hasattr(client.enums, enum_name):
+                        enum_class = getattr(client.enums, enum_name)
+                        st.success(f"✅ **{enum_name}** found")
+                        
+                        # Try to discover available values
+                        if hasattr(enum_class, '__members__'):
+                            st.write(f"  Available values: {list(enum_class.__members__.keys())}")
+                        elif hasattr(enum_class, 'values'):
+                            st.write(f"  Available values: {list(enum_class.values())}")
+                        else:
+                            st.write(f"  Values not accessible via standard methods")
+                    else:
+                        st.write(f"❌ **{enum_name}** not found")
+                
+                # Check CampaignCriterion fields
+                st.write("**🔧 CampaignCriterion Fields:**")
+                try:
+                    criterion_type = client.get_type("CampaignCriterion")
+                    criterion_fields = [attr for attr in dir(criterion_type) if not attr.startswith('_')]
+                    st.write(f"Available fields: {criterion_fields[:10]}...")
+                    
+                    # Look for specific fields
+                    if hasattr(criterion_type, 'search_network'):
+                        st.success("✅ search_network field found")
+                    else:
+                        st.warning("⚠️ search_network field not found")
+                    
+                    if hasattr(criterion_type, 'location'):
+                        st.success("✅ location field found")
+                        if hasattr(criterion_type.location, 'geo_target_type'):
+                            st.success("✅ location.geo_target_type field found")
+                        else:
+                            st.warning("⚠️ location.geo_target_type field not found")
+                    else:
+                        st.warning("⚠️ location field not found")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error checking CampaignCriterion fields: {e}")
+                        
+        except Exception as e:
+            st.error(f"❌ Error in enum discovery: {e}")
     
     st.title("Google Ads Manager AI Agent")
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
