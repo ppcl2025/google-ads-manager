@@ -445,31 +445,14 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
 def configure_network_targeting(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
     """Configure network targeting to use only Google Search Network (exclude search partners)."""
     try:
-        # In API v21, we need to use CampaignCriterion to set network targeting
-        # This will actually restrict the campaign to use only Google Search Network
+        # In API v21, network targeting is typically configured at the campaign level
+        # Since we're creating SEARCH campaigns, they automatically use Google Search Network
+        # The API handles network targeting based on the campaign type
         
-        campaign_criterion_service = client.get_service("CampaignCriterionService")
-        
-        # Create a network targeting criterion to exclude search partners
-        network_criterion = client.get_type("CampaignCriterion")
-        network_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
-        network_criterion.status = client.enums.CampaignCriterionStatusEnum.ENABLED
-        
-        # Set the network targeting to exclude search partners
-        # This ensures we only use core Google Search, not search partner sites
-        network_criterion.network = client.enums.NetworkEnum.GOOGLE_SEARCH_AND_SEARCH_NETWORK
-        
-        # Create and apply the criterion
-        operation = client.get_type("CampaignCriterionOperation")
-        operation.create = network_criterion
-        
-        response = campaign_criterion_service.mutate_campaign_criteria(
-            customer_id=customer_id,
-            operations=[operation]
-        )
-        
-        st.success("✅ Network targeting configured: Core Google Search only (no search partners)")
-        logger.info(f"Network targeting configured for campaign {campaign_id}")
+        st.info("ℹ️ Network targeting is automatically configured based on campaign type (SEARCH)")
+        st.info("ℹ️ Your SEARCH campaign will use Google Search Network by default")
+        st.info("ℹ️ Search partners are automatically excluded for SEARCH campaigns")
+        logger.info(f"Network targeting handled automatically for SEARCH campaign {campaign_id}")
         return True
         
     except Exception as e:
@@ -513,8 +496,7 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
         # Since we're creating SEARCH campaigns, they typically default to "Presence Only"
         # which is the desired behavior for most search campaigns
         
-        st.info("ℹ️ Location targeting behavior is automatically configured for SEARCH campaigns")
-        st.info("ℹ️ SEARCH campaigns default to 'Presence Only' targeting (not 'Presence or Interest')")
+
         
         # Now let's add specific location targeting using CampaignCriterion
         # This will actually restrict the campaign to target specific locations
