@@ -445,14 +445,51 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
 def configure_network_targeting(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
     """Configure network targeting to use only Google Search Network (exclude search partners)."""
     try:
-        # In API v21, network targeting is typically configured at the campaign level
-        # Since we're creating SEARCH campaigns, they automatically use Google Search Network
-        # The API handles network targeting based on the campaign type
+        # In API v21, we need to set targeting fields directly on the campaign during creation
+        # This function is called after campaign creation, so we need to update the existing campaign
         
-        st.info("ℹ️ Network targeting is automatically configured based on campaign type (SEARCH)")
-        st.info("ℹ️ Your SEARCH campaign will use Google Search Network by default")
-        st.info("ℹ️ Search partners are automatically excluded for SEARCH campaigns")
-        logger.info(f"Network targeting handled automatically for SEARCH campaign {campaign_id}")
+        campaign_service = client.get_service("CampaignService")
+        
+        # Get the current campaign to see what fields are available
+        campaign = client.get_type("Campaign")
+        campaign.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
+        
+        # Set network targeting fields directly on the campaign
+        # These fields control which networks the campaign uses
+        if hasattr(campaign, 'target_google_search'):
+            campaign.target_google_search = True
+        if hasattr(campaign, 'target_search_network'):
+            campaign.target_search_network = True
+        if hasattr(campaign, 'target_content_network'):
+            campaign.target_content_network = False  # Exclude Display Network
+        if hasattr(campaign, 'target_partner_search_network'):
+            campaign.target_partner_search_network = False  # Exclude search partners
+        
+        # Create the update operation
+        operation = client.get_type("CampaignOperation")
+        operation.update = campaign
+        
+        # Set the field mask to only update the targeting fields
+        field_mask = FieldMask()
+        if hasattr(campaign, 'target_google_search'):
+            field_mask.paths.append("target_google_search")
+        if hasattr(campaign, 'target_search_network'):
+            field_mask.paths.append("target_search_network")
+        if hasattr(campaign, 'target_content_network'):
+            field_mask.paths.append("target_content_network")
+        if hasattr(campaign, 'target_partner_search_network'):
+            field_mask.paths.append("target_partner_search_network")
+        
+        operation.update_mask.CopyFrom(field_mask)
+        
+        # Apply the update
+        response = campaign_service.mutate_campaigns(
+            customer_id=customer_id,
+            operations=[operation]
+        )
+        
+        st.success("✅ Network targeting configured: Google Search Network only (no Display, no search partners)")
+        logger.info(f"Network targeting configured for campaign {campaign_id}")
         return True
         
     except Exception as e:
@@ -488,13 +525,7 @@ def configure_location_targeting(client: GoogleAdsClient, customer_id: str, camp
             st.warning("⚠️ Campaign not found for location targeting configuration")
             return False
         
-        # For API v21, location targeting behavior is typically handled automatically:
-        # 1. SEARCH campaigns default to "Presence Only" targeting
-        # 2. Location targeting is configured when you add specific location criteria
-        # 3. The "Presence or Interest" vs "Presence Only" setting is often campaign-type dependent
-        
-        # Since we're creating SEARCH campaigns, they typically default to "Presence Only"
-        # which is the desired behavior for most search campaigns
+
         
 
         
@@ -659,10 +690,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             # Try common field names
             field_mappings = [
                 ('target_google_search', True),
-                ('target_search_network', False),
-                ('target_content_network', False),
-                ('target_partner_search_network', False),
-                ('target_youtube', False)
+                ('target_search_network', True),  # Enable search network
+                ('target_content_network', False),  # Disable display network
+                ('target_partner_search_network', False),  # Disable search partners
+                ('target_youtube', False)  # Disable YouTube
             ]
             
             for field_name, value in field_mappings:
@@ -760,21 +791,17 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                 logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
             
-            # Configure network and location targeting using the new API v21 approach
-            st.info("🔧 Configuring network and location targeting...")
-            
-            # Configure network targeting
-            network_success = configure_network_targeting(client, customer_id, campaign_id)
-            
-            # Configure location targeting
-            location_success = configure_location_targeting(client, customer_id, campaign_id)
-            
-            if network_success and location_success:
-                st.success("✅ Campaign targeting fully configured!")
-            elif network_success or location_success:
-                st.warning("⚠️ Partial targeting configuration completed")
+            # Apply location targeting if specific locations were selected
+            target_locations = st.session_state.get('selected_locations', [])
+            if target_locations:
+                st.info("🔧 Applying location targeting...")
+                location_success = configure_location_targeting(client, customer_id, campaign_id)
+                if location_success:
+                    st.success("✅ Location targeting applied successfully!")
+                else:
+                    st.warning("⚠️ Location targeting failed, but campaign was created successfully")
             else:
-                st.warning("⚠️ Targeting configuration failed, but campaign was created successfully")
+                st.info("ℹ️ No specific locations selected - campaign will target all locations")
             
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
             return campaign_id
@@ -792,6 +819,34 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.campaign_budget = budget_resource_name
                 campaign_fallback.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
                 campaign_fallback.start_date = datetime.now().strftime("%Y-%m-%d")
+                
+                # Configure NetworkSettings for fallback campaign
+                try:
+                    # Try different possible field names for API v21
+                    network_configured = False
+                    
+                    # Try common field names
+                    field_mappings = [
+                        ('target_google_search', True),
+                        ('target_search_network', True),  # Enable search network
+                        ('target_content_network', False),  # Disable display network
+                        ('target_partner_search_network', False),  # Disable search partners
+                        ('target_youtube', False)  # Disable YouTube
+                    ]
+                    
+                    for field_name, value in field_mappings:
+                        if hasattr(campaign_fallback, field_name):
+                            setattr(campaign_fallback, field_name, value)
+                            network_configured = True
+                    
+                    if network_configured:
+                        st.info("✅ Fallback campaign network settings configured: Core Google Search only")
+                    else:
+                        st.info("ℹ️ Fallback campaign network settings will use default values")
+                        
+                except Exception as network_error:
+                    st.warning(f"⚠️ Could not configure fallback campaign network settings: {network_error}")
+                    logger.warning(f"Failed to configure fallback campaign network settings: {network_error}")
                 
                 # Set EU political advertising field (required in API v21)
                 try:
@@ -913,21 +968,17 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                         st.warning(f"⚠️ Could not apply shared negative keywords list: {shared_set_error}")
                         logger.warning(f"Failed to apply shared negative keywords list: {shared_set_error}")
                     
-                    # Configure network and location targeting using the new API v21 approach (fallback case)
-                    st.info("🔧 Configuring network and location targeting for fallback campaign...")
-                    
-                    # Configure network targeting
-                    network_success = configure_network_targeting(client, customer_id, campaign_id)
-                    
-                    # Configure location targeting
-                    location_success = configure_location_targeting(client, customer_id, campaign_id)
-                    
-                    if network_success and location_success:
-                        st.success("✅ Fallback campaign targeting fully configured!")
-                    elif network_success or location_success:
-                        st.warning("⚠️ Partial targeting configuration completed for fallback campaign")
+                    # Apply location targeting if specific locations were selected (fallback case)
+                    target_locations = st.session_state.get('selected_locations', [])
+                    if target_locations:
+                        st.info("🔧 Applying location targeting to fallback campaign...")
+                        location_success = configure_location_targeting(client, customer_id, campaign_id)
+                        if location_success:
+                            st.success("✅ Location targeting applied successfully to fallback campaign!")
+                        else:
+                            st.warning("⚠️ Location targeting failed for fallback campaign, but campaign was created successfully")
                     else:
-                        st.warning("⚠️ Targeting configuration failed for fallback campaign, but campaign was created successfully")
+                        st.info("ℹ️ No specific locations selected - fallback campaign will target all locations")
                     
                     show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). You can change to MSL - MaxCon later once conversion tracking is enabled.")
                     return campaign_id
@@ -1318,11 +1369,11 @@ def main():
         # Pre-defined location options
         location_options = {
             "All Locations (Default)": [],
-            "Georgia (State) Only": [{"name": "Georgia (State)", "id": "9193498", "type": "State"}],
-            "Alabama (State) Only": [{"name": "Alabama (State)", "id": "9191021", "type": "State"}],
+            "Georgia (State) Only": [{"name": "Georgia", "id": "9193498", "type": "State"}],
+            "Alabama (State) Only": [{"name": "Alabama", "id": "9191021", "type": "State"}],
             "Georgia (State) + Alabama (State)": [
-                {"name": "Georgia (State)", "id": "9193498", "type": "State"},
-                {"name": "Alabama (State)", "id": "9191021", "type": "State"}
+                {"name": "Georgia", "id": "9193498", "type": "State"},
+                {"name": "Alabama", "id": "9191021", "type": "State"}
             ]
         }
         
