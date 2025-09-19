@@ -408,7 +408,6 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                     
                     response = google_ads_service.search(customer_id=new_customer_id, query=query)
                     for row in response:
-                        st.info(f"🔍 Debug - Customer created: {row.customer.descriptive_name} (ID: {row.customer.id})")
                         break
                     
                     st.info("✅ Sub-account is ready and accessible via Google Ads API")
@@ -586,13 +585,7 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
         campaign = campaign_operation.update
         campaign.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
         
-        # Debug: Let's see what fields are actually available on the campaign object
-        st.info(f"🔍 Debug: Available fields on campaign update object: {[attr for attr in dir(campaign) if not attr.startswith('_')]}")
-        
-        # Try to set location targeting behavior to "Presence Only"
-        # Let's check what location-related fields are actually available
-        location_fields = [attr for attr in dir(campaign) if 'geo' in attr.lower() or 'location' in attr.lower()]
-        st.info(f"🔍 Debug: Location-related fields found: {location_fields}")
+        # Configure location targeting behavior to "Presence Only"
         
         # Configure geo_target_type_setting for "Presence Only" behavior
         # In API v21, this is a direct property on the campaign object
@@ -768,7 +761,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # The bidding strategy exists at MCC level, not individual customer level
         mcc_customer_id = DEFAULT_MCC_ID.replace("-", "")  # Remove dashes from MCC ID
         bidding_strategy_resource = f"customers/{mcc_customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
-        st.info(f"🔍 Debug - Attempting to set MCC-level bidding strategy: {bidding_strategy_resource}")
         
         # Verify the bidding strategy exists at MCC level
         try:
@@ -790,7 +782,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 for row in response:
                     strategy_found = True
-                    st.info(f"🔍 Debug - Found MCC bidding strategy: {row.bidding_strategy.name} (Type: {row.bidding_strategy.type.name}, Status: {row.bidding_strategy.status.name})")
                     break
                     
                 if strategy_found:
@@ -803,7 +794,6 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     for row in response:
                         strategy_found = True
                         bidding_strategy_resource = customer_strategy_resource  # Use customer-level resource
-                        st.info(f"🔍 Debug - Found customer bidding strategy: {row.bidding_strategy.name}")
                         break
                         
             except Exception as mcc_error:
@@ -931,24 +921,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             st.info("🔧 Updating campaign targeting settings...")
             targeting_success = update_campaign_targeting(client, customer_id, campaign_id)
             
-            # Apply location targeting if specific locations were selected
-            target_locations = st.session_state.get('selected_locations', [])
-            if target_locations:
-                st.info("🔧 Applying location targeting...")
-                location_success = configure_location_targeting(client, customer_id, campaign_id)
-                if location_success:
-                    st.success("✅ Location targeting applied successfully!")
-                else:
-                    st.warning("⚠️ Location targeting failed, but campaign was created successfully")
-            else:
-                st.info("ℹ️ No specific locations selected - campaign will target all locations")
+            # Campaign will target all locations with "Presence Only" behavior
+            st.info("ℹ️ Campaign configured to target all locations with 'Presence Only' behavior")
             
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
             return campaign_id
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
             error_message = str(ex)
-            st.error(f"🔍 Debug - Campaign creation error: {error_message}")
             logger.error(f"Campaign creation failed with error: {error_message}")
             
             # Check for specific bidding strategy or conversion tracking errors
@@ -1089,17 +1069,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     st.info("🔧 Updating fallback campaign targeting settings...")
                     targeting_success = update_campaign_targeting(client, customer_id, campaign_id)
                     
-                    # Apply location targeting if specific locations were selected (fallback case)
-                    target_locations = st.session_state.get('selected_locations', [])
-                    if target_locations:
-                        st.info("🔧 Applying location targeting to fallback campaign...")
-                        location_success = configure_location_targeting(client, customer_id, campaign_id)
-                        if location_success:
-                            st.success("✅ Location targeting applied successfully to fallback campaign!")
-                        else:
-                            st.warning("⚠️ Location targeting failed for fallback campaign, but campaign was created successfully")
-                    else:
-                        st.info("ℹ️ No specific locations selected - fallback campaign will target all locations")
+                    # Fallback campaign will target all locations with "Presence Only" behavior
+                    st.info("ℹ️ Fallback campaign configured to target all locations with 'Presence Only' behavior")
                     
                     show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). You can change to MSL - MaxCon later once conversion tracking is enabled.")
                     return campaign_id
@@ -1486,88 +1457,10 @@ def main():
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
         
-        # Location targeting configuration
-        st.write("**📍 Location Targeting Configuration:**")
-        st.write("Choose which locations to target for this campaign:")
-        
-        # Pre-defined location options
-        location_options = {
-            "All Locations (Default)": [],
-            "Georgia (State) Only": [{"name": "Georgia", "id": "9193498", "type": "State"}],
-            "Alabama (State) Only": [{"name": "Alabama", "id": "9191021", "type": "State"}],
-            "Georgia (State) + Alabama (State)": [
-                {"name": "Georgia", "id": "9193498", "type": "State"},
-                {"name": "Alabama", "id": "9191021", "type": "State"}
-            ]
-        }
-        
-        selected_location_option = st.selectbox(
-            "Select Location Targeting:",
-            list(location_options.keys()),
-            index=0
-        )
-        
-        # Store the selected locations in session state
-        st.session_state.selected_locations = location_options[selected_location_option]
-        
-        if st.session_state.selected_locations:
-            st.success(f"✅ Campaign will target: {', '.join([loc['name'] for loc in st.session_state.selected_locations])}")
-        else:
-            st.info("ℹ️ Campaign will target all locations (default behavior)")
-        
-        # Debug tools for targeting issues
-        st.write("**🔧 Debug Tools for Targeting Issues:**")
-        
-        debug_col1, debug_col2 = st.columns(2)
-        
-        with debug_col1:
-            debug_network = st.checkbox("🔍 Debug: Check Available Network Fields", value=False)
-            debug_location = st.checkbox("🔍 Debug: Check Available Location Fields", value=False)
-            debug_campaign = st.checkbox("🔍 Debug: Check Campaign Object Fields", value=False)
-        
-        with debug_col2:
-            debug_criterion = st.checkbox("🔍 Debug: Check CampaignCriterion Fields", value=False)
-            debug_enums = st.checkbox("🔍 Debug: Check Available Enums", value=False)
-            debug_test_targeting = st.checkbox("🔍 Debug: Test Targeting Configuration", value=False)
-            debug_types = st.checkbox("🔍 Debug: Check Available Types", value=False)
-        
-        # Store debug options in session state
-        st.session_state.debug_options = {
-            'debug_network': debug_network,
-            'debug_location': debug_location,
-            'debug_campaign': debug_campaign,
-            'debug_criterion': debug_criterion,
-            'debug_enums': debug_enums,
-            'debug_test_targeting': debug_test_targeting,
-            'debug_types': debug_types
-        }
+        # All campaigns will target all locations with "Presence Only" behavior
         
         if st.button("Create Campaign"):
             if customer_id and campaign_name and budget_amount:
-                # Run debug functions if requested
-                debug_options = st.session_state.get('debug_options', {})
-                
-                if debug_options.get('debug_network'):
-                    debug_network_fields(client)
-                    
-                if debug_options.get('debug_location'):
-                    debug_location_fields(client)
-                    
-                if debug_options.get('debug_campaign'):
-                    debug_campaign_fields(client)
-                    
-                if debug_options.get('debug_criterion'):
-                    debug_criterion_fields(client)
-                    
-                if debug_options.get('debug_enums'):
-                    debug_available_enums(client)
-                    
-                if debug_options.get('debug_test_targeting'):
-                    debug_test_targeting(client, customer_id)
-                    
-                if debug_options.get('debug_types'):
-                    debug_available_types(client)
-                
                 # Create the campaign
                 create_campaign(client, customer_id, campaign_name, budget_amount)
             else:
