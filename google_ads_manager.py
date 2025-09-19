@@ -730,12 +730,13 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Or check in Google Ads UI: Tools & Settings > Shared Library > Bid Strategies
         msl_maxcon_strategy_id = "11481770709"  # MSL - MaxCon bidding strategy ID
         
-        # Set the shared bidding strategy using the correct API v21 field name
-        # First, let's verify the bidding strategy exists and is accessible
-        bidding_strategy_resource = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
-        st.info(f"🔍 Debug - Attempting to set bidding strategy: {bidding_strategy_resource}")
+        # Set the shared bidding strategy using the MCC customer ID
+        # The bidding strategy exists at MCC level, not individual customer level
+        mcc_customer_id = DEFAULT_MCC_ID.replace("-", "")  # Remove dashes from MCC ID
+        bidding_strategy_resource = f"customers/{mcc_customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
+        st.info(f"🔍 Debug - Attempting to set MCC-level bidding strategy: {bidding_strategy_resource}")
         
-        # Verify the bidding strategy exists before using it
+        # Verify the bidding strategy exists at MCC level
         try:
             google_ads_service = client.get_service("GoogleAdsService")
             query = f"""
@@ -748,17 +749,33 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 WHERE bidding_strategy.id = {msl_maxcon_strategy_id}
             """
             
-            response = google_ads_service.search(customer_id=customer_id, query=query)
-            strategy_found = False
-            
-            for row in response:
-                strategy_found = True
-                st.info(f"🔍 Debug - Found bidding strategy: {row.bidding_strategy.name} (Type: {row.bidding_strategy.type.name}, Status: {row.bidding_strategy.status.name})")
-                break
+            # Search at MCC level first
+            try:
+                response = google_ads_service.search(customer_id=mcc_customer_id, query=query)
+                strategy_found = False
                 
-            if not strategy_found:
-                st.error(f"❌ Bidding strategy ID {msl_maxcon_strategy_id} not found in customer {customer_id}")
-                raise ValueError(f"Bidding strategy {msl_maxcon_strategy_id} does not exist")
+                for row in response:
+                    strategy_found = True
+                    st.info(f"🔍 Debug - Found MCC bidding strategy: {row.bidding_strategy.name} (Type: {row.bidding_strategy.type.name}, Status: {row.bidding_strategy.status.name})")
+                    break
+                    
+                if strategy_found:
+                    st.info(f"✅ Bidding strategy found at MCC level ({mcc_customer_id})")
+                else:
+                    st.warning(f"⚠️ Bidding strategy not found at MCC level, checking customer level...")
+                    # Fallback to customer level
+                    customer_strategy_resource = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
+                    response = google_ads_service.search(customer_id=customer_id, query=query)
+                    for row in response:
+                        strategy_found = True
+                        bidding_strategy_resource = customer_strategy_resource  # Use customer-level resource
+                        st.info(f"🔍 Debug - Found customer bidding strategy: {row.bidding_strategy.name}")
+                        break
+                        
+            except Exception as mcc_error:
+                st.warning(f"⚠️ Could not check MCC level, trying customer level: {mcc_error}")
+                # Fallback to customer level
+                bidding_strategy_resource = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
                 
         except Exception as verify_error:
             st.warning(f"⚠️ Could not verify bidding strategy existence: {verify_error}")
@@ -905,6 +922,22 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 "REQUIRED" in error_message or 
                 "bidding" in error_message.lower() or
                 "strategy" in error_message.lower()):
+                
+                if "CONVERSION_TRACKING_NOT_ENABLED" in error_message:
+                    st.warning("⚠️ Conversion tracking is not enabled for this customer account.")
+                    st.info("💡 Portfolio bidding strategies (like Maximize Conversions) require conversion tracking to be enabled.")
+                    st.markdown("""
+                    **💡 To Enable Conversion Tracking:**
+                    1. Go to Google Ads UI for this customer account
+                    2. Navigate to **Tools & Settings** > **Measurement** > **Conversions**
+                    3. Create at least one conversion action (e.g., website purchases, form submissions)
+                    4. Or set up **Google Analytics 4** conversion import
+                    5. Wait 15-30 minutes for the system to recognize conversion tracking is enabled
+                    6. Then retry campaign creation with portfolio bidding strategy
+                    
+                    **Alternative:** Use Manual CPC bidding (current fallback) and switch to portfolio strategy later.
+                    """)
+                
                 st.warning("⚠️ Bidding strategy issue detected. Retrying with Manual CPC bidding strategy...")
                 
                 # Create a new campaign operation without the bidding strategy
