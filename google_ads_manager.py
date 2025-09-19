@@ -561,17 +561,14 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
         st.info(f"🔍 Debug: Location-related fields found: {location_fields}")
         
         # Configure geo_target_type_setting for "Presence Only" behavior
-        # This ensures users are only targeted when physically in the location
+        # In API v21, this is a direct property on the campaign object
         location_updated = False
         if hasattr(campaign, 'geo_target_type_setting'):
             try:
-                # Create and configure geo target type setting
-                geo_setting = client.get_type("GeoTargetTypeSetting")
-                geo_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-                geo_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+                # Set geo target type properties directly on campaign
+                campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
                 
-                # Assign geo target type setting to campaign
-                campaign.geo_target_type_setting = geo_setting
                 location_updated = True
                 st.success("✅ Location targeting updated: Presence Only (not Presence or Interest)")
                 
@@ -581,34 +578,19 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
             st.info("ℹ️ geo_target_type_setting field not found - location targeting will use default behavior")
         
         # Try to set network targeting to exclude Display Network and search partners
-        # We need to create a proper NetworkSettings object first
+        # In API v21, these are direct properties on the campaign object
         network_fields_updated = False
         if hasattr(campaign, 'network_settings'):
             try:
-                # Create a proper NetworkSettings object
-                network_setting = client.get_type("NetworkSettings")
+                # Set network targeting properties directly on campaign
+                campaign.network_settings.target_google_search = True  # Enable Google Search
+                campaign.network_settings.target_search_network = False  # Disable search partners
+                campaign.network_settings.target_content_network = False  # Disable Display Network
+                campaign.network_settings.target_partner_search_network = False  # Disable search partners
                 
-                # Set the individual network targeting fields
-                if hasattr(network_setting, 'target_google_search'):
-                    network_setting.target_google_search = True
-                    network_fields_updated = True
-                if hasattr(network_setting, 'target_search_network'):
-                    network_setting.target_search_network = True
-                    network_fields_updated = True
-                if hasattr(network_setting, 'target_content_network'):
-                    network_setting.target_content_network = False
-                    network_fields_updated = True
-                if hasattr(network_setting, 'target_partner_search_network'):
-                    network_setting.target_partner_search_network = False
-                    network_fields_updated = True
+                network_fields_updated = True
+                st.success("✅ Campaign network targeting updated: Google Search Network only")
                 
-                # Assign the properly initialized object
-                campaign.network_settings = network_setting
-                
-                if network_fields_updated:
-                    st.success("✅ Campaign network targeting updated: Google Search Network only")
-                else:
-                    st.info("ℹ️ No network targeting fields found to update")
             except Exception as network_error:
                 st.warning(f"⚠️ Could not update network targeting: {network_error}")
         else:
@@ -715,8 +697,20 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign_budget.amount_micros = int(float(budget_amount) * 1000000)  # Convert to micros
         campaign_budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
         
-        # In API v21, campaign budgets are automatically campaign-specific by default
-        # No need to set is_shared field as it doesn't exist in this API version
+        # Ensure budget is not shared (campaign-specific)
+        # In API v21, explicitly set explicitly_shared to False to ensure individual campaign budget
+        try:
+            if hasattr(campaign_budget, 'explicitly_shared'):
+                campaign_budget.explicitly_shared = False  # Individual campaign budget, not shared
+                st.info("✅ Budget configured as individual campaign budget (not shared)")
+            elif hasattr(campaign_budget, 'is_shared'):
+                campaign_budget.is_shared = False  # Alternative field name
+                st.info("✅ Budget configured as individual campaign budget (not shared)")
+            else:
+                st.info("ℹ️ Budget sharing field not found - using default behavior")
+        except Exception as budget_error:
+            st.warning(f"⚠️ Could not configure budget sharing: {budget_error}")
+            st.info("ℹ️ Budget will use default behavior")
         
         budget_response = campaign_budget_service.mutate_campaign_budgets(
             customer_id=customer_id, operations=[budget_operation]
@@ -757,17 +751,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         st.info(f"✅ Will apply PPCL List negative keywords (ID: {ppcl_negative_list_id}) after campaign creation")
         
         # Configure network settings to exclude search partners and display network
-        # SEARCH campaigns by default include search partners, so we need to explicitly disable them
+        # In API v21, these are direct properties on the campaign object, not separate types
         try:
-            # Create and configure network settings
-            network_settings = client.get_type("NetworkSettings")
-            network_settings.target_google_search = True  # Enable Google Search
-            network_settings.target_search_network = False  # Disable search partners
-            network_settings.target_content_network = False  # Disable Display Network
-            network_settings.target_partner_search_network = False  # Disable search partners (alternative field)
+            # Set network targeting properties directly on campaign
+            campaign.network_settings.target_google_search = True  # Enable Google Search
+            campaign.network_settings.target_search_network = False  # Disable search partners
+            campaign.network_settings.target_content_network = False  # Disable Display Network
+            campaign.network_settings.target_partner_search_network = False  # Disable search partners
             
-            # Assign network settings to campaign
-            campaign.network_settings = network_settings
             st.info("✅ Network settings configured: Google Search only (no search partners, no Display Network)")
             
         except Exception as network_error:
@@ -775,14 +766,12 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             st.info("ℹ️ Network settings will be configured after campaign creation")
         
         # Configure location targeting behavior to "Presence Only"
+        # In API v21, this is a direct property on the campaign object, not a separate type
         try:
-            # Create and configure geo target type setting
-            geo_setting = client.get_type("GeoTargetTypeSetting")
-            geo_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-            geo_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+            # Set geo target type properties directly on campaign
+            campaign.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+            campaign.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
             
-            # Assign geo target type setting to campaign
-            campaign.geo_target_type_setting = geo_setting
             st.info("✅ Location targeting configured: Presence Only (not Presence or Interest)")
             
         except Exception as geo_error:
@@ -885,30 +874,26 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.start_date = datetime.now().strftime("%Y-%m-%d")
                 
                 # Configure network settings for fallback campaign too
+                # In API v21, these are direct properties on the campaign object
                 try:
-                    # Create and configure network settings for fallback
-                    network_settings_fallback = client.get_type("NetworkSettings")
-                    network_settings_fallback.target_google_search = True  # Enable Google Search
-                    network_settings_fallback.target_search_network = False  # Disable search partners
-                    network_settings_fallback.target_content_network = False  # Disable Display Network
-                    network_settings_fallback.target_partner_search_network = False  # Disable search partners (alternative field)
+                    # Set network targeting properties directly on fallback campaign
+                    campaign_fallback.network_settings.target_google_search = True  # Enable Google Search
+                    campaign_fallback.network_settings.target_search_network = False  # Disable search partners
+                    campaign_fallback.network_settings.target_content_network = False  # Disable Display Network
+                    campaign_fallback.network_settings.target_partner_search_network = False  # Disable search partners
                     
-                    # Assign network settings to fallback campaign
-                    campaign_fallback.network_settings = network_settings_fallback
                     st.info("✅ Fallback network settings configured: Google Search only (no search partners, no Display Network)")
                     
                 except Exception as network_error_fallback:
                     st.warning(f"⚠️ Could not configure fallback network settings: {network_error_fallback}")
                 
                 # Configure location targeting behavior for fallback campaign too
+                # In API v21, this is a direct property on the campaign object
                 try:
-                    # Create and configure geo target type setting for fallback
-                    geo_setting_fallback = client.get_type("GeoTargetTypeSetting")
-                    geo_setting_fallback.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
-                    geo_setting_fallback.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
+                    # Set geo target type properties directly on fallback campaign
+                    campaign_fallback.geo_target_type_setting.positive_geo_target_type = client.enums.PositiveGeoTargetTypeEnum.PRESENCE
+                    campaign_fallback.geo_target_type_setting.negative_geo_target_type = client.enums.NegativeGeoTargetTypeEnum.PRESENCE
                     
-                    # Assign geo target type setting to fallback campaign
-                    campaign_fallback.geo_target_type_setting = geo_setting_fallback
                     st.info("✅ Fallback location targeting configured: Presence Only (not Presence or Interest)")
                     
                 except Exception as geo_error_fallback:
