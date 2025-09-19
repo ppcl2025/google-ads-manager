@@ -731,18 +731,54 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         msl_maxcon_strategy_id = "11481770709"  # MSL - MaxCon bidding strategy ID
         
         # Set the shared bidding strategy using the correct API v21 field name
-        # In API v21, we need to use the correct field name for bidding strategy
+        # First, let's verify the bidding strategy exists and is accessible
+        bidding_strategy_resource = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
+        st.info(f"🔍 Debug - Attempting to set bidding strategy: {bidding_strategy_resource}")
+        
+        # Verify the bidding strategy exists before using it
         try:
-            # Try the correct field name for API v21 - bidding_strategy is the correct field
-            campaign.bidding_strategy = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
-        except AttributeError:
-            # Fallback to alternative field name
-            try:
-                campaign.campaign_bidding_strategy = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
-            except AttributeError:
-                # If neither field exists, we'll handle it in the try-catch below
-                st.warning("⚠️ Could not set bidding strategy field - will retry with Manual CPC if needed")
-                pass
+            google_ads_service = client.get_service("GoogleAdsService")
+            query = f"""
+                SELECT
+                  bidding_strategy.id,
+                  bidding_strategy.name,
+                  bidding_strategy.type,
+                  bidding_strategy.status
+                FROM bidding_strategy
+                WHERE bidding_strategy.id = {msl_maxcon_strategy_id}
+            """
+            
+            response = google_ads_service.search(customer_id=customer_id, query=query)
+            strategy_found = False
+            
+            for row in response:
+                strategy_found = True
+                st.info(f"🔍 Debug - Found bidding strategy: {row.bidding_strategy.name} (Type: {row.bidding_strategy.type.name}, Status: {row.bidding_strategy.status.name})")
+                break
+                
+            if not strategy_found:
+                st.error(f"❌ Bidding strategy ID {msl_maxcon_strategy_id} not found in customer {customer_id}")
+                raise ValueError(f"Bidding strategy {msl_maxcon_strategy_id} does not exist")
+                
+        except Exception as verify_error:
+            st.warning(f"⚠️ Could not verify bidding strategy existence: {verify_error}")
+            logger.warning(f"Failed to verify bidding strategy: {verify_error}")
+        
+        try:
+            # Set the bidding strategy on the campaign
+            if hasattr(campaign, 'bidding_strategy'):
+                campaign.bidding_strategy = bidding_strategy_resource
+                st.info(f"✅ Set bidding_strategy field to: {bidding_strategy_resource}")
+            elif hasattr(campaign, 'campaign_bidding_strategy'):
+                campaign.campaign_bidding_strategy = bidding_strategy_resource
+                st.info(f"✅ Set campaign_bidding_strategy field to: {bidding_strategy_resource}")
+            else:
+                st.error("❌ Neither bidding_strategy nor campaign_bidding_strategy field found on campaign object")
+                raise AttributeError("No bidding strategy field found")
+                
+        except Exception as bidding_error:
+            st.warning(f"⚠️ Could not set bidding strategy field: {bidding_error}")
+            logger.warning(f"Failed to set bidding strategy field: {bidding_error}")
         
         st.info(f"✅ Attempting to use MSL - MaxCon bidding strategy (ID: {msl_maxcon_strategy_id})")
         
@@ -861,8 +897,15 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
             error_message = str(ex)
-            if "CONVERSION_TRACKING_NOT_ENABLED" in error_message or "REQUIRED" in error_message:
-                st.warning("⚠️ Conversion tracking is not enabled or bidding strategy field issue. Retrying with Manual CPC bidding strategy...")
+            st.error(f"🔍 Debug - Campaign creation error: {error_message}")
+            logger.error(f"Campaign creation failed with error: {error_message}")
+            
+            # Check for specific bidding strategy or conversion tracking errors
+            if ("CONVERSION_TRACKING_NOT_ENABLED" in error_message or 
+                "REQUIRED" in error_message or 
+                "bidding" in error_message.lower() or
+                "strategy" in error_message.lower()):
+                st.warning("⚠️ Bidding strategy issue detected. Retrying with Manual CPC bidding strategy...")
                 
                 # Create a new campaign operation without the bidding strategy
                 campaign_operation_fallback = client.get_type("CampaignOperation")
@@ -996,6 +1039,9 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 except Exception as fallback_ex:
                     handle_api_exception(fallback_ex, "create campaign with Manual CPC")
                     return None
+            else:
+                st.error(f"❌ Campaign creation failed with non-bidding strategy error: {error_message}")
+                st.error("❌ This error is not related to bidding strategy. Please check the error details above.")
                 handle_api_exception(ex, "create campaign")
                 return None
         
