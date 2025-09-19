@@ -387,107 +387,77 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
             try:
                 st.info("🔧 Configuring conversion tracking to use 'This Manager'...")
                 
-                # Try multiple approaches for API v21 conversion tracking setup
-                customer_service = client.get_service("CustomerService")
+                # In Google Ads API v21, conversion tracking for sub-accounts is typically configured
+                # through the Google Ads UI rather than the API. However, let's try the correct approach:
                 
-                # Approach 1: Try to set conversion_tracking_id directly on customer
+                st.info("💡 In API v21, conversion tracking for sub-accounts is typically configured through the Google Ads UI.")
+                st.info("🔧 The sub-account has been created and is ready for manual conversion tracking setup.")
+                
+                # Check current conversion tracking status
                 try:
-                    customer_operation = client.get_type("CustomerOperation")
-                    customer_update = customer_operation.update
-                    customer_update.resource_name = f"customers/{new_customer_id}"
+                    google_ads_service = client.get_service("GoogleAdsService")
                     
-                    # Set conversion tracking ID to MCC customer ID
-                    if hasattr(customer_update, 'conversion_tracking_id'):
-                        customer_update.conversion_tracking_id = int(mcc_customer_id)
-                        st.info(f"🔍 Debug - Setting conversion_tracking_id to: {mcc_customer_id}")
+                    # Query to check current customer conversion tracking settings
+                    query = f"""
+                        SELECT
+                          customer.id,
+                          customer.descriptive_name
+                        FROM customer
+                        WHERE customer.id = {new_customer_id}
+                    """
                     
-                    # Try cross-account conversion tracking field
-                    if hasattr(customer_update, 'cross_account_conversion_tracking_id'):
-                        customer_update.cross_account_conversion_tracking_id = int(mcc_customer_id)
-                        st.info(f"🔍 Debug - Setting cross_account_conversion_tracking_id to: {mcc_customer_id}")
+                    response = google_ads_service.search(customer_id=new_customer_id, query=query)
+                    for row in response:
+                        st.info(f"🔍 Debug - Customer created: {row.customer.descriptive_name} (ID: {row.customer.id})")
+                        break
                     
-                    # Set field mask for conversion tracking fields
-                    from google.protobuf.field_mask_pb2 import FieldMask
-                    field_mask = FieldMask()
-                    if hasattr(customer_update, 'conversion_tracking_id'):
-                        field_mask.paths.append("conversion_tracking_id")
-                    if hasattr(customer_update, 'cross_account_conversion_tracking_id'):
-                        field_mask.paths.append("cross_account_conversion_tracking_id")
+                    st.info("✅ Sub-account is ready and accessible via Google Ads API")
                     
-                    if field_mask.paths:
-                        customer_operation.update_mask.CopyFrom(field_mask)
-                        
-                        # Update the customer with conversion tracking settings
-                        update_response = customer_service.mutate_customers(
-                            customer_id=new_customer_id,
-                            operations=[customer_operation]
-                        )
-                        
-                        st.success(f"✅ Conversion tracking configured: Using 'This Manager' ({mcc_customer_id})")
-                        show_message(f"✅ Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
-                        logger.info(f"Created sub-account: {new_customer_id} with conversion tracking enabled")
-                        
-                        return new_customer_id
-                    else:
-                        st.warning("⚠️ No conversion tracking fields found on customer object")
-                        
-                except Exception as direct_error:
-                    st.warning(f"⚠️ Direct conversion tracking setup failed: {direct_error}")
-                    logger.warning(f"Direct conversion tracking setup failed: {direct_error}")
+                except Exception as query_error:
+                    st.warning(f"⚠️ Could not query new customer details: {query_error}")
+                    logger.warning(f"Could not query new customer details: {query_error}")
                 
-                # Approach 2: Try using ConversionTrackingSetting if it exists
-                try:
-                    customer_operation = client.get_type("CustomerOperation")
-                    customer_update = customer_operation.update
-                    customer_update.resource_name = f"customers/{new_customer_id}"
-                    
-                    # Try to create ConversionTrackingSetting
-                    conversion_setting = client.get_type("ConversionTrackingSetting")
-                    conversion_setting.conversion_tracking_id = int(mcc_customer_id)
-                    conversion_setting.cross_account_conversion_tracking_id = int(mcc_customer_id)
-                    
-                    customer_update.conversion_tracking_setting = conversion_setting
-                    
-                    # Update the customer
-                    update_response = customer_service.mutate_customers(
-                        customer_id=new_customer_id,
-                        operations=[customer_operation]
-                    )
-                    
-                    st.success(f"✅ Conversion tracking configured via ConversionTrackingSetting")
-                    show_message(f"✅ Created sub-account with ID: {new_customer_id} with conversion tracking set to 'This Manager'")
-                    logger.info(f"Created sub-account: {new_customer_id} with conversion tracking enabled via ConversionTrackingSetting")
-                    
-                    return new_customer_id
-                    
-                except Exception as setting_error:
-                    st.warning(f"⚠️ ConversionTrackingSetting approach failed: {setting_error}")
-                    logger.warning(f"ConversionTrackingSetting approach failed: {setting_error}")
+                # Note: The manager-customer relationship is already established during account creation
+                # The conversion tracking needs to be set manually in the Google Ads UI
                 
-                # If both approaches fail, provide manual instructions
-                st.warning("⚠️ Automatic conversion tracking setup failed. Manual setup required.")
-                show_message(f"✅ Created sub-account with ID: {new_customer_id}. Conversion tracking needs manual setup.")
+                # Provide clear manual setup instructions since API approach isn't working
+                st.success("✅ Sub-account created successfully!")
+                st.warning("🔧 Manual conversion tracking setup required for portfolio bidding strategies")
                 
-                # Add detailed manual setup instructions
+                show_message(f"✅ Created sub-account with ID: {new_customer_id}. Manual conversion tracking setup needed for portfolio bidding.")
+                
+                # Add detailed, user-friendly manual setup instructions
                 st.markdown(f"""
-                **🔧 Manual Conversion Tracking Setup Required:**
+                ## 🎯 **Important: Enable Portfolio Bidding Strategies**
                 
-                **For Account: {new_customer_id}**
+                **Account Created: `{new_customer_id}`**
                 
-                1. **Go to Google Ads UI** for account {new_customer_id}
-                2. **Navigate to**: Tools & Settings → Measurement → Conversions
-                3. **Click on**: "Google Ads conversion account" settings
-                4. **Select**: "This manager ({mcc_customer_id})" from the dropdown
-                5. **Save** the changes
-                6. **Wait 15-30 minutes** for the system to recognize the change
+                ### **Quick Setup (5 minutes):**
                 
-                **Why this is needed:**
-                - Portfolio bidding strategies (like MSL - MaxCon) require conversion tracking
-                - Setting it to "This Manager" uses the MCC's conversion tracking setup
-                - This enables advanced bidding strategies for campaigns in this account
+                1. **Open Google Ads** → Go to [ads.google.com](https://ads.google.com)
+                2. **Switch to account** `{new_customer_id}` (use account selector in top-right)
+                3. **Go to Settings** → Click ⚙️ in top-right → Account Settings
+                4. **Find "Conversion tracking"** section
+                5. **Click "Google Ads conversion account"**
+                6. **Select "This manager ({mcc_customer_id})"** from dropdown
+                7. **Click "Save"**
+                8. **Wait 15-30 minutes** for system update
                 
-                **Alternative:** Create campaigns with Manual CPC bidding and switch to portfolio strategies later.
+                ### **✅ What this enables:**
+                - 🎯 **MSL - MaxCon bidding strategy** (Maximize Conversions)
+                - 📊 **Portfolio bidding strategies** for all campaigns
+                - 🚀 **Advanced automated bidding** capabilities
+                
+                ### **🔄 Alternative (if you skip this step):**
+                - Campaigns will use **Manual CPC bidding** (still works fine)
+                - You can enable portfolio strategies later when ready
+                
+                ### **📱 Quick Link:**
+                **Direct URL:** `https://ads.google.com/aw/accountsettings?ocid={new_customer_id}#conversion-tracking`
                 """)
+                
+                # Add a helpful reminder
+                st.info("💡 **Tip**: Bookmark this page or save the account ID for easy reference!")
                 
                 return new_customer_id
                 
@@ -1511,7 +1481,7 @@ def main():
         
         # Hardcoded bidding strategy and negative keywords info
         st.info("🎯 All campaigns will use the hardcoded MSL - MaxCon (Maximize Conversions) bidding strategy")
-        st.info("🔧 Conversion tracking is configured to 'This Manager' for new sub-accounts to enable portfolio bidding strategies")
+        st.info("🔧 Portfolio bidding requires conversion tracking set to 'This Manager' (see sub-account creation for setup)")
         st.info("✅ All campaigns will use the hardcoded PPCL List shared negative keywords list")
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
