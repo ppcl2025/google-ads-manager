@@ -429,8 +429,8 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 
                 ### **✅ Current Campaign Setup:**
                 - 🎯 **Maximize Clicks** bidding (works immediately)
-                - 🔄 **Rotate ads indefinitely** (no optimization)
                 - 🔍 **Google Search only** network targeting
+                - 📍 **Presence Only** location targeting
                 - 💰 **Individual campaign budgets**
                 
                 ### **🔄 If you enable conversion tracking later:**
@@ -792,13 +792,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
         
-        # Set ad rotation to rotate indefinitely (do not optimize)
-        try:
-            campaign.ad_serving_optimization_status = client.enums.AdServingOptimizationStatusEnum.ROTATE_INDEFINITELY
-            st.info("✅ Ad rotation set to: Rotate ads indefinitely (do not optimize)")
-        except Exception as rotation_error:
-            st.warning(f"⚠️ Could not set ad rotation: {rotation_error}")
-            logger.warning(f"Failed to set ad rotation: {rotation_error}")
+        # Note: Ad rotation mode is deprecated at campaign level in newer API versions
+        # Ad rotation is now set at the ad group level instead
         
         # Set EU political advertising field (required in API v21)
         try:
@@ -902,12 +897,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
                 campaign_fallback.start_date = datetime.now().strftime("%Y-%m-%d")
                 
-                # Set ad rotation to rotate indefinitely for fallback campaign
-                try:
-                    campaign_fallback.ad_serving_optimization_status = client.enums.AdServingOptimizationStatusEnum.ROTATE_INDEFINITELY
-                    st.info("✅ Fallback ad rotation set to: Rotate ads indefinitely (do not optimize)")
-                except Exception as rotation_error_fallback:
-                    st.warning(f"⚠️ Could not set fallback ad rotation: {rotation_error_fallback}")
+                # Note: Ad rotation mode is deprecated at campaign level
+                # Ad rotation is now set at the ad group level instead
                 
                 # Configure network settings for fallback campaign too
                 # In API v21, these are direct properties on the campaign object
@@ -1466,7 +1457,6 @@ def main():
         
         # Hardcoded bidding strategy and negative keywords info
         st.info("🎯 All campaigns will use Maximize Clicks bidding strategy")
-        st.info("🔄 Ad rotation set to rotate indefinitely (no optimization)")
         st.info("✅ All campaigns will use the hardcoded PPCL List shared negative keywords list")
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
