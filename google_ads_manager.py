@@ -737,26 +737,13 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.campaign_budget = budget_resource_name
         campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
         
-        # Set Maximize Clicks bidding strategy
-        # In protobuf APIs, accessing a message field initializes it
+        # Set Maximize Clicks bidding strategy using target_spend
+        # Note: Google Ads API uses "target_spend" for what's called "Maximize Clicks" in the UI
+        # This gets as many clicks as possible within your daily budget
         try:
-            # Method 1: Just access the maximize_clicks field to initialize it
-            # This tells the API to use Maximize Clicks bidding strategy
-            campaign.maximize_clicks
-            st.info("✅ Bidding strategy set to: Maximize Clicks (initialized)")
-        except AttributeError as attr_error:
-            st.warning(f"⚠️ maximize_clicks field not found on campaign: {attr_error}")
-            # Try alternate field names
-            try:
-                # Some API versions use different field names
-                if hasattr(campaign, 'maximize_conversion_clicks'):
-                    campaign.maximize_conversion_clicks
-                    st.info("✅ Bidding strategy set to: Maximize Clicks (alternate field)")
-                else:
-                    raise AttributeError("No maximize clicks field found")
-            except Exception as alt_error:
-                st.warning(f"⚠️ Could not set Maximize Clicks: {alt_error}")
-                raise  # Re-raise to trigger fallback
+            # Initialize the target_spend field (this is Maximize Clicks in the API)
+            campaign.target_spend
+            st.info("✅ Bidding strategy set to: Maximize Clicks (target_spend)")
         except Exception as bidding_error:
             st.warning(f"⚠️ Could not set Maximize Clicks bidding strategy: {bidding_error}")
             logger.warning(f"Failed to set Maximize Clicks bidding strategy: {bidding_error}")
