@@ -402,17 +402,21 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 
                 # Provide clear manual setup instructions since API approach isn't working
                 st.success("✅ Sub-account created successfully!")
-                st.warning("🔧 Manual conversion tracking setup required for portfolio bidding strategies")
+                st.warning("🔧 Manual conversion tracking setup may be beneficial for advanced bidding strategies")
                 
-                show_message(f"✅ Created sub-account with ID: {new_customer_id}. Manual conversion tracking setup needed for portfolio bidding.")
+                show_message(f"✅ Created sub-account with ID: {new_customer_id}. Manual conversion tracking setup may be needed for advanced strategies.")
                 
                 # Add detailed, user-friendly manual setup instructions
                 st.markdown(f"""
-                ## 🎯 **Important: Enable Portfolio Bidding Strategies**
+                ## 🎯 **Conversion Tracking Setup (Optional)**
                 
                 **Account Created: `{new_customer_id}`**
                 
-                ### **Quick Setup (5 minutes):**
+                Campaigns are configured with **Maximize Clicks** bidding by default, which doesn't require conversion tracking.
+                
+                ### **Optional Setup for Advanced Strategies:**
+                
+                If you want to use conversion-based bidding later (Maximize Conversions, Target CPA, etc.):
                 
                 1. **Open Google Ads** → Go to [ads.google.com](https://ads.google.com)
                 2. **Switch to account** `{new_customer_id}` (use account selector in top-right)
@@ -423,14 +427,15 @@ def create_sub_account(client: GoogleAdsClient, mcc_customer_id: str, account_na
                 7. **Click "Save"**
                 8. **Wait 15-30 minutes** for system update
                 
-                ### **✅ What this enables:**
-                - 🎯 **MSL - MaxCon bidding strategy** (Maximize Conversions)
-                - 📊 **Portfolio bidding strategies** for all campaigns
-                - 🚀 **Advanced automated bidding** capabilities
+                ### **✅ Current Campaign Setup:**
+                - 🎯 **Maximize Clicks** bidding (works immediately)
+                - 🔄 **Rotate ads indefinitely** (no optimization)
+                - 🔍 **Google Search only** network targeting
+                - 💰 **Individual campaign budgets**
                 
-                ### **🔄 Alternative (if you skip this step):**
-                - Campaigns will use **Manual CPC bidding** (still works fine)
-                - You can enable portfolio strategies later when ready
+                ### **🔄 If you enable conversion tracking later:**
+                - You can switch to conversion-based bidding strategies
+                - Use Maximize Conversions, Target CPA, Target ROAS, etc.
                 
                 ### **📱 Quick Link:**
                 **Direct URL:** `https://ads.google.com/aw/accountsettings?ocid={new_customer_id}#conversion-tracking`
@@ -873,7 +878,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 
                 if "CONVERSION_TRACKING_NOT_ENABLED" in error_message:
                     st.warning("⚠️ Conversion tracking is not enabled for this customer account.")
-                    st.info("💡 Portfolio bidding strategies (like Maximize Conversions) require conversion tracking to be enabled.")
+                    st.info("💡 Conversion-based bidding strategies (like Maximize Conversions) require conversion tracking to be enabled.")
                     st.markdown("""
                     **💡 To Enable Conversion Tracking:**
                     1. Go to Google Ads UI for this customer account
@@ -881,9 +886,9 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     3. Create at least one conversion action (e.g., website purchases, form submissions)
                     4. Or set up **Google Analytics 4** conversion import
                     5. Wait 15-30 minutes for the system to recognize conversion tracking is enabled
-                    6. Then retry campaign creation with portfolio bidding strategy
+                    6. Then retry campaign creation with conversion-based bidding strategy
                     
-                    **Alternative:** Use Manual CPC bidding (current fallback) and switch to portfolio strategy later.
+                    **Alternative:** Use Manual CPC bidding (current fallback) and switch to advanced strategy later.
                     """)
                 
                 st.warning("⚠️ Bidding strategy issue detected. Retrying with Manual CPC bidding strategy...")
@@ -1013,7 +1018,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     # Fallback campaign will target all locations with "Presence Only" behavior
                     st.info("ℹ️ Fallback campaign configured to target all locations with 'Presence Only' behavior")
                     
-                    show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). You can change to MSL - MaxCon later once conversion tracking is enabled.")
+                    show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). You can change to advanced bidding strategies later if needed.")
                     return campaign_id
                 except Exception as fallback_ex:
                     handle_api_exception(fallback_ex, "create campaign with Manual CPC")
@@ -1460,8 +1465,8 @@ def main():
         status = st.selectbox("Campaign Status", DEFAULT_CAMPAIGN_STATUSES)
         
         # Hardcoded bidding strategy and negative keywords info
-        st.info("🎯 All campaigns will use the hardcoded MSL - MaxCon (Maximize Conversions) bidding strategy")
-        st.info("🔧 Portfolio bidding requires conversion tracking set to 'This Manager' (see sub-account creation for setup)")
+        st.info("🎯 All campaigns will use Maximize Clicks bidding strategy")
+        st.info("🔄 Ad rotation set to rotate indefinitely (no optimization)")
         st.info("✅ All campaigns will use the hardcoded PPCL List shared negative keywords list")
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
