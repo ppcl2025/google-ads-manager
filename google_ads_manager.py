@@ -695,6 +695,54 @@ def get_location_ids(client: GoogleAdsClient, customer_id: str, location_names: 
         logger.error(f"Failed to get location IDs: {e}")
         return {}
 
+# Function to exclude demographics (income and age ranges)
+def exclude_demographics(client: GoogleAdsClient, customer_id: str, campaign_id: str) -> bool:
+    """Exclude specific demographics from campaign: Top 10%, 11-20% household income, and age 18-24."""
+    try:
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
+        operations = []
+        
+        # Demographic criterion IDs to exclude
+        exclusions = [
+            ("510001", "Top 10% household income"),
+            ("510002", "11-20% household income"),  
+            ("503001", "Age 18-24")
+        ]
+        
+        for criterion_id, description in exclusions:
+            # Create campaign criterion operation for exclusion
+            campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
+            campaign_criterion = campaign_criterion_operation.create
+            
+            # Set the campaign
+            campaign_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+            
+            # Set as negative (exclusion)
+            campaign_criterion.negative = True
+            
+            # Set the criterion ID
+            campaign_criterion.criterion_id = int(criterion_id)
+            
+            operations.append(campaign_criterion_operation)
+            logger.info(f"Excluding demographic: {description} (ID: {criterion_id})")
+        
+        # Apply all exclusions
+        if operations:
+            response = campaign_criterion_service.mutate_campaign_criteria(
+                customer_id=customer_id,
+                operations=operations
+            )
+            st.info(f"✅ Excluded demographics: Top 10% income, 11-20% income, Age 18-24")
+            logger.info(f"Successfully excluded {len(operations)} demographic segments from campaign {campaign_id}")
+            return True
+        
+        return False
+        
+    except Exception as e:
+        st.warning(f"⚠️ Could not exclude demographics: {e}")
+        logger.warning(f"Failed to exclude demographics from campaign {campaign_id}: {e}")
+        return False
+
 # Create a campaign with daily budget
 def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
                    budget_amount: float) -> Optional[str]:
@@ -858,6 +906,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             # Campaign will target all locations with "Presence Only" behavior
             st.info("ℹ️ Campaign configured to target all locations with 'Presence Only' behavior")
             
+            # Exclude specific demographics (high income and young age)
+            st.info("🔧 Excluding demographics (Top 10%, 11-20% income, Age 18-24)...")
+            demographics_excluded = exclude_demographics(client, customer_id, campaign_id)
+            
             show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Maximize Clicks bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
             return campaign_id
         except Exception as ex:
@@ -1008,6 +1060,10 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                     
                     # Fallback campaign will target all locations with "Presence Only" behavior
                     st.info("ℹ️ Fallback campaign configured to target all locations with 'Presence Only' behavior")
+                    
+                    # Exclude specific demographics (high income and young age)
+                    st.info("🔧 Excluding demographics (Top 10%, 11-20% income, Age 18-24)...")
+                    demographics_excluded = exclude_demographics(client, customer_id, campaign_id)
                     
                     show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). You can change to advanced bidding strategies later if needed.")
                     return campaign_id
@@ -1468,6 +1524,7 @@ def main():
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
         st.info("🔄 All ad groups will have ad rotation set to 'Rotate forever' (no optimization)")
+        st.info("🚫 All campaigns will exclude: Top 10% income, 11-20% income, Age 18-24")
         
         # All campaigns will target all locations with "Presence Only" behavior
         
