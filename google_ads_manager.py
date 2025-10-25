@@ -740,8 +740,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Set Maximize Clicks bidding strategy
         # This is a campaign-level automated bidding strategy that automatically sets bids to get as many clicks as possible within the budget
         try:
-            # Access the maximize_clicks field to initialize it (this sets the bidding strategy)
-            campaign.maximize_clicks.SetInParent()
+            campaign.maximize_clicks = client.get_type("MaximizeClicks")
             st.info("✅ Bidding strategy set to: Maximize Clicks")
         except Exception as bidding_error:
             st.warning(f"⚠️ Could not set Maximize Clicks bidding strategy: {bidding_error}")
