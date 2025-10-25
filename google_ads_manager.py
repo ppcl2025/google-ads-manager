@@ -204,35 +204,16 @@ def get_google_ads_client():
             if "invalid_grant" in str(test_error).lower() or "token has been expired" in str(test_error).lower():
                 st.error("🔐 **Authentication Error: Refresh Token Expired or Revoked**")
                 st.error(f"Error details: {test_error}")
-                st.markdown("""
-                **Your Google Ads refresh token has expired or been revoked. This can happen when:**
-                - The token hasn't been used for 6+ months
-                - You've revoked access to the app
-                - The OAuth consent screen was modified
-                - Too many refresh tokens were issued
                 
-                **To fix this, you need to generate a new refresh token:**
+                # Automatically show the reset instructions
+                st.session_state.show_auth_reset = True
                 
-                1. **Download your OAuth client credentials:**
-                   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-                   - Navigate to APIs & Services > Credentials
-                   - Find your OAuth 2.0 Client ID
-                   - Download the JSON file and save it as `client_secrets.json`
+                st.warning("""
+                **⚠️ Your refresh token has expired!**
                 
-                2. **Run the refresh token script:**
-                   ```bash
-                   python get_refresh_token.py
-                   ```
+                Click the **"🔐 Reset Authentication"** button at the top of the page for step-by-step instructions to fix this.
                 
-                3. **Update your Streamlit Cloud secrets:**
-                   - Go to your Streamlit Cloud app settings
-                   - Update the `GOOGLE_ADS_REFRESH_TOKEN` secret with the new token
-                
-                4. **Redeploy your app**
-                
-                **Alternative: Use the script in this repository:**
-                - The `get_refresh_token.py` script will help you generate a new token
-                - Make sure you have `client_secrets.json` in your project directory
+                This usually takes 2-3 minutes to resolve.
                 """)
                 return None
             else:
@@ -1331,22 +1312,90 @@ def main():
     st.title("Google Ads Manager AI Agent")
     st.write("Manage Google Ads sub-accounts, campaigns, ad groups, ads, and keywords under your MCC account. Budgets are set at the campaign level.")
 
-    # Memory usage display and cleanup options
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
+    # Authentication Reset Section - Prominent placement at the top
+    col_auth1, col_auth2, col_auth3, col_auth4 = st.columns([2, 1.2, 1, 1])
+    with col_auth1:
         memory_usage = memory_manager.get_memory_usage()
         st.info(f"💾 Current Memory Usage: {memory_usage:.1f} MB")
-    with col2:
+    with col_auth2:
+        if st.button("🔐 Reset Authentication", help="Click if you're getting 'invalid_grant' errors"):
+            st.session_state.show_auth_reset = True
+    with col_auth3:
         if st.button("🧹 Clear Cache"):
             st.cache_data.clear()
             st.cache_resource.clear()
             memory_manager.clear_session_data()
             memory_manager.cleanup_dataframes()
             st.success("Cache and memory cleared!")
-    with col3:
+    with col_auth4:
         if st.button("🔄 Force GC"):
             memory_manager.cleanup_dataframes()
             st.success("Garbage collection completed!")
+    
+    # Show authentication reset instructions when button is clicked
+    if st.session_state.get('show_auth_reset', False):
+        st.warning("### 🔐 Authentication Reset Instructions")
+        st.markdown("""
+        **If you're seeing `invalid_grant: Bad Request` errors, follow these steps:**
+        
+        **Why This Happens:**
+        - Google OAuth refresh tokens expire after 6+ months of inactivity
+        - Too many refresh tokens issued for the same user/client
+        - Changes to the OAuth consent screen in Google Cloud Console
+        
+        ---
+        
+        ### Step-by-Step Fix:
+        
+        **1. Generate a New Refresh Token (Local Machine):**
+        ```bash
+        # Clone your repository (if not already on your machine)
+        git clone <your-repo-url>
+        cd google-ads-manager
+        
+        # Activate virtual environment
+        source venv/bin/activate  # Mac/Linux
+        # or: venv\\Scripts\\activate  # Windows
+        
+        # Run the token generator
+        python get_refresh_token.py
+        ```
+        
+        **2. Follow the Browser Flow:**
+        - A browser window will open automatically
+        - Sign in with your Google Ads account
+        - Grant permissions to the app
+        - Copy the refresh token that appears in the terminal
+        
+        **3. Update Streamlit Cloud Secrets:**
+        - Go to your [Streamlit Cloud Dashboard](https://share.streamlit.io/)
+        - Click on your app name
+        - Navigate to **Settings** → **Secrets**
+        - Find `GOOGLE_ADS_REFRESH_TOKEN`
+        - Replace the old token with your new token
+        - Click **Save**
+        
+        **4. Redeploy the App:**
+        - Click **Main** in the sidebar
+        - Click **Reboot app** or **Clear cache** and reload
+        - The error should be resolved!
+        
+        ---
+        
+        **Quick Reference:**
+        - 📄 See `AUTHENTICATION_TROUBLESHOOTING.md` for more details
+        - 🔧 Use `get_refresh_token.py` script in your repository
+        - 💡 Keep `client_secrets.json` secure and never commit it
+        
+        **Still having issues?** Check that:
+        - Your OAuth Client ID is still active in Google Cloud Console
+        - The OAuth consent screen hasn't been modified
+        - Your Google Ads account has API access enabled
+        """)
+        
+        if st.button("✅ Close Instructions"):
+            st.session_state.show_auth_reset = False
+            st.rerun()
 
     # Load client once and cache it
     client = get_google_ads_client()
