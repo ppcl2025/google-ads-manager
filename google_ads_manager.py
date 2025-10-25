@@ -787,6 +787,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.start_date = datetime.now().strftime("%Y-%m-%d")  # Current date at runtime
         # No end_date (ongoing)
         
+        # Set ad rotation to rotate indefinitely (do not optimize)
+        try:
+            campaign.ad_serving_optimization_status = client.enums.AdServingOptimizationStatusEnum.ROTATE_INDEFINITELY
+            st.info("✅ Ad rotation set to: Rotate ads indefinitely (do not optimize)")
+        except Exception as rotation_error:
+            st.warning(f"⚠️ Could not set ad rotation: {rotation_error}")
+            logger.warning(f"Failed to set ad rotation: {rotation_error}")
+        
         # Set EU political advertising field (required in API v21)
         try:
             # Try different possible field names for API v21
@@ -888,6 +896,13 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
                 campaign_fallback.campaign_budget = budget_resource_name
                 campaign_fallback.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
                 campaign_fallback.start_date = datetime.now().strftime("%Y-%m-%d")
+                
+                # Set ad rotation to rotate indefinitely for fallback campaign
+                try:
+                    campaign_fallback.ad_serving_optimization_status = client.enums.AdServingOptimizationStatusEnum.ROTATE_INDEFINITELY
+                    st.info("✅ Fallback ad rotation set to: Rotate ads indefinitely (do not optimize)")
+                except Exception as rotation_error_fallback:
+                    st.warning(f"⚠️ Could not set fallback ad rotation: {rotation_error_fallback}")
                 
                 # Configure network settings for fallback campaign too
                 # In API v21, these are direct properties on the campaign object
