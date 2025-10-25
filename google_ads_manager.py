@@ -613,9 +613,13 @@ def update_campaign_targeting(client: GoogleAdsClient, customer_id: str, campaig
             # Set the field mask to update the targeting fields
             field_mask = FieldMask()
             
-            # Add geo_target_type_setting to field mask if location was updated
+            # Add geo_target_type_setting subfields to field mask if location was updated
+            # Note: Must specify subfields, not parent field, to avoid FIELD_HAS_SUBFIELDS error
             if location_updated:
-                field_mask.paths.append("geo_target_type_setting")
+                if hasattr(campaign.geo_target_type_setting, 'positive_geo_target_type'):
+                    field_mask.paths.append("geo_target_type_setting.positive_geo_target_type")
+                if hasattr(campaign.geo_target_type_setting, 'negative_geo_target_type'):
+                    field_mask.paths.append("geo_target_type_setting.negative_geo_target_type")
             
             # Add network_settings subfields to the field mask if network was updated
             if network_fields_updated and hasattr(campaign.network_settings, 'target_google_search'):
