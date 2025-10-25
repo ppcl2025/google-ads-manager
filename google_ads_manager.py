@@ -741,8 +741,8 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         # Note: Google Ads API uses "target_spend" for what's called "Maximize Clicks" in the UI
         # This gets as many clicks as possible within your daily budget
         try:
-            # Initialize the target_spend field (this is Maximize Clicks in the API)
-            campaign.target_spend
+            # Set target_spend bidding strategy (this is Maximize Clicks in the API)
+            campaign.target_spend = client.get_type("TargetSpend")
             st.info("✅ Bidding strategy set to: Maximize Clicks (target_spend)")
         except Exception as bidding_error:
             st.warning(f"⚠️ Could not set Maximize Clicks bidding strategy: {bidding_error}")
