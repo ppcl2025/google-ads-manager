@@ -689,7 +689,7 @@ def get_location_ids(client: GoogleAdsClient, customer_id: str, location_names: 
 # Create a campaign with daily budget
 def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
                    budget_amount: float) -> Optional[str]:
-    """Create a campaign with daily budget and hardcoded MSL - MaxCon bidding strategy."""
+    """Create a campaign with daily budget and Maximize Clicks bidding strategy."""
     try:
         campaign_service = client.get_service("CampaignService")
         campaign_budget_service = client.get_service("CampaignBudgetService")
@@ -733,76 +733,14 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.campaign_budget = budget_resource_name
         campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
         
-        # Hardcoded MSL - MaxCon bidding strategy
-        # To find your bidding strategy ID, run: python find_bidding_strategy.py
-        # Or check in Google Ads UI: Tools & Settings > Shared Library > Bid Strategies
-        msl_maxcon_strategy_id = "11481770709"  # MSL - MaxCon bidding strategy ID
-        
-        # Set the shared bidding strategy using the MCC customer ID
-        # The bidding strategy exists at MCC level, not individual customer level
-        mcc_customer_id = DEFAULT_MCC_ID.replace("-", "")  # Remove dashes from MCC ID
-        bidding_strategy_resource = f"customers/{mcc_customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
-        
-        # Verify the bidding strategy exists at MCC level
+        # Set Maximize Clicks bidding strategy
+        # This is a campaign-level automated bidding strategy that automatically sets bids to get as many clicks as possible within the budget
         try:
-            google_ads_service = client.get_service("GoogleAdsService")
-            query = f"""
-                SELECT
-                  bidding_strategy.id,
-                  bidding_strategy.name,
-                  bidding_strategy.type,
-                  bidding_strategy.status
-                FROM bidding_strategy
-                WHERE bidding_strategy.id = {msl_maxcon_strategy_id}
-            """
-            
-            # Search at MCC level first
-            try:
-                response = google_ads_service.search(customer_id=mcc_customer_id, query=query)
-                strategy_found = False
-                
-                for row in response:
-                    strategy_found = True
-                    break
-                    
-                if strategy_found:
-                    st.info(f"✅ Bidding strategy found at MCC level ({mcc_customer_id})")
-                else:
-                    st.warning(f"⚠️ Bidding strategy not found at MCC level, checking customer level...")
-                    # Fallback to customer level
-                    customer_strategy_resource = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
-                    response = google_ads_service.search(customer_id=customer_id, query=query)
-                    for row in response:
-                        strategy_found = True
-                        bidding_strategy_resource = customer_strategy_resource  # Use customer-level resource
-                        break
-                        
-            except Exception as mcc_error:
-                st.warning(f"⚠️ Could not check MCC level, trying customer level: {mcc_error}")
-                # Fallback to customer level
-                bidding_strategy_resource = f"customers/{customer_id}/biddingStrategies/{msl_maxcon_strategy_id}"
-                
-        except Exception as verify_error:
-            st.warning(f"⚠️ Could not verify bidding strategy existence: {verify_error}")
-            logger.warning(f"Failed to verify bidding strategy: {verify_error}")
-        
-        try:
-            # Set the bidding strategy on the campaign
-            if hasattr(campaign, 'bidding_strategy'):
-                campaign.bidding_strategy = bidding_strategy_resource
-                st.info(f"✅ Set bidding_strategy field to: {bidding_strategy_resource}")
-            elif hasattr(campaign, 'campaign_bidding_strategy'):
-                campaign.campaign_bidding_strategy = bidding_strategy_resource
-                st.info(f"✅ Set campaign_bidding_strategy field to: {bidding_strategy_resource}")
-            else:
-                st.error("❌ Neither bidding_strategy nor campaign_bidding_strategy field found on campaign object")
-                raise AttributeError("No bidding strategy field found")
-                
+            campaign.maximize_clicks.CopyFrom(client.get_type("MaximizeClicks"))
+            st.info("✅ Bidding strategy set to: Maximize Clicks")
         except Exception as bidding_error:
-            st.warning(f"⚠️ Could not set bidding strategy field: {bidding_error}")
-            logger.warning(f"Failed to set bidding strategy field: {bidding_error}")
-        
-        st.info(f"✅ Attempting to use MSL - MaxCon bidding strategy (ID: {msl_maxcon_strategy_id})")
+            st.warning(f"⚠️ Could not set Maximize Clicks bidding strategy: {bidding_error}")
+            logger.warning(f"Failed to set Maximize Clicks bidding strategy: {bidding_error}")
         
         # Hardcoded shared negative keywords list - PPCL List
         ppcl_negative_list_id = "11404993599"  # PPCL List negative keywords ID
@@ -905,7 +843,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             # Campaign will target all locations with "Presence Only" behavior
             st.info("ℹ️ Campaign configured to target all locations with 'Presence Only' behavior")
             
-            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using MSL - MaxCon bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
+            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Maximize Clicks bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
             return campaign_id
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
