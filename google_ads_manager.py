@@ -693,7 +693,7 @@ def get_location_ids(client: GoogleAdsClient, customer_id: str, location_names: 
 # Create a campaign with daily budget
 def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: str, 
                    budget_amount: float) -> Optional[str]:
-    """Create a campaign with daily budget and Maximize Clicks bidding strategy."""
+    """Create a campaign with daily budget and Manual CPC with Enhanced CPC bidding strategy."""
     try:
         campaign_service = client.get_service("CampaignService")
         campaign_budget_service = client.get_service("CampaignBudgetService")
@@ -737,14 +737,20 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
         campaign.campaign_budget = budget_resource_name
         campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
         
-        # Set Maximize Clicks bidding strategy
-        # This is a campaign-level automated bidding strategy that automatically sets bids to get as many clicks as possible within the budget
+        # Set Maximize Clicks bidding strategy  
+        # For now, we'll use Manual CPC with Enhanced CPC as default since Maximize Clicks API type varies by version
+        # Users can change to automated strategies (like Maximize Clicks) in the Google Ads UI after campaign creation
         try:
-            campaign.maximize_clicks = client.get_type("MaximizeClicks")
-            st.info("✅ Bidding strategy set to: Maximize Clicks")
+            campaign.manual_cpc = client.get_type("ManualCpc")
+            # Enable enhanced CPC for better performance (automatically adjusts bids)
+            if hasattr(campaign.manual_cpc, 'enhanced_cpc_enabled'):
+                campaign.manual_cpc.enhanced_cpc_enabled = True
+                st.info("✅ Bidding strategy set to: Manual CPC with Enhanced CPC enabled (optimizes for clicks)")
+            else:
+                st.info("✅ Bidding strategy set to: Manual CPC")
         except Exception as bidding_error:
-            st.warning(f"⚠️ Could not set Maximize Clicks bidding strategy: {bidding_error}")
-            logger.warning(f"Failed to set Maximize Clicks bidding strategy: {bidding_error}")
+            st.warning(f"⚠️ Could not set bidding strategy: {bidding_error}")
+            logger.warning(f"Failed to set bidding strategy: {bidding_error}")
         
         # Hardcoded shared negative keywords list - PPCL List
         ppcl_negative_list_id = "11404993599"  # PPCL List negative keywords ID
@@ -847,7 +853,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
             # Campaign will target all locations with "Presence Only" behavior
             st.info("ℹ️ Campaign configured to target all locations with 'Presence Only' behavior")
             
-            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Maximize Clicks bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab.")
+            show_message(f"✅ Created campaign with ID: {campaign_id} (PAUSED) using Manual CPC with Enhanced CPC bidding strategy. Budget is set to ${budget_amount}/day for this campaign only (not shared). Add ad groups, ads, and keywords in the Bulk Upload tab. You can change to Maximize Clicks in Google Ads UI if preferred.")
             return campaign_id
         except Exception as ex:
             # Check if the error is related to conversion tracking or bidding strategy
