@@ -1027,7 +1027,7 @@ def create_campaign(client: GoogleAdsClient, customer_id: str, campaign_name: st
 # Create an ad group
 def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str, 
                    ad_group_name: str, status: str = "ENABLED") -> Optional[str]:
-    """Create an ad group."""
+    """Create an ad group with ad rotation set to rotate forever (indefinitely)."""
     try:
         ad_group_service = client.get_service("AdGroupService")
         ad_group = client.get_type("AdGroup")
@@ -1036,6 +1036,13 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
         ad_group.status = client.enums.AdGroupStatusEnum[status]
         ad_group.type_ = client.enums.AdGroupTypeEnum.SEARCH_STANDARD
         ad_group.cpc_bid_micros = DEFAULT_CPC_BID_MICROS
+        
+        # Set ad rotation to rotate forever (do not optimize)
+        try:
+            ad_group.ad_rotation_mode = client.enums.AdRotationModeEnum.ROTATE_FOREVER
+            logger.info(f"Ad rotation set to ROTATE_FOREVER for ad group: {ad_group_name}")
+        except Exception as rotation_error:
+            logger.warning(f"Could not set ad rotation mode: {rotation_error}")
 
         ad_group_operation = client.get_type("AdGroupOperation")
         ad_group_operation.create = ad_group
@@ -1044,8 +1051,8 @@ def create_ad_group(client: GoogleAdsClient, customer_id: str, campaign_id: str,
             operations=[ad_group_operation]
         )
         ad_group_id = ad_group_response.results[0].resource_name.split("/")[-1]
-        show_message(f"Created ad group with ID: {ad_group_id}")
-        logger.info(f"Created ad group: {ad_group_id}")
+        show_message(f"✅ Created ad group with ID: {ad_group_id} (ad rotation: rotate forever)")
+        logger.info(f"Created ad group: {ad_group_id} with ROTATE_FOREVER")
         return ad_group_id
         
     except GoogleAdsException as ex:
@@ -1460,6 +1467,7 @@ def main():
         st.info("✅ All campaigns will use the hardcoded PPCL List shared negative keywords list")
         st.info("🎯 All campaigns will be configured for core Google Search only (no search partners, no Display Network)")
         st.info("🎯 All campaigns will use 'Presence Only' location targeting (not Presence or Interest)")
+        st.info("🔄 All ad groups will have ad rotation set to 'Rotate forever' (no optimization)")
         
         # All campaigns will target all locations with "Presence Only" behavior
         
