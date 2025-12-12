@@ -2015,6 +2015,22 @@ def show_help_chat():
         with st.spinner("Loading documentation..."):
             st.session_state.help_docs = load_documentation()
     
+    # Check if there's a pending question to process
+    if 'pending_help_question' in st.session_state and st.session_state.pending_help_question:
+        user_question = st.session_state.pending_help_question
+        st.session_state.pending_help_question = None  # Clear it
+        
+        # Add user question to chat history if not already there
+        if not st.session_state.help_chat_history or st.session_state.help_chat_history[-1].get("content") != user_question:
+            st.session_state.help_chat_history.append({
+                "role": "user",
+                "content": user_question
+            })
+        
+        # Process the question
+        _process_help_question(user_question, st.session_state.help_docs)
+        st.rerun()
+    
     # Display suggested questions
     st.markdown("### 💡 Suggested Questions")
     suggested_questions = get_suggested_questions()
@@ -2025,11 +2041,8 @@ def show_help_chat():
         col_idx = idx % 3
         with cols[col_idx]:
             if st.button(question, key=f"suggested_{idx}", use_container_width=True):
-                # Add question to chat
-                st.session_state.help_chat_history.append({
-                    "role": "user",
-                    "content": question
-                })
+                # Set pending question to process
+                st.session_state.pending_help_question = question
                 st.rerun()
     
     # Show more suggestions in expander
@@ -2037,10 +2050,8 @@ def show_help_chat():
         with st.expander("More Suggested Questions"):
             for idx, question in enumerate(suggested_questions[9:], start=9):
                 if st.button(question, key=f"suggested_{idx}", use_container_width=True):
-                    st.session_state.help_chat_history.append({
-                        "role": "user",
-                        "content": question
-                    })
+                    # Set pending question to process
+                    st.session_state.pending_help_question = question
                     st.rerun()
     
     st.markdown("---")
@@ -2063,64 +2074,62 @@ def show_help_chat():
     user_question = st.chat_input("Ask a question about the app...")
     
     if user_question:
-        # Add user question to chat history
-        st.session_state.help_chat_history.append({
-            "role": "user",
-            "content": user_question
-        })
+        # Set pending question to process
+        st.session_state.pending_help_question = user_question
+        st.rerun()
+
+
+def _process_help_question(user_question: str, help_docs: dict):
+    """Process a help question and get answer from Claude."""
+    # Find relevant documentation
+    with st.spinner("🔍 Searching documentation..."):
+        relevant_docs = find_relevant_docs(user_question, help_docs)
         
-        # Find relevant documentation
-        with st.spinner("🔍 Searching documentation..."):
-            relevant_docs = find_relevant_docs(user_question, st.session_state.help_docs)
-            
-            if not relevant_docs:
-                # No relevant docs found
+        if not relevant_docs:
+            # No relevant docs found
+            st.session_state.help_chat_history.append({
+                "role": "assistant",
+                "content": "I couldn't find relevant information in the documentation for your question. Please try rephrasing or ask about a different topic.",
+                "sources": []
+            })
+            return
+        
+        # Format docs for prompt
+        formatted_docs = format_docs_for_prompt(relevant_docs)
+        citations = get_document_citations(relevant_docs)
+        
+        # Create prompt
+        help_prompt = create_help_prompt(user_question, formatted_docs)
+        
+        # Get answer from Claude (use Haiku for faster/cheaper responses)
+        with st.spinner("🤖 Getting answer from Claude..."):
+            try:
+                # Use Haiku model for help queries (faster and cheaper)
+                haiku_model = "claude-3-5-haiku-20241022"
+                
+                response = st.session_state.analyzer.claude.messages.create(
+                    model=haiku_model,
+                    max_tokens=2048,
+                    system="You are a helpful documentation assistant. Provide clear, concise answers based on the documentation provided.",
+                    messages=[{"role": "user", "content": help_prompt}]
+                )
+                
+                answer = response.content[0].text
+                
+                # Add assistant response to chat history
                 st.session_state.help_chat_history.append({
                     "role": "assistant",
-                    "content": "I couldn't find relevant information in the documentation for your question. Please try rephrasing or ask about a different topic.",
+                    "content": answer,
+                    "sources": citations
+                })
+                
+            except Exception as e:
+                st.error(f"❌ Error getting answer: {str(e)}")
+                st.session_state.help_chat_history.append({
+                    "role": "assistant",
+                    "content": f"Sorry, I encountered an error: {str(e)}",
                     "sources": []
                 })
-                st.rerun()
-            
-            # Format docs for prompt
-            formatted_docs = format_docs_for_prompt(relevant_docs)
-            citations = get_document_citations(relevant_docs)
-            
-            # Create prompt
-            help_prompt = create_help_prompt(user_question, formatted_docs)
-            
-            # Get answer from Claude (use Haiku for faster/cheaper responses)
-            with st.spinner("🤖 Getting answer from Claude..."):
-                try:
-                    # Use Haiku model for help queries (faster and cheaper)
-                    haiku_model = "claude-3-5-haiku-20241022"
-                    
-                    response = st.session_state.analyzer.claude.messages.create(
-                        model=haiku_model,
-                        max_tokens=2048,
-                        system="You are a helpful documentation assistant. Provide clear, concise answers based on the documentation provided.",
-                        messages=[{"role": "user", "content": help_prompt}]
-                    )
-                    
-                    answer = response.content[0].text
-                    
-                    # Add assistant response to chat history
-                    st.session_state.help_chat_history.append({
-                        "role": "assistant",
-                        "content": answer,
-                        "sources": citations
-                    })
-                    
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"❌ Error getting answer: {str(e)}")
-                    st.session_state.help_chat_history.append({
-                        "role": "assistant",
-                        "content": f"Sorry, I encountered an error: {str(e)}",
-                        "sources": []
-                    })
-                    st.rerun()
     
     # Clear chat button
     if st.session_state.help_chat_history:
