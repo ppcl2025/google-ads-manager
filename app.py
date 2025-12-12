@@ -136,7 +136,7 @@ def main():
     # Sidebar navigation
     with st.sidebar:
         # Add logo at top of sidebar
-        logo_paths = ['PPC_LAUNCH_logo.png', 'logo.png', 'ppc_launch_logo.png']
+        logo_paths = ['sidebar_logo.png', 'PPC_LAUNCH_logo.png', 'logo.png', 'ppc_launch_logo.png']
         logo_found = False
         for logo_path in logo_paths:
             if os.path.exists(logo_path):
