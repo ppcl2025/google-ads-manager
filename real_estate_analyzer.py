@@ -945,11 +945,43 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         # What's Working table
         if whats_working:
             story.append(Paragraph("What's Working", section_style))
-            table_data = [['Keyword/Ad Group', 'Leads', 'Cost/Lead', 'Why It\'s Working']]
-            for row in whats_working[:5]:
-                table_data.append(row)
+            # Create header row with Paragraph objects for proper wrapping
+            header_style = ParagraphStyle(
+                'TableHeader', parent=styles['Normal'],
+                fontSize=10, textColor=white, alignment=TA_CENTER,
+                fontName='Helvetica-Bold'
+            )
+            table_data = [[
+                Paragraph('Keyword/Ad Group', header_style),
+                Paragraph('Leads', header_style),
+                Paragraph('Cost/Lead', header_style),
+                Paragraph('Why It\'s Working', header_style)
+            ]]
             
-            working_table = Table(table_data, colWidths=[2.2*inch, 0.8*inch, 1*inch, 2*inch])
+            # Create body rows with Paragraph objects for text wrapping
+            body_style_wrap = ParagraphStyle(
+                'TableBody', parent=styles['Normal'],
+                fontSize=9, alignment=TA_LEFT,
+                leading=11, wordWrap='LTR'
+            )
+            body_style_center = ParagraphStyle(
+                'TableBodyCenter', parent=styles['Normal'],
+                fontSize=9, alignment=TA_CENTER,
+                leading=11
+            )
+            
+            for row in whats_working[:5]:
+                if len(row) >= 4:
+                    # Wrap text in Paragraph objects for proper text wrapping
+                    table_data.append([
+                        Paragraph(str(row[0]), body_style_wrap),
+                        Paragraph(str(row[1]), body_style_center),
+                        Paragraph(str(row[2]), body_style_center),
+                        Paragraph(str(row[3]), body_style_wrap)  # This will wrap properly
+                    ])
+            
+            # Adjust column widths - give more space to "Why It's Working" column
+            working_table = Table(table_data, colWidths=[2*inch, 0.7*inch, 0.9*inch, 2.9*inch])
             working_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), COLOR_BLUE),
                 ('TEXTCOLOR', (0, 0), (-1, 0), white),
