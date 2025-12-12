@@ -606,7 +606,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         if campaign_name and campaign_name != 'All Campaigns':
             story.append(Paragraph(f"Campaign: {campaign_name}", subtitle_style))
         story.append(Paragraph(f"Report Period: {date_range_str}", subtitle_style))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 0.2*inch))
         
         # Parse metrics with emoji indicators
         lines = report_content.split('\n')
@@ -771,7 +771,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         
         if metrics_data:
             story.append(Paragraph("Key Metrics:", section_style))
-            story.append(Spacer(1, 0.1*inch))  # Reduced spacing after header
+            story.append(Spacer(1, 0.05*inch))  # Minimal spacing after header
             
             # Create metric cards in a 2-column layout with 3 metrics per column
             # Split metrics into two columns: first 3 in left column, next 3 in right column
@@ -824,11 +824,11 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                             name_escaped = escape(str(metric['name']))
                             value_escaped = escape(str(metric['value']))
                             
-                            cell_text = f"<font name='Helvetica' size='9' color='{COLOR_GRAY.hexval()}'>{name_escaped}</font><br/><br/>"
+                            cell_text = f"<font name='Helvetica' size='9' color='{COLOR_GRAY.hexval()}'>{name_escaped}</font><br/>"
                             cell_text += f"<font name='Helvetica-Bold' size='18' color='{metric['color'].hexval()}'>{value_escaped}</font>"
                             if metric['description']:
                                 desc_escaped = escape(str(metric['description']))
-                                cell_text += f"<br/><br/><font name='Helvetica' size='8' color='{COLOR_GRAY.hexval()}'>{desc_escaped}</font>"
+                                cell_text += f"<br/><font name='Helvetica' size='8' color='{COLOR_GRAY.hexval()}'>{desc_escaped}</font>"
                             
                             cell_content = Paragraph(cell_text, body_style)
                             table_data.append([cell_content])
@@ -850,7 +850,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                     if i < 2:  # Don't add spacer after last row
                         story.append(Spacer(1, 0.05*inch))
             
-            story.append(Spacer(1, 0.2*inch))
+            story.append(Spacer(1, 0.15*inch))
         
         # Two-Week Trend
         if trend_text.strip():
