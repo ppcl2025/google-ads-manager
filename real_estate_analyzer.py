@@ -4592,10 +4592,12 @@ class RealEstateAnalyzer:
                 if prompt_type != 'biweekly_report':
                     prompt = prompt.replace('{OPTIMIZATION_GOALS}', optimization_goals if optimization_goals else '')
         
-        print("\n" + "="*60)
-        print("🤖 Claude Analysis in Progress...")
-        print("="*60 + "\n")
-        print("This may take a minute. Claude is analyzing your campaign data...\n")
+        # Only print if not in Streamlit context (in_streamlit already defined above)
+        if not in_streamlit:
+            print("\n" + "="*60)
+            print("🤖 Claude Analysis in Progress...")
+            print("="*60 + "\n")
+            print("This may take a minute. Claude is analyzing your campaign data...\n")
         
         # Call Claude API
         try:
