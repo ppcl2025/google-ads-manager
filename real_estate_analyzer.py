@@ -14,6 +14,7 @@ from anthropic import Anthropic
 from authenticate import get_client, authenticate
 from account_manager import select_account_interactive, select_campaign_interactive
 from comprehensive_data_fetcher import fetch_comprehensive_campaign_data, format_campaign_data_for_prompt
+from prompt_loader import get_prompt_for_page
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -4740,6 +4741,62 @@ Generate a professional, client-friendly biweekly report based on the campaign d
 # Q&A Prompt Template - For asking Claude questions about Google Ads management
 QA_PROMPT_TEMPLATE = """# Google Ads Senior Account Manager & Strategist - Q&A Assistant
 
+You are an elite Google Ads Senior Account Manager and Strategist with 10+ years of experience specializing exclusively in real estate investor marketing. You are an expert at generating high-quality leads from motivated and distressed home sellers for real estate investors, wholesalers, and house flippers.
+
+## Campaign Data Context:
+
+{campaign_data_context}
+
+## User Question:
+
+{user_question}
+
+Please provide expert, actionable advice based on your knowledge of Google Ads management for real estate investor campaigns. Be specific, data-driven, and provide clear recommendations.
+"""
+
+# Prompt loading function - Use modular prompt system
+def _get_prompt_template(prompt_type='full', **kwargs):
+    """
+    Load prompt template using modular system.
+    
+    Args:
+        prompt_type: Type of prompt ('full', 'ad_copy', 'biweekly_report', 'qa', 'keyword_research', 'campaign_analysis')
+        **kwargs: Additional arguments for prompt_loader
+        
+    Returns:
+        str: Combined prompt text
+    """
+    try:
+        # Map prompt_type to page_type for prompt_loader
+        page_type_map = {
+            'full': 'campaign_analysis',
+            'ad_copy': 'ad_copy',
+            'biweekly_report': 'biweekly_report',
+            'qa': 'qa',
+            'keyword_research': 'keyword_research',
+            'campaign_analysis': 'campaign_analysis'
+        }
+        
+        page_type = page_type_map.get(prompt_type, 'campaign_analysis')
+        
+        # For Q&A, pass user_question if available
+        if prompt_type == 'qa' and 'user_question' in kwargs:
+            return get_prompt_for_page(page_type, user_question=kwargs['user_question'])
+        
+        # For campaign_analysis, include keyword planner if requested
+        if prompt_type in ('full', 'campaign_analysis') and kwargs.get('include_keyword_planner', False):
+            return get_prompt_for_page(page_type, include_keyword_planner=True)
+        
+        return get_prompt_for_page(page_type)
+    except Exception as e:
+        # Fallback to old templates if modular system fails
+        print(f"⚠️  Warning: Could not load modular prompt, using fallback: {e}")
+        return None
+
+# Legacy prompt templates - Keep as fallback
+# These will be replaced by modular system at runtime in analyze() method
+REAL_ESTATE_PROMPT_TEMPLATE = """# Google Ads Senior Account Manager & Strategist - System Prompt
+
 You are an elite Google Ads Senior Account Manager and Strategist with 10+ years of experience specializing exclusively in real estate investor marketing. You are an expert at generating high-quality leads from motivated and distressed home sellers for real estate investors, wholesalers, and house flippers. Your expertise spans campaign strategy, bid optimization, creative testing, audience targeting, and conversion rate optimization specifically for the real estate investor niche.
 
 **YOUR EXPERTISE INCLUDES:**
@@ -4897,16 +4954,53 @@ class RealEstateAnalyzer:
 4. Improve ROAS (Return on Ad Spend)
 5. Optimize budget allocation"""
         
-        # Select prompt template based on prompt_type
-        if prompt_type == 'ad_copy':
-            prompt_template = AD_COPY_OPTIMIZATION_PROMPT_TEMPLATE
-            print("📝 Running Ad Copy Optimization Analysis...\n")
-        elif prompt_type == 'biweekly_report':
-            prompt_template = BIWEEKLY_REPORT_PROMPT_TEMPLATE
-            print("📄 Generating Biweekly Client Report...\n")
-        else:
-            prompt_template = REAL_ESTATE_PROMPT_TEMPLATE
-            print("📊 Running Comprehensive Campaign Analysis...\n")
+        # Select prompt template based on prompt_type - Use modular system
+        try:
+            # Try to load from modular system first
+            modular_prompt = _get_prompt_template(prompt_type)
+            if modular_prompt:
+                prompt_template = modular_prompt
+                print(f"✅ Loaded modular prompt for {prompt_type}\n")
+            else:
+                # Fallback to old templates
+                raise Exception("Modular prompt not available")
+        except Exception as e:
+            # Fallback to legacy templates
+            if prompt_type == 'ad_copy':
+                prompt_template = AD_COPY_OPTIMIZATION_PROMPT_TEMPLATE
+                print("📝 Running Ad Copy Optimization Analysis (legacy prompt)...\n")
+            elif prompt_type == 'biweekly_report':
+                prompt_template = BIWEEKLY_REPORT_PROMPT_TEMPLATE
+                print("📄 Generating Biweekly Client Report (legacy prompt)...\n")
+            elif prompt_type == 'keyword_research':
+                # Keyword research prompt - create inline if not in modules
+                prompt_template = """# Keyword Research & Competitive Analysis
+
+You are an elite Google Ads Senior Account Manager specializing in real estate investor marketing. Analyze the following Keyword Planner data and provide strategic recommendations.
+
+## KEYWORD PLANNER DATA:
+
+{KEYWORD_PLANNER_DATA}
+
+## GEO TARGETING CONTEXT:
+
+{GEO_TARGETING_CONTEXT}
+
+## YOUR TASK:
+
+Analyze the keyword data and provide:
+1. Keyword competition assessment
+2. Search volume opportunities
+3. Bid estimate recommendations
+4. New keyword suggestions
+5. Negative keyword recommendations
+6. Match type strategy recommendations
+
+Focus on keywords relevant to motivated and distressed home sellers."""
+                print("📊 Running Keyword Research Analysis...\n")
+            else:
+                prompt_template = REAL_ESTATE_PROMPT_TEMPLATE
+                print("📊 Running Comprehensive Campaign Analysis (legacy prompt)...\n")
         
         # Check if running in Streamlit context
         try:
@@ -5319,9 +5413,35 @@ def main():
         else:
             campaign_data_context = "No campaign data provided. Answer based on general best practices."
         
-        # Build Q&A prompt
-        qa_prompt = QA_PROMPT_TEMPLATE.replace('{user_question}', user_question)
-        qa_prompt = qa_prompt.replace('{campaign_data_context}', campaign_data_context)
+        # Build Q&A prompt - Use modular system
+        try:
+            # Try to load from modular system
+            modular_qa_prompt = _get_prompt_template('qa', user_question=user_question)
+            if modular_qa_prompt:
+                # Add campaign data context if available
+                qa_prompt = f"{modular_qa_prompt}\n\n## Campaign Data Context:\n\n{campaign_data_context}\n\n## User Question:\n\n{user_question}"
+            else:
+                raise Exception("Modular prompt not available")
+        except Exception:
+            # Fallback to legacy template (if still defined)
+            try:
+                qa_prompt = QA_PROMPT_TEMPLATE.replace('{user_question}', user_question)
+                qa_prompt = qa_prompt.replace('{campaign_data_context}', campaign_data_context)
+            except NameError:
+                # If QA_PROMPT_TEMPLATE not defined, create minimal prompt
+                qa_prompt = f"""# Google Ads Senior Account Manager & Strategist - Q&A Assistant
+
+You are an elite Google Ads Senior Account Manager and Strategist with 10+ years of experience specializing exclusively in real estate investor marketing.
+
+## Campaign Data Context:
+
+{campaign_data_context}
+
+## User Question:
+
+{user_question}
+
+Please provide expert, actionable advice based on your knowledge of Google Ads management for real estate investor campaigns."""
         
         # Call Claude
         print("\n" + "="*60)

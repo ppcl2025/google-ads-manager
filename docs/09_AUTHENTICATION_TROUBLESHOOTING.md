@@ -1,5 +1,6 @@
-# Authentication Troubleshooting Guide
+# 9. Authentication Troubleshooting Guide
 
+**Documentation Order:** #9 (Troubleshooting)  
 Common authentication issues and how to fix them.
 
 ## Error: "DEVELOPER_TOKEN_INVALID"

@@ -1,5 +1,6 @@
-# Setup Guide
+# 2. Setup Guide
 
+**Documentation Order:** #2 (Getting Started)  
 Complete setup instructions for the Real Estate Google Ads Analyzer.
 
 ## Prerequisites
@@ -271,8 +272,8 @@ If you manage multiple Google Ads accounts:
 
 Once setup is complete:
 
-1. Read the [Usage Guide](USAGE.md) for how to use the analyzer
-2. Review [Model Comparison](MODEL_COMPARISON.md) for Claude model selection
+1. Read the [Usage Guide](05_USAGE.md) for how to use the analyzer
+2. Review [Model Comparison](07_MODEL_COMPARISON.md) for Claude model selection
 3. Run your first analysis:
    ```bash
    python real_estate_analyzer.py
@@ -287,5 +288,5 @@ If you encounter issues:
 3. Ensure all dependencies are installed
 4. Check Google Ads API and Claude API status pages
 
-For usage questions, see [USAGE.md](USAGE.md).
+For usage questions, see [05_USAGE.md](05_USAGE.md).
 

@@ -1,8 +1,9 @@
-# Google Ads Account Manager - AI Agent
+# 1. Google Ads Account Manager - AI Agent
 ## Comprehensive User Guide
 
 **Version:** 1.0  
-**Last Updated:** December 2024
+**Last Updated:** December 2024  
+**Documentation Order:** #1 (Getting Started - Read First)
 
 ---
 
@@ -61,6 +62,8 @@
    - Generates optimization recommendations
    - Creates client-friendly reports
    - Answers Google Ads management questions
+   - Uses modular prompt system for efficient token usage (20-60% reduction)
+   - See [Claude Prompt System](06_CLAUDE_PROMPT_SYSTEM.md) for architecture details
 
 4. **Google Drive API** - Report storage
    - Uploads PDF reports to organized folders
@@ -130,8 +133,12 @@ Campaign Data    AI Analysis          Report Storage
 - Answers Google Ads management questions
 - Assesses impact of previous changes (with changelog context)
 
-**Prompt Engineering:**
-- Specialized prompts for real estate investor campaigns
+**Claude Prompt System:**
+- Modular prompt architecture (core + optional modules)
+- Dynamic module loading based on feature/page
+- Reduced token usage (20-60% savings per analysis)
+- Each page loads only the modules it needs
+- See [Claude Prompt System Documentation](06_CLAUDE_PROMPT_SYSTEM.md) for complete details
 - Context-aware analysis using changelog history
 - Character limit compliance for ad copy
 - Client-friendly report formatting
@@ -173,12 +180,12 @@ Campaign Data    AI Analysis          Report Storage
 
 ### Initial Setup
 
-See [SETUP.md](SETUP.md) for detailed setup instructions.
+See [02_SETUP.md](02_SETUP.md) for detailed setup instructions.
 
 **Quick Setup Steps:**
 1. Clone repository
 2. Install dependencies (`pip install -r requirements.txt`)
-3. Configure credentials (see [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md))
+3. Configure credentials (see [03_STREAMLIT_DEPLOYMENT.md](03_STREAMLIT_DEPLOYMENT.md))
 4. Deploy to Streamlit Cloud or run locally
 
 ### First Time Access
@@ -284,6 +291,86 @@ See [SETUP.md](SETUP.md) for detailed setup instructions.
 - Focus on top-performing keywords (3+ conversions, >10% conversion rate)
 - Test one change at a time for accurate results
 - Keep character limits in mind (30 chars for headlines, 90 for descriptions)
+
+---
+
+### 🔍 Keyword Research
+
+**Purpose:** Analyze keyword competition, search volume, and get AI-powered expansion recommendations using Google Keyword Planner data.
+
+**How to Use:**
+
+1. **Select Account**
+   - Choose account from dropdown
+   - Account is required for Keyword Planner API access
+
+2. **Input Keywords**
+   - **Option 1: Manual Entry**
+     - Enter keywords one per line in the text area
+     - Example: `sell my house fast`, `inherited property buyer`, `probate house cash offer`
+   
+   - **Option 2: Load from Campaign**
+     - Select a campaign from dropdown
+     - Click "Load Keywords from Selected Campaign"
+     - All keywords from that campaign will be loaded automatically
+   
+   - **Option 3: Generate Suggestions from Seed Keywords**
+     - Enter seed keywords (e.g., `we buy houses`, `foreclosure help`)
+     - Click "Generate Keyword Suggestions"
+     - System uses Keyword Planner to generate related keyword ideas
+
+3. **Set Location Targeting (Optional)**
+   - **None (National/Global):** Analyze keywords without geo-targeting
+   - **Enter Location Names:**
+     - Enter location names (e.g., `Cleveland, Ohio`, `New York, New York`)
+     - Click "Resolve Locations" to convert to geo-targets
+     - System will use these for search volume and competition analysis
+
+4. **Run Analysis**
+   - Click "🚀 Analyze Keywords"
+   - System will:
+     - Fetch Keyword Planner data (search volume, competition, suggested bids)
+     - Send data to Claude for analysis
+     - Generate recommendations
+
+5. **Review Results**
+   - **Keyword Planner Data Table:**
+     - Shows search volume, competition level, suggested bid range for each keyword
+     - Interactive table for easy review
+   
+   - **Claude's Analysis & Recommendations:**
+     - Competition analysis (which keywords are too competitive)
+     - Search volume assessment (scaling potential)
+     - Keyword expansion recommendations (priority 1, 2, 3)
+     - Budget allocation strategy
+     - Market positioning insights
+
+6. **Export Results**
+   - "💾 Save to PDF" - Download keyword research report
+   - "📤 Upload to Google Drive" - Upload to Google Drive folder
+
+**What You Get:**
+- Competition analysis for each keyword
+- Search volume data (high/medium/low)
+- Suggested bid estimates
+- Keyword expansion recommendations (add, test, skip)
+- Budget allocation strategy
+- Quality Score indicators
+- Market positioning insights
+
+**Tips:**
+- Use "Load from Campaign" to analyze existing campaign keywords
+- Use "Generate Suggestions" to discover new keyword opportunities
+- Set location targeting for geo-specific search volume data
+- Review competition levels before adding high-competition keywords
+- Focus on keywords with medium-high search volume (1K-10K/month) for best results
+
+**When to Use:**
+- Before launching a new campaign
+- When expanding existing campaigns
+- To find new keyword opportunities
+- To assess competition levels
+- To get bid estimates for new keywords
 
 ---
 
@@ -604,7 +691,7 @@ Changelog files are stored in `changelogs/` directory:
 **Solutions:**
 - Check credentials in Streamlit secrets or .env file
 - Verify Google Ads API access
-- See [AUTHENTICATION_TROUBLESHOOTING.md](AUTHENTICATION_TROUBLESHOOTING.md)
+- See [09_AUTHENTICATION_TROUBLESHOOTING.md](09_AUTHENTICATION_TROUBLESHOOTING.md)
 
 ### Analysis Hanging
 
@@ -655,17 +742,18 @@ Changelog files are stored in `changelogs/` directory:
 - Ensure OAuth token has Drive scope
 - Re-authenticate if needed
 
-For more troubleshooting, see [AUTHENTICATION_TROUBLESHOOTING.md](AUTHENTICATION_TROUBLESHOOTING.md).
+For more troubleshooting, see [09_AUTHENTICATION_TROUBLESHOOTING.md](09_AUTHENTICATION_TROUBLESHOOTING.md).
 
 ---
 
 ## Additional Resources
 
-- [Setup Guide](SETUP.md) - Initial setup instructions
-- [Streamlit Deployment](STREAMLIT_DEPLOYMENT.md) - Deploy to Streamlit Cloud
-- [Authentication Troubleshooting](AUTHENTICATION_TROUBLESHOOTING.md) - Fix auth issues
-- [Model Comparison](MODEL_COMPARISON.md) - Compare Claude models
-- [Prompt Recommendations](PROMPT_RECOMMENDATIONS.md) - Optimize prompts
+- [Setup Guide](02_SETUP.md) - Initial setup instructions
+- [Streamlit Deployment](03_STREAMLIT_DEPLOYMENT.md) - Deploy to Streamlit Cloud
+- [Claude Prompt System](06_CLAUDE_PROMPT_SYSTEM.md) - Modular prompt architecture and module usage
+- [Authentication Troubleshooting](09_AUTHENTICATION_TROUBLESHOOTING.md) - Fix auth issues
+- [Model Comparison](07_MODEL_COMPARISON.md) - Compare Claude models
+- [Prompt Recommendations](08_PROMPT_RECOMMENDATIONS.md) - Optimize prompts
 
 ---
 

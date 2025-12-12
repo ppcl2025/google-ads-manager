@@ -17,6 +17,12 @@ from account_manager import select_account_interactive, select_campaign_interact
 from account_campaign_manager import get_sub_accounts, create_sub_account, create_campaign, US_TIMEZONES
 from real_estate_analyzer import RealEstateAnalyzer
 from comprehensive_data_fetcher import fetch_comprehensive_campaign_data, format_campaign_data_for_prompt
+from keyword_planner_fetcher import (
+    fetch_keyword_planner_data, 
+    get_related_keyword_suggestions,
+    format_keyword_planner_for_prompt,
+    get_geo_target_constants
+)
 
 # Load environment variables (works with .env file locally or Streamlit Cloud secrets)
 load_dotenv()
@@ -153,6 +159,7 @@ def main():
             [
                 "📊 Campaign Analysis",
                 "📝 Ad Copy Optimization",
+                "🔍 Keyword Research",
                 "📄 Biweekly Reports",
                 "💬 Ask Claude",
                 "➕ Create Account",
@@ -198,6 +205,8 @@ def main():
         show_comprehensive_analysis()
     elif page == "📝 Ad Copy Optimization":
         show_ad_copy_optimization()
+    elif page == "🔍 Keyword Research":
+        show_keyword_research()
     elif page == "📄 Biweekly Reports":
         show_biweekly_reports()
     elif page == "💬 Ask Claude":
@@ -1130,9 +1139,16 @@ def show_qa_chat():
         with st.chat_message("assistant"):
             with st.spinner("Claude is thinking..."):
                 try:
-                    from real_estate_analyzer import QA_PROMPT_TEMPLATE
-                    qa_prompt = QA_PROMPT_TEMPLATE.replace('{user_question}', user_question)
-                    qa_prompt = qa_prompt.replace('{campaign_data_context}', "No campaign data provided.")
+                    # Use modular prompt system for Q&A
+                    from prompt_loader import get_prompt_for_page
+                    try:
+                        qa_prompt = get_prompt_for_page('qa', user_question=user_question)
+                        qa_prompt = f"{qa_prompt}\n\n## Campaign Data Context:\n\nNo campaign data provided.\n\n## User Question:\n\n{user_question}"
+                    except Exception as e:
+                        # Fallback to legacy template
+                        from real_estate_analyzer import QA_PROMPT_TEMPLATE
+                        qa_prompt = QA_PROMPT_TEMPLATE.replace('{user_question}', user_question)
+                        qa_prompt = qa_prompt.replace('{campaign_data_context}', "No campaign data provided.")
                     
                     system_message = "You are a Google Ads Senior Account Manager and Strategist. Answer the user's question with expert knowledge and actionable advice."
                     
@@ -1288,6 +1304,532 @@ def show_create_account():
                             st.info("💡 The account has been created. The client will need to set up their own payment method in Google Ads.")
                     except Exception as e:
                         st.error(f"❌ Error creating account: {str(e)}")
+
+def show_keyword_research():
+    """Keyword Research page with Keyword Planner integration."""
+    st.header("🔍 Keyword Research")
+    st.markdown("Analyze keyword competition, search volume, and get AI-powered expansion recommendations.")
+    
+    # Account selection
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        mcc_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
+        if mcc_id:
+            try:
+                accounts = list_customer_accounts(st.session_state.client, mcc_id)
+                account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
+                selected_account_display = st.selectbox("Select Account", list(account_options.keys()))
+                selected_account_id = account_options[selected_account_display]
+            except Exception as e:
+                st.error(f"Error loading accounts: {e}")
+                st.stop()
+        else:
+            selected_account_id = st.text_input("Enter Customer ID", value="")
+    
+    with col2:
+        # Optional: Select campaign to get existing keywords
+        if selected_account_id:
+            try:
+                from account_manager import list_campaigns
+                campaigns = list_campaigns(st.session_state.client, selected_account_id)
+                campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
+                campaign_options["None - Enter keywords manually"] = None
+                selected_campaign_display = st.selectbox("Select Campaign (Optional)", list(campaign_options.keys()))
+                selected_campaign_id = campaign_options[selected_campaign_display]
+            except Exception as e:
+                st.warning(f"Could not load campaigns: {e}")
+                selected_campaign_id = None
+        else:
+            selected_campaign_id = None
+    
+    st.markdown("---")
+    
+    # Keyword input method
+    input_method = st.radio(
+        "Keyword Input Method",
+        ["Enter keywords manually", "Load from campaign", "Generate suggestions from seed keywords"],
+        horizontal=True
+    )
+    
+    keywords_list = []
+    
+    if input_method == "Enter keywords manually":
+        keywords_input = st.text_area(
+            "Enter keywords (one per line)",
+            height=150,
+            placeholder="we buy houses\nsell my house fast\ninherited property buyer\ncash home buyer",
+            help="Enter one keyword per line"
+        )
+        if keywords_input:
+            keywords_list = [k.strip() for k in keywords_input.split("\n") if k.strip()]
+    
+    elif input_method == "Load from campaign":
+        if not selected_campaign_id:
+            st.warning("⚠️ Please select a campaign first.")
+        else:
+            if st.button("📥 Load Keywords from Campaign"):
+                with st.spinner("Loading keywords from campaign..."):
+                    try:
+                        # Fetch campaign data to get keywords
+                        data = fetch_comprehensive_campaign_data(
+                            st.session_state.client,
+                            selected_account_id,
+                            campaign_id=selected_campaign_id,
+                            date_range_days=30
+                        )
+                        
+                        # Extract unique keywords
+                        keywords_list = list(set([kw['keyword'] for kw in data.get('keywords', [])]))
+                        
+                        if keywords_list:
+                            st.success(f"✅ Loaded {len(keywords_list)} keywords from campaign")
+                            # Display keywords in text area for editing
+                            keywords_text = "\n".join(keywords_list[:50])  # Limit to 50 for display
+                            keywords_input = st.text_area(
+                                "Keywords (editable)",
+                                value=keywords_text,
+                                height=200,
+                                help="Edit keywords if needed, then click 'Analyze Keywords' below"
+                            )
+                            keywords_list = [k.strip() for k in keywords_input.split("\n") if k.strip()]
+                        else:
+                            st.warning("No keywords found in this campaign.")
+                    except Exception as e:
+                        st.error(f"Error loading keywords: {str(e)}")
+                        import traceback
+                        st.code(traceback.format_exc())
+    
+    elif input_method == "Generate suggestions from seed keywords":
+        seed_keywords_input = st.text_area(
+            "Enter seed keywords (one per line)",
+            height=100,
+            placeholder="we buy houses\ncash home buyer",
+            help="Enter 1-3 seed keywords to generate related suggestions"
+        )
+        if seed_keywords_input:
+            seed_keywords = [k.strip() for k in seed_keywords_input.split("\n") if k.strip()]
+            if seed_keywords:
+                if st.button("🔍 Generate Keyword Suggestions"):
+                    with st.spinner("Generating keyword suggestions from Keyword Planner..."):
+                        try:
+                            suggestions = get_related_keyword_suggestions(
+                                st.session_state.client,
+                                selected_account_id,
+                                seed_keywords
+                            )
+                            
+                            if suggestions:
+                                # Show top 50 suggestions
+                                st.success(f"✅ Generated {len(suggestions)} keyword suggestions")
+                                
+                                # Display as selectable list
+                                suggestion_texts = [f"{s['keyword_text']} ({s['avg_monthly_searches']:,} searches/mo, {s['competition']})" 
+                                                   for s in suggestions[:50]]
+                                selected_suggestions = st.multiselect(
+                                    "Select keywords to analyze",
+                                    suggestion_texts,
+                                    default=suggestion_texts[:10] if len(suggestion_texts) >= 10 else suggestion_texts,
+                                    help="Select keywords you want to analyze further"
+                                )
+                                
+                                # Extract keyword text from selected
+                                keywords_list = [s.split(" (")[0] for s in selected_suggestions]
+                            else:
+                                st.warning("No suggestions generated. Try different seed keywords.")
+                        except Exception as e:
+                            st.error(f"Error generating suggestions: {str(e)}")
+                            import traceback
+                            st.code(traceback.format_exc())
+    
+    st.markdown("---")
+    
+    # Geo targeting (optional)
+    geo_targeting = st.checkbox("Specify geographic targeting", help="Match your campaign's location targeting for accurate search volume")
+    geo_targets = None
+    if geo_targeting:
+        geo_input = st.text_input(
+            "Location (e.g., 'United States', 'Cleveland', 'New York')",
+            placeholder="United States",
+            help="Enter location name. Leave blank for national data."
+        )
+        if geo_input:
+            with st.spinner("Looking up location..."):
+                try:
+                    geo_targets = get_geo_target_constants(st.session_state.client, [geo_input])
+                    if geo_targets:
+                        st.success(f"✅ Location set: {geo_input}")
+                    else:
+                        st.warning(f"⚠️ Could not find location '{geo_input}'. Using national data.")
+                except Exception as e:
+                    st.warning(f"⚠️ Error looking up location: {e}. Using national data.")
+    
+    # Analyze button
+    if st.button("🚀 Analyze Keywords", type="primary", use_container_width=True):
+        if not selected_account_id:
+            st.error("Please select an account.")
+            return
+        
+        if not keywords_list:
+            st.error("Please enter or load keywords to analyze.")
+            return
+        
+        if len(keywords_list) > 50:
+            st.warning(f"⚠️ You have {len(keywords_list)} keywords. Analyzing first 50 for performance.")
+            keywords_list = keywords_list[:50]
+        
+        with st.spinner("🔍 Fetching Keyword Planner data..."):
+            try:
+                # Fetch Keyword Planner data
+                planner_data = fetch_keyword_planner_data(
+                    st.session_state.client,
+                    selected_account_id,
+                    keywords_list,
+                    geo_targets=geo_targets
+                )
+                
+                if not planner_data:
+                    st.error("No data returned from Keyword Planner. Please check your keywords and try again.")
+                    return
+                
+                st.success(f"✅ Fetched data for {len(planner_data)} keywords")
+                
+                # Optionally fetch current campaign performance for comparison
+                current_performance = None
+                if selected_campaign_id:
+                    with st.spinner("📊 Fetching current campaign performance for comparison..."):
+                        try:
+                            data = fetch_comprehensive_campaign_data(
+                                st.session_state.client,
+                                selected_account_id,
+                                campaign_id=selected_campaign_id,
+                                date_range_days=30
+                            )
+                            
+                            # Build performance dict by keyword
+                            current_performance = {}
+                            for kw in data.get('keywords', []):
+                                keyword_text = kw['keyword']
+                                current_performance[keyword_text] = {
+                                    'avg_cpc': kw.get('avg_cpc', 0),
+                                    'cost_per_conversion': kw.get('cost_per_conversion', 0),
+                                    'conversions': kw.get('conversions', 0),
+                                    'impressions': kw.get('impressions', 0),
+                                    'clicks': kw.get('clicks', 0)
+                                }
+                        except Exception as e:
+                            st.warning(f"Could not fetch campaign performance: {e}")
+                
+                # Format data for Claude prompt
+                planner_formatted = format_keyword_planner_for_prompt(planner_data, current_performance)
+                
+                # Use modular prompt system for keyword research
+                from prompt_loader import get_prompt_for_page
+                try:
+                    keyword_research_prompt = get_prompt_for_page('keyword_research')
+                    # Replace placeholders
+                    keyword_research_prompt = keyword_research_prompt.replace('{KEYWORD_PLANNER_DATA}', planner_formatted)
+                    geo_context = f"Location Targeting: {', '.join(geo_display_names)}" if geo_display_names else "Location Targeting: None (National/Global)"
+                    keyword_research_prompt = keyword_research_prompt.replace('{GEO_TARGETING_CONTEXT}', geo_context)
+                except Exception as e:
+                    # Fallback to inline prompt if modular system fails
+                    st.warning(f"⚠️  Using fallback prompt: {e}")
+                    keyword_research_prompt = f"""# Keyword Research & Competitive Analysis
+
+You are an elite Google Ads Senior Account Manager specializing in real estate investor marketing. Analyze the following Keyword Planner data and provide strategic recommendations.
+
+## KEYWORD PLANNER DATA:
+
+{planner_formatted}
+
+## YOUR TASK:
+
+Analyze this keyword data and provide:
+
+### 1. Competition Analysis
+- Which keywords are too competitive for typical real estate investor budgets?
+- Which keywords have LOW competition (opportunities)?
+- Which keywords show Quality Score problems (if current CPC data provided)?
+
+### 2. Search Volume Assessment
+- Which keywords have realistic volume for scaling?
+- Which are micro-niches (can't scale)?
+- Which have high volume but wrong intent?
+
+### 3. Keyword Expansion Recommendations
+- Prioritize keywords to ADD (low competition, high intent, good volume)
+- Identify keywords to PAUSE (too competitive, wrong intent, low volume)
+- Suggest related keywords to test
+
+### 4. Budget Allocation Strategy
+- How should budget be allocated across competition tiers?
+- Expected impact of adding recommended keywords
+- Risk assessment for high-competition keywords
+
+### 5. Market Positioning
+- What does this data tell us about market competition?
+- Where are the opportunities vs. saturated areas?
+- Geographic insights (if geo-targeting provided)
+
+## OUTPUT FORMAT:
+
+Structure your response as:
+
+**COMPETITION ANALYSIS:**
+[Analysis of competition levels]
+
+**SEARCH VOLUME ASSESSMENT:**
+[Volume analysis and scaling potential]
+
+**KEYWORD EXPANSION RECOMMENDATIONS:**
+- Priority 1 (Add Immediately): [List with rationale]
+- Priority 2 (Test): [List with rationale]
+- Priority 3 (Skip): [List with rationale]
+
+**BUDGET ALLOCATION STRATEGY:**
+[How to allocate budget across keywords]
+
+**QUALITY SCORE ISSUES (if applicable):**
+[Keywords with CPC >> suggested bid]
+
+**MARKET POSITIONING:**
+[Overall market insights]
+
+Provide specific, actionable recommendations with expected impact.
+"""
+                
+                # Get Claude analysis
+                with st.spinner("🤖 Claude is analyzing keyword data..."):
+                    try:
+                        response = st.session_state.analyzer.claude.messages.create(
+                            model=st.session_state.analyzer.model,
+                            max_tokens=4096,
+                            system="You are an expert Google Ads strategist specializing in real estate investor marketing.",
+                            messages=[{"role": "user", "content": keyword_research_prompt}]
+                        )
+                        
+                        recommendations = response.content[0].text
+                        
+                        # Store results
+                        st.session_state['keyword_research_results'] = {
+                            'recommendations': recommendations,
+                            'planner_data': planner_data,
+                            'keywords_analyzed': keywords_list,
+                            'account_id': selected_account_id,
+                            'account_display': selected_account_display,
+                            'campaign_id': selected_campaign_id,
+                            'campaign_display': selected_campaign_display if selected_campaign_id else None,
+                            'geo_targeting': geo_input if geo_targeting and geo_input else None
+                        }
+                        
+                        st.success("✅ Keyword Research Analysis Complete!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error during Claude analysis: {str(e)}")
+                        import traceback
+                        st.code(traceback.format_exc())
+                
+            except Exception as e:
+                st.error(f"❌ Error fetching Keyword Planner data: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
+    
+    # Display results if available
+    if 'keyword_research_results' in st.session_state and st.session_state['keyword_research_results']:
+        results = st.session_state['keyword_research_results']
+        
+        st.markdown("---")
+        st.markdown("### 📊 Keyword Planner Data")
+        
+        # Display planner data in a table
+        import pandas as pd
+        planner_df_data = []
+        for keyword, data in results['planner_data'].items():
+            planner_df_data.append({
+                'Keyword': keyword,
+                'Monthly Searches': f"{data.get('avg_monthly_searches', 0):,}",
+                'Competition': data.get('competition', 'UNKNOWN'),
+                'Suggested Bid Range': data.get('suggested_bid_range', 'N/A')
+            })
+        
+        if planner_df_data:
+            planner_df = pd.DataFrame(planner_df_data)
+            st.dataframe(planner_df, use_container_width=True, hide_index=True)
+        
+        st.markdown("---")
+        st.markdown("### 🤖 Claude's Analysis & Recommendations")
+        st.markdown(results['recommendations'])
+        
+        # Export options
+        st.markdown("---")
+        st.markdown("### 💾 Export Options")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save to PDF", use_container_width=True, key="keyword_research_pdf"):
+                _save_keyword_research_to_pdf()
+        with col2:
+            if st.button("📤 Upload to Google Drive", use_container_width=True, key="keyword_research_drive"):
+                _upload_keyword_research_to_drive()
+
+def _save_keyword_research_to_pdf():
+    """Helper function to save keyword research to PDF."""
+    if 'keyword_research_results' not in st.session_state:
+        st.error("No keyword research to save. Please run an analysis first.")
+        return
+    
+    results = st.session_state['keyword_research_results']
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else "Account"
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "Keyword Research"
+    
+    try:
+        from real_estate_analyzer import create_pdf_report
+        import tempfile
+        
+        temp_filepath = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
+        
+        # Create PDF with keyword research content
+        title = f"Keyword Research Report - {account_name}"
+        if results.get('geo_targeting'):
+            title += f" ({results['geo_targeting']})"
+        
+        content = f"""
+KEYWORD RESEARCH REPORT
+{account_name}
+{datetime.now().strftime('%B %d, %Y')}
+
+Keywords Analyzed: {len(results['keywords_analyzed'])}
+"""
+        if results.get('campaign_display'):
+            content += f"Campaign: {campaign_name}\n"
+        if results.get('geo_targeting'):
+            content += f"Location: {results['geo_targeting']}\n"
+        
+        content += "\n" + "="*80 + "\n\n"
+        content += "KEYWORD PLANNER DATA\n"
+        content += "="*80 + "\n\n"
+        
+        # Add planner data table
+        for keyword, data in results['planner_data'].items():
+            content += f"Keyword: {keyword}\n"
+            content += f"  Monthly Searches: {data.get('avg_monthly_searches', 0):,}\n"
+            content += f"  Competition: {data.get('competition', 'UNKNOWN')}\n"
+            content += f"  Suggested Bid Range: {data.get('suggested_bid_range', 'N/A')}\n\n"
+        
+        content += "\n" + "="*80 + "\n\n"
+        content += "CLAUDE'S ANALYSIS & RECOMMENDATIONS\n"
+        content += "="*80 + "\n\n"
+        content += results['recommendations']
+        
+        if create_pdf_report(
+            content,
+            account_name,
+            campaign_name,
+            f"Keyword Research - {len(results['keywords_analyzed'])} keywords",
+            temp_filepath
+        ):
+            # Download PDF
+            with open(temp_filepath, 'rb') as pdf_file:
+                st.download_button(
+                    label="📥 Download PDF",
+                    data=pdf_file.read(),
+                    file_name=f"{account_name}_KeywordResearch_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf",
+                    key="download_keyword_research_pdf"
+                )
+            os.unlink(temp_filepath)
+        else:
+            st.error("❌ Failed to create PDF")
+    except Exception as e:
+        st.error(f"❌ Error creating PDF: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+
+def _upload_keyword_research_to_drive():
+    """Helper function to upload keyword research to Google Drive."""
+    if 'keyword_research_results' not in st.session_state:
+        st.error("No keyword research to upload. Please run an analysis first.")
+        return
+    
+    results = st.session_state['keyword_research_results']
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else "Account"
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "Keyword Research"
+    
+    try:
+        from real_estate_analyzer import create_pdf_report, get_drive_service, upload_to_drive
+        import tempfile
+        
+        temp_filepath = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
+        
+        # Create PDF (same as save function)
+        title = f"Keyword Research Report - {account_name}"
+        if results.get('geo_targeting'):
+            title += f" ({results['geo_targeting']})"
+        
+        content = f"""
+KEYWORD RESEARCH REPORT
+{account_name}
+{datetime.now().strftime('%B %d, %Y')}
+
+Keywords Analyzed: {len(results['keywords_analyzed'])}
+"""
+        if results.get('campaign_display'):
+            content += f"Campaign: {campaign_name}\n"
+        if results.get('geo_targeting'):
+            content += f"Location: {results['geo_targeting']}\n"
+        
+        content += "\n" + "="*80 + "\n\n"
+        content += "KEYWORD PLANNER DATA\n"
+        content += "="*80 + "\n\n"
+        
+        for keyword, data in results['planner_data'].items():
+            content += f"Keyword: {keyword}\n"
+            content += f"  Monthly Searches: {data.get('avg_monthly_searches', 0):,}\n"
+            content += f"  Competition: {data.get('competition', 'UNKNOWN')}\n"
+            content += f"  Suggested Bid Range: {data.get('suggested_bid_range', 'N/A')}\n\n"
+        
+        content += "\n" + "="*80 + "\n\n"
+        content += "CLAUDE'S ANALYSIS & RECOMMENDATIONS\n"
+        content += "="*80 + "\n\n"
+        content += results['recommendations']
+        
+        if not create_pdf_report(
+            content,
+            account_name,
+            campaign_name,
+            f"Keyword Research - {len(results['keywords_analyzed'])} keywords",
+            temp_filepath
+        ):
+            st.error("❌ Failed to create PDF for upload")
+            return
+        
+        # Get Drive service
+        from real_estate_analyzer import get_drive_service, upload_to_drive
+        drive_service = get_drive_service()
+        if not drive_service:
+            st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            os.unlink(temp_filepath)
+            return
+        
+        # Use optimization reports folder (or create a keyword research folder)
+        folder_id = DRIVE_FOLDER_IDS.get('optimization_reports')  # Use same folder for now
+        
+        # Upload file
+        filename = f"{account_name}_KeywordResearch_{datetime.now().strftime('%Y%m%d')}.pdf"
+        file_id, file_link = upload_to_drive(drive_service, temp_filepath, filename, folder_id)
+        
+        # Clean up temp file
+        os.unlink(temp_filepath)
+        
+        if file_id and file_link:
+            st.success(f"✅ Successfully uploaded to Google Drive!")
+            st.markdown(f"📁 [View file in Google Drive]({file_link})")
+        else:
+            st.error("❌ Failed to upload to Google Drive")
+    except Exception as e:
+        st.error(f"❌ Error uploading to Google Drive: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
 
 def show_create_campaign():
     """Create new campaign page."""

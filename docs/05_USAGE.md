@@ -1,6 +1,7 @@
-# Usage Guide
+# 5. Usage Guide (CLI - Legacy)
 
-Complete guide for using the Real Estate Google Ads Analyzer.
+**Documentation Order:** #5 (Usage Guides)  
+Complete guide for using the Real Estate Google Ads Analyzer via command-line interface.
 
 ## Quick Start
 
@@ -181,7 +182,7 @@ Select model (1-4, default: 4):
 
 **Recommendation:** Use Claude 3.5 Sonnet (option 1) for best balance of performance and cost.
 
-See [MODEL_COMPARISON.md](MODEL_COMPARISON.md) for detailed comparison.
+See [07_MODEL_COMPARISON.md](07_MODEL_COMPARISON.md) for detailed comparison.
 
 ## Example Output
 
@@ -323,7 +324,7 @@ After getting recommendations:
 3. **Monitor Results** - Track performance after changes
 4. **Iterate** - Run analysis again after 2-4 weeks
 
-For setup instructions, see [SETUP.md](SETUP.md).
+For setup instructions, see [02_SETUP.md](02_SETUP.md).
 
 # Real Estate Google Ads Analyzer Guide
 

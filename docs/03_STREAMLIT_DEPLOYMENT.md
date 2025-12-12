@@ -1,5 +1,6 @@
-# Streamlit Cloud Deployment Guide
+# 3. Streamlit Cloud Deployment Guide
 
+**Documentation Order:** #3 (Getting Started)  
 Complete guide for deploying the Google Ads Analyzer to Streamlit Cloud.
 
 ## Prerequisites
@@ -56,7 +57,7 @@ TOKEN_JSON = """
 
 - **TOKEN_JSON format**: Must use triple quotes `"""` for multi-line strings in TOML
 - **All secrets are required**: Missing any will cause authentication errors
-- **TOKEN_JSON**: Copy from your local `token.json` file (see [Authentication Setup](SETUP.md))
+- **TOKEN_JSON**: Copy from your local `token.json` file (see [Authentication Setup](02_SETUP.md))
 
 ## Step 4: Deploy
 
@@ -68,7 +69,7 @@ TOKEN_JSON = """
 
 ### Authentication Errors
 
-See [Authentication Troubleshooting](AUTHENTICATION_TROUBLESHOOTING.md)
+See [Authentication Troubleshooting](09_AUTHENTICATION_TROUBLESHOOTING.md)
 
 ### Common Issues
 

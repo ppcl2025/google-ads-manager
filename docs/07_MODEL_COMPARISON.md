@@ -1,4 +1,6 @@
-# Claude Model Comparison for Google Ads Analysis
+# 7. Claude Model Comparison for Google Ads Analysis
+
+**Documentation Order:** #7 (Technical & Advanced Topics)
 
 ## Quick Recommendation
 

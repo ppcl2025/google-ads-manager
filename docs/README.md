@@ -2,31 +2,94 @@
 
 Welcome to the Google Ads Account Manager - AI Agent documentation.
 
-## 📚 Documentation Structure (Chronological Order)
+## 📋 How to Use This Index
 
-### 1. Getting Started
+All documentation files are **numbered in recommended reading order**:
+- **#1-3:** Getting Started (read first)
+- **#4-5:** Usage Guides (daily reference)
+- **#6-8:** Technical & Advanced Topics (deep dive)
+- **#9:** Troubleshooting (when issues occur)
 
-Start here if you're new to the project:
+Each document's title includes its number (e.g., "1. User Guide", "6. Claude Prompt System") for easy navigation.
 
-- **[USER_GUIDE.md](USER_GUIDE.md)** ⭐ **START HERE** - Comprehensive guide to the web app, integrations, and all features
-- **[SETUP.md](SETUP.md)** - Initial setup and installation instructions
-- **[STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md)** - Deploy the web app to Streamlit Cloud
+---
 
-### 2. Usage & Reference
+## 📚 Documentation Structure (Recommended Reading Order)
 
-After setup, learn how to use the system:
+### Part 1: Getting Started (Read First)
 
-- **[USER_GUIDE.md](USER_GUIDE.md)** ⭐ - Complete web app user guide (includes usage instructions for all pages)
-- **[USAGE.md](USAGE.md)** - CLI usage guide (legacy - for command-line interface)
-- **[MODEL_COMPARISON.md](MODEL_COMPARISON.md)** - Compare Claude AI models for optimal selection
-- **[PROMPT_RECOMMENDATIONS.md](PROMPT_RECOMMENDATIONS.md)** - Tips for optimizing Claude prompts
+**1. [01_USER_GUIDE.md](01_USER_GUIDE.md)** ⭐ **START HERE**
+   - Comprehensive overview of the web app
+   - System architecture and integrations
+   - All features and pages explained
+   - Best practices and troubleshooting
+   - **Read this first** to understand the entire system
 
-### 3. Troubleshooting
+**2. [02_SETUP.md](02_SETUP.md)** - Setup & Installation
+   - Initial setup instructions
+   - Environment configuration
+   - Required credentials and API keys
+   - Local development setup
+   - **Read after USER_GUIDE** to get started
 
-If you encounter issues:
+**3. [03_STREAMLIT_DEPLOYMENT.md](03_STREAMLIT_DEPLOYMENT.md)** - Cloud Deployment
+   - Deploy to Streamlit Cloud
+   - Secrets configuration
+   - GitHub integration
+   - **Read when ready to deploy**
 
-- **[AUTHENTICATION_TROUBLESHOOTING.md](AUTHENTICATION_TROUBLESHOOTING.md)** - Fix authentication and API access issues
-- **[USER_GUIDE.md](USER_GUIDE.md#troubleshooting)** - General troubleshooting section
+---
+
+### Part 2: Usage Guides
+
+**4. [01_USER_GUIDE.md](01_USER_GUIDE.md)** - Complete User Guide
+   - Detailed instructions for each page
+   - Feature walkthroughs
+   - Change tracking system
+   - **Reference guide** for daily use
+
+**5. [05_USAGE.md](05_USAGE.md)** - CLI Usage (Legacy)
+   - Command-line interface guide
+   - Legacy CLI functionality
+   - **Only if using CLI instead of web app**
+
+---
+
+### Part 3: Technical & Advanced Topics
+
+**6. [06_CLAUDE_PROMPT_SYSTEM.md](06_CLAUDE_PROMPT_SYSTEM.md)** - Prompt Architecture
+   - Modular prompt system explained
+   - Core prompt and modules
+   - Module usage by page/feature
+   - Token usage optimization
+   - **For understanding how AI prompts work**
+
+**7. [07_MODEL_COMPARISON.md](07_MODEL_COMPARISON.md)** - Claude Model Selection
+   - Compare Claude AI models
+   - Performance characteristics
+   - Cost considerations
+   - **When choosing which model to use**
+
+**8. [08_PROMPT_RECOMMENDATIONS.md](08_PROMPT_RECOMMENDATIONS.md)** - Prompt Optimization
+   - Tips for optimizing prompts
+   - Best practices
+   - Advanced techniques
+   - **For advanced users and developers**
+
+---
+
+### Part 4: Troubleshooting
+
+**9. [09_AUTHENTICATION_TROUBLESHOOTING.md](09_AUTHENTICATION_TROUBLESHOOTING.md)** - Fix Auth Issues
+   - Common authentication errors
+   - OAuth 2.0 troubleshooting
+   - API access problems
+   - **When encountering authentication errors**
+
+**10. [01_USER_GUIDE.md](01_USER_GUIDE.md#troubleshooting)** - General Troubleshooting
+   - General issues and solutions
+   - Common problems
+   - **For other non-auth issues**
 
 ---
 
@@ -35,49 +98,55 @@ If you encounter issues:
 ### By Topic
 
 **Web App Usage:**
-- [USER_GUIDE.md](USER_GUIDE.md) - Complete guide to all pages and features
+- [01_USER_GUIDE.md](01_USER_GUIDE.md) - Complete guide to all pages and features
 
 **Setup & Deployment:**
-- [SETUP.md](SETUP.md) - Local setup
-- [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md) - Cloud deployment
+- [02_SETUP.md](02_SETUP.md) - Local setup
+- [03_STREAMLIT_DEPLOYMENT.md](03_STREAMLIT_DEPLOYMENT.md) - Cloud deployment
 
 **AI & Models:**
-- [MODEL_COMPARISON.md](MODEL_COMPARISON.md) - Claude model comparison
-- [PROMPT_RECOMMENDATIONS.md](PROMPT_RECOMMENDATIONS.md) - Prompt optimization
+- [06_CLAUDE_PROMPT_SYSTEM.md](06_CLAUDE_PROMPT_SYSTEM.md) - Modular prompt architecture guide
+- [07_MODEL_COMPARISON.md](07_MODEL_COMPARISON.md) - Claude model comparison
+- [08_PROMPT_RECOMMENDATIONS.md](08_PROMPT_RECOMMENDATIONS.md) - Prompt optimization
 
 **Troubleshooting:**
-- [AUTHENTICATION_TROUBLESHOOTING.md](AUTHENTICATION_TROUBLESHOOTING.md) - Auth issues
-- [USER_GUIDE.md](USER_GUIDE.md#troubleshooting) - General issues
+- [09_AUTHENTICATION_TROUBLESHOOTING.md](09_AUTHENTICATION_TROUBLESHOOTING.md) - Auth issues
+- [01_USER_GUIDE.md](01_USER_GUIDE.md#troubleshooting) - General issues
 
 ### By User Type
 
-**New Users:**
-1. Read [USER_GUIDE.md](USER_GUIDE.md) - Overview and all features
-2. Follow [SETUP.md](SETUP.md) - Initial setup
-3. Deploy with [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md)
+**New Users (First Time Setup):**
+1. **[01_USER_GUIDE.md](01_USER_GUIDE.md)** (#1) - Read overview and all features
+2. **[02_SETUP.md](02_SETUP.md)** (#2) - Complete initial setup
+3. **[03_STREAMLIT_DEPLOYMENT.md](03_STREAMLIT_DEPLOYMENT.md)** (#3) - Deploy to Streamlit Cloud
+4. **[01_USER_GUIDE.md](01_USER_GUIDE.md)** (#4) - Reference for daily use
 
-**Existing Users:**
-- [USER_GUIDE.md](USER_GUIDE.md) - Reference for all features
-- [MODEL_COMPARISON.md](MODEL_COMPARISON.md) - Choose best model
-- [AUTHENTICATION_TROUBLESHOOTING.md](AUTHENTICATION_TROUBLESHOOTING.md) - Fix issues
+**Existing Users (Daily Use):**
+- **[01_USER_GUIDE.md](01_USER_GUIDE.md)** (#4) - Reference for all features
+- **[07_MODEL_COMPARISON.md](07_MODEL_COMPARISON.md)** (#7) - Choose best model if needed
+- **[09_AUTHENTICATION_TROUBLESHOOTING.md](09_AUTHENTICATION_TROUBLESHOOTING.md)** (#9) - Fix issues when they occur
 
-**Developers:**
-- [USER_GUIDE.md](USER_GUIDE.md#system-architecture--integrations) - System architecture
-- [PROMPT_RECOMMENDATIONS.md](PROMPT_RECOMMENDATIONS.md) - Prompt engineering
+**Developers (Technical Deep Dive):**
+- **[01_USER_GUIDE.md](01_USER_GUIDE.md#system-architecture--integrations)** (#1) - System architecture
+- **[06_CLAUDE_PROMPT_SYSTEM.md](06_CLAUDE_PROMPT_SYSTEM.md)** (#6) - Modular prompt system architecture
+- **[08_PROMPT_RECOMMENDATIONS.md](08_PROMPT_RECOMMENDATIONS.md)** (#8) - Prompt engineering
 
 ---
 
-## Documentation Files
+## Documentation Files (Quick Reference)
 
-| File | Purpose | When to Read |
-|------|---------|--------------|
-| **USER_GUIDE.md** | Complete web app user guide | First (comprehensive overview) |
-| **SETUP.md** | Setup instructions | After USER_GUIDE, before first use |
-| **STREAMLIT_DEPLOYMENT.md** | Cloud deployment | When deploying to Streamlit Cloud |
-| **USAGE.md** | CLI usage (legacy) | If using command-line interface |
-| **AUTHENTICATION_TROUBLESHOOTING.md** | Fix auth issues | When encountering authentication errors |
-| **MODEL_COMPARISON.md** | Compare AI models | When choosing which Claude model to use |
-| **PROMPT_RECOMMENDATIONS.md** | Prompt optimization | Advanced: optimizing prompts |
+| # | File | Purpose | When to Read |
+|---|------|---------|--------------|
+| 1 | **01_USER_GUIDE.md** | Complete web app user guide | First (comprehensive overview) |
+| 2 | **02_SETUP.md** | Setup instructions | After USER_GUIDE, before first use |
+| 3 | **03_STREAMLIT_DEPLOYMENT.md** | Cloud deployment | When deploying to Streamlit Cloud |
+| 4 | **01_USER_GUIDE.md** | Usage reference | Daily reference for features |
+| 5 | **05_USAGE.md** | CLI usage (legacy) | If using command-line interface |
+| 6 | **06_CLAUDE_PROMPT_SYSTEM.md** | Modular prompt architecture | Understanding prompt system and modules |
+| 7 | **07_MODEL_COMPARISON.md** | Compare AI models | When choosing which Claude model to use |
+| 8 | **08_PROMPT_RECOMMENDATIONS.md** | Prompt optimization | Advanced: optimizing prompts |
+| 9 | **09_AUTHENTICATION_TROUBLESHOOTING.md** | Fix auth issues | When encountering authentication errors |
+| 10 | **01_USER_GUIDE.md#troubleshooting** | General troubleshooting | For non-auth issues |
 
 ---
 
@@ -98,22 +167,33 @@ GAds-Claude/
 ├── README.md                       # Main project README
 └── docs/                           # All documentation
     ├── README.md                   # This file (documentation index)
-    ├── USER_GUIDE.md               # ⭐ Comprehensive user guide
-    ├── SETUP.md                    # Setup instructions
-    ├── STREAMLIT_DEPLOYMENT.md    # Streamlit Cloud deployment
-    ├── AUTHENTICATION_TROUBLESHOOTING.md
-    ├── MODEL_COMPARISON.md         # Claude model comparison
-    └── PROMPT_RECOMMENDATIONS.md  # Prompt optimization tips
+    ├── 01_USER_GUIDE.md               # #1 ⭐ Comprehensive user guide
+    ├── 02_SETUP.md                    # #2 Setup instructions
+    ├── 03_STREAMLIT_DEPLOYMENT.md    # #3 Streamlit Cloud deployment
+    ├── 05_USAGE.md                    # #5 CLI usage (legacy)
+    ├── 06_CLAUDE_PROMPT_SYSTEM.md    # #6 Modular prompt architecture guide
+    ├── 07_MODEL_COMPARISON.md         # #7 Claude model comparison
+    ├── 08_PROMPT_RECOMMENDATIONS.md  # #8 Prompt optimization tips
+    └── 09_AUTHENTICATION_TROUBLESHOOTING.md  # #9 Fix auth issues
 ```
 
 ---
 
 ## Getting Help
 
-1. **Start with [USER_GUIDE.md](USER_GUIDE.md)** - Most questions are answered here
-2. **Check [AUTHENTICATION_TROUBLESHOOTING.md](AUTHENTICATION_TROUBLESHOOTING.md)** - For auth/API issues
-3. **Review specific feature sections** in USER_GUIDE.md
-4. **Check Streamlit Cloud logs** - For deployment issues
+**Quick Help Path:**
+1. **Start with [01_USER_GUIDE.md](01_USER_GUIDE.md)** (#1) - Most questions are answered here
+2. **Check [09_AUTHENTICATION_TROUBLESHOOTING.md](09_AUTHENTICATION_TROUBLESHOOTING.md)** (#9) - For auth/API issues
+3. **Review specific feature sections** in 01_USER_GUIDE.md (#1)
+4. **Check Streamlit Cloud logs** - For deployment issues (see #3)
+
+**By Issue Type:**
+- **Setup/Installation:** See #2 (02_SETUP.md)
+- **Deployment:** See #3 (03_STREAMLIT_DEPLOYMENT.md)
+- **Feature Usage:** See #1 (01_USER_GUIDE.md)
+- **Authentication Errors:** See #9 (09_AUTHENTICATION_TROUBLESHOOTING.md)
+- **Model Selection:** See #7 (07_MODEL_COMPARISON.md)
+- **Prompt System:** See #6 (06_CLAUDE_PROMPT_SYSTEM.md)
 
 ---
 
