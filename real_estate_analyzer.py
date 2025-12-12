@@ -847,16 +847,8 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         if trend_text.strip():
             story.append(Paragraph("Two-Week Trend", section_style))
             story.append(Paragraph(trend_text.strip(), body_style))
-            story.append(Spacer(1, 0.2*inch))
         
-        # What This Means
-        if what_means:
-            story.append(Paragraph("What This Means", section_style))
-            story.append(Spacer(1, 8))  # Add space after section header
-            for bullet in what_means:
-                story.append(Paragraph(f"• {bullet}", bullet_style))
-                story.append(Spacer(1, 6))  # Add space between bullets
-        
+        # End of Page 1 - move to Page 2 for remaining sections
         story.append(PageBreak())
         
         # PAGE 2: Actions & Insights
@@ -934,6 +926,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         # What's Working table
         if whats_working:
             story.append(Paragraph("What's Working", section_style))
+            story.append(Spacer(1, 0.1*inch))
             # Create header row with Paragraph objects for proper wrapping
             header_style = ParagraphStyle(
                 'TableHeader', parent=styles['Normal'],
@@ -1005,22 +998,22 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
             ]))
             story.append(working_table)
-            story.append(Spacer(1, 0.3*inch))
+            story.append(Spacer(1, 0.2*inch))
         
         # What We're Optimizing
         if optimizations:
             story.append(Paragraph("What We're Optimizing", section_style))
             story.append(Spacer(1, 8))  # Add space after section header
-            for opt in optimizations[:5]:
+            for opt in optimizations[:3]:  # Limit to 3 items to fit on page
                 story.append(Paragraph(f"• {opt}", bullet_style))
                 story.append(Spacer(1, 6))  # Add space between bullets
-            story.append(Spacer(1, 0.2*inch))
+            story.append(Spacer(1, 0.15*inch))
         
         # Next Steps
         if next_steps:
             story.append(Paragraph("Next Steps (Next 2 Weeks)", section_style))
             story.append(Spacer(1, 8))  # Add space after section header
-            for step in next_steps[:5]:
+            for step in next_steps[:3]:  # Limit to 3 items to fit on page
                 story.append(Paragraph(f"• {step}", bullet_style))
                 story.append(Spacer(1, 6))  # Add space between bullets
         
