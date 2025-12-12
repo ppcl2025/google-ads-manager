@@ -320,16 +320,25 @@ See [02_SETUP.md](02_SETUP.md) for detailed setup instructions.
      - System uses Keyword Planner to generate related keyword ideas
 
 3. **Set Location Targeting (Optional)**
-   - **None (National/Global):** Analyze keywords without geo-targeting
-   - **Enter Location Names:**
-     - Enter location names (e.g., `Cleveland, Ohio`, `New York, New York`)
-     - Click "Resolve Locations" to convert to geo-targets
-     - System will use these for search volume and competition analysis
+   - **Automatic (Recommended):** If you select a campaign and leave "Specify geographic targeting" unchecked:
+     - System automatically detects and uses the campaign's geo-targeting locations
+     - Search volume data will match your campaign's actual target locations
+     - Shows: "📍 Using campaign's geo-targeting (X location(s))"
+   
+   - **Manual Override:** Check "Specify geographic targeting" to override campaign settings:
+     - Enter location name (e.g., `Cleveland, Ohio`, `New York`, `United States`)
+     - System resolves the location and uses it for search volume analysis
+     - This overrides campaign geo-targeting if a campaign is selected
+     - Leave blank for national/global data
+   
+   - **No Campaign Selected:** If no campaign is selected and geo-targeting is unchecked:
+     - Uses national/global data (no specific location targeting)
 
 4. **Run Analysis**
    - Click "🚀 Analyze Keywords"
    - System will:
-     - Fetch Keyword Planner data (search volume, competition, suggested bids)
+     - Auto-detect campaign geo-targeting (if campaign selected and checkbox unchecked)
+     - Fetch Keyword Planner data (search volume, competition, suggested bids) for the target locations
      - Send data to Claude for analysis
      - Generate recommendations
 
@@ -361,16 +370,24 @@ See [02_SETUP.md](02_SETUP.md) for detailed setup instructions.
 **Tips:**
 - Use "Load from Campaign" to analyze existing campaign keywords
 - Use "Generate Suggestions" to discover new keyword opportunities
-- Set location targeting for geo-specific search volume data
+- **Leave "Specify geographic targeting" unchecked when analyzing campaign keywords** - it will automatically use your campaign's geo-targeting for accurate search volume
+- Check "Specify geographic targeting" only if you want to research keywords for a different location than your campaign targets
+- Location format: Simple names work best (e.g., `Cleveland`, `Cleveland, Ohio`, `United States`)
 - Review competition levels before adding high-competition keywords
 - Focus on keywords with medium-high search volume (1K-10K/month) for best results
 
 **When to Use:**
-- Before launching a new campaign
-- When expanding existing campaigns
+- Before launching a new campaign (use manual location entry)
+- When expanding existing campaigns (auto-detects campaign geo-targeting)
 - To find new keyword opportunities
-- To assess competition levels
+- To assess competition levels in your target markets
 - To get bid estimates for new keywords
+- To research keywords for different locations than your campaign targets (check "Specify geographic targeting")
+
+**Geo-Targeting Behavior:**
+- **Unchecked + Campaign Selected:** Automatically uses campaign's geo-targeting (recommended for analyzing campaign keywords)
+- **Checked + Location Entered:** Overrides campaign settings, uses only the entered location
+- **Unchecked + No Campaign:** Uses national/global data
 
 ---
 
