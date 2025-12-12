@@ -4589,16 +4589,11 @@ class RealEstateAnalyzer:
                 
                 # Try with higher token limit, fallback to 8192 if model doesn't support it
                 try:
-                    # Add timeout to prevent hanging (30 seconds)
-                    import signal
-                    import time
-                    
                     message = self.claude.messages.create(
                         model=self.model,
                         max_tokens=16384,  # Increased for full detailed recommendations
                         system=system_message,
-                        messages=conversation_messages,
-                        timeout=60.0  # 60 second timeout
+                        messages=conversation_messages
                     )
                 except Exception as e:
                     if "max_tokens" in str(e).lower() or "token" in str(e).lower():
