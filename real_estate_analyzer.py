@@ -861,7 +861,16 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         
         # PAGE 2: Actions & Insights
         story.append(Paragraph("Actions & Insights", page_title_style))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # What This Means - moved to page 2
+        if what_means:
+            story.append(Paragraph("What This Means", section_style))
+            story.append(Spacer(1, 8))  # Add space after section header
+            for bullet in what_means:
+                story.append(Paragraph(f"• {bullet}", bullet_style))
+                story.append(Spacer(1, 6))  # Add space between bullets
+            story.append(Spacer(1, 0.2*inch))
         
         # Extract "What's Working" table
         whats_working = []
@@ -1016,11 +1025,11 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 story.append(Spacer(1, 6))  # Add space between bullets
         
         # Footer
-        story.append(Spacer(1, 0.4*inch))
+        story.append(Spacer(1, 0.2*inch))
         footer_style = ParagraphStyle(
             'Footer', parent=styles['Normal'],
             fontSize=9, textColor=COLOR_GRAY,
-            alignment=TA_CENTER, spaceBefore=20
+            alignment=TA_CENTER, spaceBefore=10
         )
         story.append(Paragraph("Questions? Contact us for more details.", footer_style))
         
