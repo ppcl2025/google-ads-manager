@@ -922,16 +922,45 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 story.append(Paragraph(f"• {step}", bullet_style))
                 story.append(Spacer(1, 6))  # Add space between bullets
         
+        # Footer
+        story.append(Spacer(1, 0.4*inch))
+        footer_style = ParagraphStyle(
+            'Footer', parent=styles['Normal'],
+            fontSize=9, textColor=COLOR_GRAY,
+            alignment=TA_CENTER, spaceBefore=20
+        )
+        story.append(Paragraph("Questions? Contact us for more details.", footer_style))
+        
         # Build PDF
-        doc.build(story)
-        return True
-    except ImportError:
-        print("⚠️  reportlab not installed. Run: pip install reportlab")
+        try:
+            doc.build(story)
+            return True
+        except Exception as build_error:
+            # Re-raise with more context
+            raise Exception(f"Error building PDF document: {str(build_error)}") from build_error
+    except ImportError as e:
+        error_msg = f"Missing required library: {e}. Install with: pip install reportlab"
+        print(f"⚠️  {error_msg}")
+        try:
+            import streamlit as st
+            st.error(f"❌ {error_msg}")
+        except:
+            pass
         return False
     except Exception as e:
-        print(f"Error creating biweekly report PDF: {e}")
+        error_msg = f"Error creating biweekly report PDF: {e}"
+        print(error_msg)
         import traceback
-        traceback.print_exc()
+        error_trace = traceback.format_exc()
+        print(error_trace)
+        # In Streamlit, also try to show error via st if available
+        try:
+            import streamlit as st
+            st.error(f"❌ {error_msg}")
+            with st.expander("Show detailed error", expanded=False):
+                st.code(error_trace)
+        except:
+            pass
         return False
 
 def create_qa_chat_pdf(conversation_history, account_name, campaign_name, output_path):

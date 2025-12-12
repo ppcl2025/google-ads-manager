@@ -801,24 +801,52 @@ def _save_biweekly_to_pdf():
         temp_file.close()
         
         try:
-            if create_biweekly_report_pdf(results['report_content'], account_name, campaign_name, results['date_range'], temp_filepath):
-                with open(temp_filepath, 'rb') as f:
-                    st.download_button(
-                        label="📥 Download PDF",
-                        data=f.read(),
-                        file_name=f"{account_name}_BiweeklyReport_{datetime.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key=f"download_biweekly_{datetime.now().timestamp()}"
-                    )
-                os.unlink(temp_filepath)
-                st.success("✅ PDF created successfully! Click the download button above.")
+            # Try to create PDF and capture any errors
+            pdf_result = create_biweekly_report_pdf(
+                results['report_content'], 
+                account_name, 
+                campaign_name, 
+                results['date_range'], 
+                temp_filepath
+            )
+            
+            if pdf_result:
+                # Check if file was actually created
+                if os.path.exists(temp_filepath) and os.path.getsize(temp_filepath) > 0:
+                    with open(temp_filepath, 'rb') as f:
+                        st.download_button(
+                            label="📥 Download PDF",
+                            data=f.read(),
+                            file_name=f"{account_name}_BiweeklyReport_{datetime.now().strftime('%Y%m%d')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"download_biweekly_{datetime.now().timestamp()}"
+                        )
+                    os.unlink(temp_filepath)
+                    st.success("✅ PDF created successfully! Click the download button above.")
+                else:
+                    st.error("❌ PDF file was not created or is empty.")
+                    st.info("💡 Check the error details below or in Streamlit Cloud logs.")
+                    # Try to get error from st.session_state if available
+                    if 'pdf_error' in st.session_state:
+                        with st.expander("Error Details", expanded=True):
+                            st.code(st.session_state['pdf_error'])
             else:
-                st.error("❌ Failed to create PDF. Check the logs for details.")
+                st.error("❌ Failed to create PDF.")
+                st.info("💡 Check the error details below or in Streamlit Cloud logs.")
+                # Try to get error from st.session_state if available
+                if 'pdf_error' in st.session_state:
+                    with st.expander("Error Details", expanded=True):
+                        st.code(st.session_state['pdf_error'])
         except Exception as e:
             st.error(f"❌ Error creating PDF: {str(e)}")
             import traceback
-            st.code(traceback.format_exc())
+            error_trace = traceback.format_exc()
+            with st.expander("Show detailed error", expanded=True):
+                st.code(error_trace)
+            # Clean up temp file if it exists
+            if os.path.exists(temp_filepath):
+                os.unlink(temp_filepath)
     except Exception as e:
         st.error(f"❌ Error creating PDF: {str(e)}")
         import traceback
