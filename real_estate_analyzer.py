@@ -972,7 +972,10 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                     ])
             
             # Adjust column widths - give more space to "Why It's Working" column
-            working_table = Table(table_data, colWidths=[2*inch, 0.7*inch, 0.9*inch, 2.9*inch])
+            # Use available width (7.5 inches with 0.5 inch margins)
+            available_table_width = 7.5*inch
+            why_col_width = available_table_width - 2*inch - 0.7*inch - 0.9*inch
+            working_table = Table(table_data, colWidths=[2*inch, 0.7*inch, 0.9*inch, why_col_width])
             working_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), COLOR_BLUE),
                 ('TEXTCOLOR', (0, 0), (-1, 0), white),
