@@ -1,16 +1,97 @@
 """
 Help System for Google Ads Account Manager
 Loads documentation and provides AI-powered answers using Claude
+Uses index-based loading to optimize token usage
 """
 
 from pathlib import Path
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
+
+
+def create_documentation_index() -> Dict[str, Dict]:
+    """
+    Create a lightweight index of all documentation files.
+    Index contains titles, headers, and keywords for relevance matching.
+    
+    Returns:
+        Dictionary mapping document names to their index metadata
+    """
+    index = {}
+    docs_path = Path(__file__).parent / 'docs'
+    
+    if not docs_path.exists():
+        return index
+    
+    for md_file in sorted(docs_path.glob('*.md')):
+        # Skip README.md as it's just an index
+        if md_file.name == 'README.md':
+            continue
+            
+        try:
+            with open(md_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                doc_name = md_file.stem
+                
+                # Extract title (first # header)
+                title_match = re.search(r'^#+\s+(.+)$', content, re.MULTILINE)
+                title = title_match.group(1).strip() if title_match else doc_name.replace('_', ' ').title()
+                
+                # Extract all headers (# ## ###)
+                headers = re.findall(r'^#+\s+(.+)$', content, re.MULTILINE)
+                
+                # Extract keywords from first 500 chars (intro section)
+                intro = content[:500].lower()
+                # Get common words (exclude common stop words)
+                stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who', 'when', 'where', 'why', 'how'}
+                words = re.findall(r'\b[a-z]{3,}\b', intro)
+                keywords = [w for w in words if w not in stop_words][:20]  # Top 20 keywords
+                
+                # Get file size for reference
+                file_size = len(content)
+                
+                index[doc_name] = {
+                    'title': title,
+                    'headers': headers[:15],  # First 15 headers
+                    'keywords': keywords,
+                    'file_size': file_size,
+                    'file_path': str(md_file)
+                }
+        except Exception as e:
+            print(f"Warning: Could not index {md_file.name}: {e}")
+    
+    return index
+
+
+def load_doc_content(doc_name: str) -> Optional[str]:
+    """
+    Load full content of a specific documentation file.
+    
+    Args:
+        doc_name: Document name (without .md extension)
+    
+    Returns:
+        Document content or None if not found
+    """
+    docs_path = Path(__file__).parent / 'docs'
+    doc_file = docs_path / f"{doc_name}.md"
+    
+    if not doc_file.exists():
+        return None
+    
+    try:
+        with open(doc_file, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        print(f"Warning: Could not load {doc_name}: {e}")
+        return None
 
 
 def load_documentation() -> Dict[str, str]:
     """
     Load all markdown files from docs folder.
+    DEPRECATED: Use create_documentation_index() and load_doc_content() instead.
+    Kept for backward compatibility.
     
     Returns:
         Dictionary mapping document names to their content
@@ -38,9 +119,63 @@ def load_documentation() -> Dict[str, str]:
     return docs
 
 
+def find_relevant_docs_from_index(query: str, index: Dict[str, Dict], top_n: int = 2) -> List[Tuple[str, int]]:
+    """
+    Find most relevant documents using the index (lightweight, fast).
+    
+    Args:
+        query: User's question
+        index: Documentation index from create_documentation_index()
+        top_n: Number of top documents to return (default 2 for token optimization)
+    
+    Returns:
+        List of tuples: (doc_name, relevance_score), sorted by relevance
+    """
+    query_lower = query.lower()
+    query_words = set(re.findall(r'\b\w+\b', query_lower))
+    
+    relevance_scores = []
+    
+    for doc_name, doc_index in index.items():
+        score = 0
+        
+        # Check title match (high weight)
+        title_lower = doc_index['title'].lower()
+        title_matches = sum(1 for word in query_words if word in title_lower)
+        score += title_matches * 5
+        
+        # Check header matches (medium weight)
+        headers_text = ' '.join(doc_index['headers']).lower()
+        header_matches = sum(1 for word in query_words if word in headers_text)
+        score += header_matches * 3
+        
+        # Check keyword matches (low weight)
+        keywords_text = ' '.join(doc_index['keywords']).lower()
+        keyword_matches = sum(1 for word in query_words if word in keywords_text)
+        score += keyword_matches
+        
+        # Bonus for phrase matches in title/headers
+        words_list = list(query_words)
+        if len(words_list) >= 2:
+            for i in range(len(words_list) - 1):
+                phrase = f"{words_list[i]} {words_list[i+1]}"
+                if phrase in title_lower:
+                    score += 5
+                elif phrase in headers_text:
+                    score += 3
+        
+        if score > 0:
+            relevance_scores.append((doc_name, score))
+    
+    # Sort by relevance score (descending) and return top N
+    relevance_scores.sort(key=lambda x: x[1], reverse=True)
+    return relevance_scores[:top_n]
+
+
 def find_relevant_docs(query: str, docs_dict: Dict[str, str], top_n: int = 3) -> List[Tuple[str, str, int]]:
     """
-    Find most relevant documents using keyword matching.
+    Find most relevant documents using keyword matching (legacy method).
+    DEPRECATED: Use find_relevant_docs_from_index() instead.
     
     Args:
         query: User's question

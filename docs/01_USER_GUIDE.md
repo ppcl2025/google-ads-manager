@@ -30,6 +30,7 @@
 - 📝 **Ad Copy Optimization** - Specialized A/B testing recommendations with character limit compliance
 - 📄 **Biweekly Client Reports** - Professional 2-page PDF reports for clients
 - 💬 **AI Q&A** - Ask Claude questions about Google Ads management
+- ❓ **Help Center** - AI-powered documentation assistant with instant answers from app documentation
 - ➕ **Account Management** - Create sub-accounts and campaigns directly from the app
 - 📸 **Change Tracking** - Automatic and manual change tracking for continuous optimization
 
@@ -559,6 +560,63 @@ See [02_SETUP.md](02_SETUP.md) for detailed setup instructions.
 - Start with Maximize Clicks, upgrade to Target CPA later
 - Use descriptive campaign names
 - Set appropriate daily budget
+
+---
+
+### ❓ Help Center
+
+**Purpose:** Get instant answers to questions about the app using AI-powered documentation search.
+
+**How to Use:**
+
+1. **Access Help Center**
+   - Click "❓ Help Center" button in the Settings section of the sidebar (underneath Claude Model selector)
+   - Help Center page opens with suggested questions
+
+2. **Ask Questions**
+   - **Option 1: Click Suggested Questions**
+     - Browse 12 pre-populated questions displayed in 3 columns
+     - Click any question to get an instant answer
+     - Additional questions available in "More Suggested Questions" expander
+   
+   - **Option 2: Type Your Question**
+     - Use the chat input at the bottom: "Ask a question about the app..."
+     - Type your question and press Enter
+     - System searches documentation and provides answer
+
+3. **Review Answers**
+   - Answers appear in chat format with user and assistant messages
+   - Source citations show which documentation files were referenced
+   - Chat history persists during your session
+
+4. **Clear Chat**
+   - Click "🗑️ Clear Chat History" to start fresh
+
+**What You Get:**
+- Instant answers based on app documentation
+- Step-by-step instructions when relevant
+- Source citations for transparency
+- Context-aware responses using Claude AI
+- Optimized token usage (only loads relevant documentation)
+
+**How It Works:**
+- **Index-Based Loading:** System uses a lightweight index (titles, headers, keywords) to quickly identify relevant documentation
+- **On-Demand Content:** Only loads the 2 most relevant documentation files per question (optimized for token usage)
+- **Smart Caching:** Loaded documentation is cached in session state to prevent redundant loading
+- **Token Optimization:** Saves ~35% tokens per query compared to loading all documentation
+
+**Tips:**
+- Use specific questions for better results (e.g., "How do I set up geo-targeting?" vs. "help")
+- Suggested questions cover common topics - try them first
+- Answers are based on documentation in the `docs/` folder
+- If answer isn't helpful, try rephrasing your question
+
+**When to Use:**
+- Learning how to use a specific feature
+- Troubleshooting setup or configuration issues
+- Understanding how features work together
+- Quick reference for common tasks
+- Getting clarification on documentation
 
 ---
 

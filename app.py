@@ -27,6 +27,9 @@ from keyword_planner_fetcher import (
 from help_system import (
     load_documentation,
     find_relevant_docs,
+    find_relevant_docs_from_index,
+    create_documentation_index,
+    load_doc_content,
     format_docs_for_prompt,
     get_document_citations,
     create_help_prompt,
@@ -2011,10 +2014,18 @@ def show_help_chat():
     if 'help_chat_history' not in st.session_state:
         st.session_state.help_chat_history = []
     
-    # Load documentation (cache in session state)
-    if 'help_docs' not in st.session_state:
-        with st.spinner("Loading documentation..."):
-            st.session_state.help_docs = load_documentation()
+    # Load documentation index (lightweight, cached in session state)
+    if 'help_docs_index' not in st.session_state:
+        with st.spinner("Loading documentation index..."):
+            st.session_state.help_docs_index = create_documentation_index()
+            if st.session_state.help_docs_index:
+                st.success(f"✅ Loaded index for {len(st.session_state.help_docs_index)} documentation files")
+            else:
+                st.warning("⚠️ No documentation files found. Please check the docs folder.")
+    
+    # Cache for loaded document content (loaded on-demand)
+    if 'help_docs_cache' not in st.session_state:
+        st.session_state.help_docs_cache = {}
     
     # Check if there's a pending question to process
     if 'pending_help_question' in st.session_state and st.session_state.pending_help_question:
@@ -2029,7 +2040,7 @@ def show_help_chat():
             })
         
         # Process the question
-        _process_help_question(user_question, st.session_state.help_docs)
+        _process_help_question(user_question, st.session_state.help_docs_index, st.session_state.help_docs_cache)
         st.rerun()
     
     # Display suggested questions
@@ -2082,24 +2093,32 @@ def show_help_chat():
         st.rerun()
 
 
-def _process_help_question(user_question: str, help_docs: dict):
-    """Process a help question and get answer from Claude."""
+def _process_help_question(user_question: str, docs_index: dict, docs_cache: dict):
+    """
+    Process a help question and get answer from Claude.
+    Uses index-based loading to optimize token usage.
+    
+    Args:
+        user_question: User's question
+        docs_index: Documentation index (lightweight metadata)
+        docs_cache: Cache for loaded document content (loaded on-demand)
+    """
     # Ensure we stay on Help Center page
     st.session_state.current_page = "Help Center"
     
-    # Debug: Check if docs are loaded
-    if not help_docs:
+    # Check if index is loaded
+    if not docs_index:
         st.session_state.help_chat_history.append({
             "role": "assistant",
-            "content": "⚠️ Error: Documentation not loaded. Please refresh the page.",
+            "content": "⚠️ Error: Documentation index not loaded. Please refresh the page.",
             "sources": []
         })
         return
     
-    # Find relevant documentation
-    relevant_docs = find_relevant_docs(user_question, help_docs)
+    # Step 1: Find relevant docs using index (fast, lightweight)
+    relevant_doc_names = find_relevant_docs_from_index(user_question, docs_index, top_n=2)
     
-    if not relevant_docs:
+    if not relevant_doc_names:
         # No relevant docs found
         st.session_state.help_chat_history.append({
             "role": "assistant",
@@ -2108,14 +2127,37 @@ def _process_help_question(user_question: str, help_docs: dict):
         })
         return
     
-    # Format docs for prompt
+    # Step 2: Load document content on-demand (from cache or file)
+    relevant_docs = []
+    for doc_name, score in relevant_doc_names:
+        # Check cache first
+        if doc_name in docs_cache:
+            content = docs_cache[doc_name]
+        else:
+            # Load from file and cache it
+            content = load_doc_content(doc_name)
+            if content:
+                docs_cache[doc_name] = content
+        
+        if content:
+            relevant_docs.append((doc_name, content, score))
+    
+    if not relevant_docs:
+        st.session_state.help_chat_history.append({
+            "role": "assistant",
+            "content": "⚠️ Error: Could not load document content. Please refresh the page.",
+            "sources": []
+        })
+        return
+    
+    # Step 3: Format docs for prompt
     formatted_docs = format_docs_for_prompt(relevant_docs)
     citations = get_document_citations(relevant_docs)
     
-    # Create prompt
+    # Step 4: Create prompt
     help_prompt = create_help_prompt(user_question, formatted_docs)
     
-    # Get answer from Claude (use Haiku for faster/cheaper responses)
+    # Step 5: Get answer from Claude (use Haiku for faster/cheaper responses)
     try:
         # Use Haiku model for help queries (faster and cheaper)
         haiku_model = "claude-3-5-haiku-20241022"
