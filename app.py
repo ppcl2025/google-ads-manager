@@ -384,6 +384,14 @@ def _save_analysis_to_pdf():
         import traceback
         st.code(traceback.format_exc())
 
+# Google Drive folder IDs for different report types
+DRIVE_FOLDER_IDS = {
+    'optimization_reports': '185ebaQUxrNIMLIiNp9R61PVWEHdLZghn',
+    'ad_copy_optimization': '1lWe5SH7VLV0LMZLlUWt8WW4JeOfamehn',
+    'qa_chat': '1kMShfz38NWRkBK99GzwjDJTzyWi3TXFW',
+    'biweekly_reports': '185ebaQUxrNIMLIiNp9R61PVWEHdLZghn'  # Same as optimization reports
+}
+
 def _upload_analysis_to_drive():
     """Helper function to upload analysis to Google Drive."""
     if 'analysis_results' not in st.session_state:
@@ -395,7 +403,7 @@ def _upload_analysis_to_drive():
     campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "All Campaigns"
     
     try:
-        from real_estate_analyzer import create_pdf_report, find_or_create_drive_folder, upload_to_drive, get_drive_service
+        from real_estate_analyzer import create_pdf_report, upload_to_drive, get_drive_service
         import tempfile
         import os
         from datetime import datetime
@@ -423,10 +431,8 @@ def _upload_analysis_to_drive():
             os.unlink(temp_filepath)
             return
         
-        # Find or create folder
-        folder_id = find_or_create_drive_folder(drive_service, "Optimization Reports", "PPC Launch")
-        if not folder_id:
-            st.warning("⚠️ Could not create/find Drive folder. Uploading to Drive root.")
+        # Use specific folder ID for optimization reports
+        folder_id = DRIVE_FOLDER_IDS['optimization_reports']
         
         # Upload file
         filename = f"{account_name}_{campaign_name}_Analysis_{datetime.now().strftime('%Y%m%d')}.pdf"
@@ -501,12 +507,144 @@ def show_ad_copy_optimization():
                     prompt_type='ad_copy'
                 )
                 
+                # Store results in session state
+                st.session_state['ad_copy_results'] = {
+                    'recommendations': recommendations,
+                    'account_id': selected_account_id,
+                    'account_display': selected_account_display,
+                    'campaign_id': selected_campaign_id,
+                    'campaign_display': selected_campaign_display,
+                    'date_range': date_range
+                }
+                
                 st.success("✅ Ad Copy Analysis Complete!")
-                st.markdown("---")
-                st.markdown("### 📋 Ad Copy Recommendations")
-                st.markdown(recommendations)
+                st.rerun()  # Rerun to show results below
                 
             except Exception as e:
+                st.error(f"❌ Error during analysis: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
+    
+    # Display stored results if they exist
+    if 'ad_copy_results' in st.session_state and st.session_state['ad_copy_results']:
+        results = st.session_state['ad_copy_results']
+        st.markdown("---")
+        st.markdown("### 📋 Ad Copy Recommendations")
+        st.markdown(results['recommendations'])
+        
+        # Save options
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save to PDF", use_container_width=True, key="ad_copy_pdf_stored"):
+                _save_ad_copy_to_pdf()
+        with col2:
+            if st.button("📤 Upload to Google Drive", use_container_width=True, key="ad_copy_drive_stored"):
+                _upload_ad_copy_to_drive()
+
+def _save_ad_copy_to_pdf():
+    """Helper function to save ad copy analysis to PDF."""
+    if 'ad_copy_results' not in st.session_state:
+        st.error("No ad copy analysis to save. Please run an analysis first.")
+        return
+    
+    results = st.session_state['ad_copy_results']
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else "Account"
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "All Campaigns"
+    
+    try:
+        from real_estate_analyzer import create_pdf_report
+        import tempfile
+        import os
+        from datetime import datetime
+        
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_filepath = temp_file.name
+        temp_file.close()
+        
+        if create_pdf_report(
+            results['recommendations'],
+            account_name,
+            campaign_name,
+            results['date_range'],
+            temp_filepath
+        ):
+            with open(temp_filepath, 'rb') as f:
+                st.download_button(
+                    label="📥 Download PDF",
+                    data=f.read(),
+                    file_name=f"{account_name}_{campaign_name}_AdCopy_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"download_ad_copy_{datetime.now().timestamp()}"
+                )
+            os.unlink(temp_filepath)
+            st.success("✅ PDF created successfully! Click the download button above.")
+        else:
+            st.error("❌ Failed to create PDF")
+    except Exception as e:
+        st.error(f"❌ Error creating PDF: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+
+def _upload_ad_copy_to_drive():
+    """Helper function to upload ad copy analysis to Google Drive."""
+    if 'ad_copy_results' not in st.session_state:
+        st.error("No ad copy analysis to upload. Please run an analysis first.")
+        return
+    
+    results = st.session_state['ad_copy_results']
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else "Account"
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "All Campaigns"
+    
+    try:
+        from real_estate_analyzer import create_pdf_report, upload_to_drive, get_drive_service
+        import tempfile
+        import os
+        from datetime import datetime
+        
+        # Create temporary PDF
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_filepath = temp_file.name
+        temp_file.close()
+        
+        # Generate PDF
+        if not create_pdf_report(
+            results['recommendations'],
+            account_name,
+            campaign_name,
+            results['date_range'],
+            temp_filepath
+        ):
+            st.error("❌ Failed to create PDF for upload")
+            return
+        
+        # Get Drive service
+        drive_service = get_drive_service()
+        if not drive_service:
+            st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            os.unlink(temp_filepath)
+            return
+        
+        # Use specific folder ID for ad copy optimization
+        folder_id = DRIVE_FOLDER_IDS['ad_copy_optimization']
+        
+        # Upload file
+        filename = f"{account_name}_{campaign_name}_AdCopy_{datetime.now().strftime('%Y%m%d')}.pdf"
+        file_id, file_link = upload_to_drive(drive_service, temp_filepath, filename, folder_id)
+        
+        # Clean up temp file
+        os.unlink(temp_filepath)
+        
+        if file_id and file_link:
+            st.success(f"✅ Successfully uploaded to Google Drive!")
+            st.markdown(f"📁 [View file in Google Drive]({file_link})")
+        else:
+            st.error("❌ Failed to upload to Google Drive")
+    except Exception as e:
+        st.error(f"❌ Error uploading to Google Drive: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
                 st.error(f"❌ Error running analysis: {str(e)}")
 
 def show_biweekly_reports():
@@ -566,44 +704,130 @@ def show_biweekly_reports():
                     prompt_type='biweekly_report'
                 )
                 
-                st.success("✅ Report Generated!")
-                st.markdown("---")
-                st.markdown("### 📄 Biweekly Report Preview")
-                st.markdown(report_content)
+                # Store results in session state
+                st.session_state['biweekly_results'] = {
+                    'report_content': report_content,
+                    'account_id': selected_account_id,
+                    'account_display': selected_account_display,
+                    'campaign_id': selected_campaign_id,
+                    'campaign_display': selected_campaign_display,
+                    'date_range': date_range
+                }
                 
-                # Save options
-                st.markdown("---")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("💾 Save to PDF", use_container_width=True, key="biweekly_pdf"):
-                        # Get account name for filename
-                        account_name = selected_account_display.split(" (")[0] if selected_account_display else "Account"
-                        campaign_name = selected_campaign_display.split(" (")[0] if selected_campaign_display and selected_campaign_display != "All Campaigns" else "All Campaigns"
+                st.success("✅ Report Generated!")
+                st.rerun()  # Rerun to show results below
                         
-                        from real_estate_analyzer import create_biweekly_report_pdf
-                        import tempfile
-                        import os
-                        
-                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
-                        temp_filepath = temp_file.name
-                        temp_file.close()
-                        
-                        if create_biweekly_report_pdf(report_content, account_name, campaign_name, date_range, temp_filepath):
-                            with open(temp_filepath, 'rb') as f:
-                                st.download_button(
-                                    label="📥 Download PDF",
-                                    data=f.read(),
-                                    file_name=f"{account_name}_BiweeklyReport_{datetime.now().strftime('%Y%m%d')}.pdf",
-                                    mime="application/pdf",
-                                    use_container_width=True
-                                )
-                            os.unlink(temp_filepath)
-                        else:
-                            st.error("Failed to create PDF")
-                            
-                with col2:
-                    if st.button("📤 Upload to Google Drive", use_container_width=True, key="biweekly_drive"):
-                        st.info("Google Drive upload functionality will be implemented")
+            except Exception as e:
+                st.error(f"❌ Error generating report: {str(e)}")
+    
+    # Display stored results if they exist
+    if 'biweekly_results' in st.session_state and st.session_state['biweekly_results']:
+        results = st.session_state['biweekly_results']
+        st.markdown("---")
+        st.markdown("### 📄 Biweekly Report Preview")
+        st.markdown(results['report_content'])
+        
+        # Save options
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save to PDF", use_container_width=True, key="biweekly_pdf_stored"):
+                _save_biweekly_to_pdf()
+        with col2:
+            if st.button("📤 Upload to Google Drive", use_container_width=True, key="biweekly_drive_stored"):
+                _upload_biweekly_to_drive()
+
+def _save_biweekly_to_pdf():
+    """Helper function to save biweekly report to PDF."""
+    if 'biweekly_results' not in st.session_state:
+        st.error("No biweekly report to save. Please generate a report first.")
+        return
+    
+    results = st.session_state['biweekly_results']
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else "Account"
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "All Campaigns"
+    
+    try:
+        from real_estate_analyzer import create_biweekly_report_pdf
+        import tempfile
+        import os
+        from datetime import datetime
+        
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_filepath = temp_file.name
+        temp_file.close()
+        
+        if create_biweekly_report_pdf(results['report_content'], account_name, campaign_name, results['date_range'], temp_filepath):
+            with open(temp_filepath, 'rb') as f:
+                st.download_button(
+                    label="📥 Download PDF",
+                    data=f.read(),
+                    file_name=f"{account_name}_BiweeklyReport_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"download_biweekly_{datetime.now().timestamp()}"
+                )
+            os.unlink(temp_filepath)
+            st.success("✅ PDF created successfully! Click the download button above.")
+        else:
+            st.error("❌ Failed to create PDF")
+    except Exception as e:
+        st.error(f"❌ Error creating PDF: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+
+def _upload_biweekly_to_drive():
+    """Helper function to upload biweekly report to Google Drive."""
+    if 'biweekly_results' not in st.session_state:
+        st.error("No biweekly report to upload. Please generate a report first.")
+        return
+    
+    results = st.session_state['biweekly_results']
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else "Account"
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "All Campaigns"
+    
+    try:
+        from real_estate_analyzer import create_biweekly_report_pdf, upload_to_drive, get_drive_service
+        import tempfile
+        import os
+        from datetime import datetime
+        
+        # Create temporary PDF
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_filepath = temp_file.name
+        temp_file.close()
+        
+        # Generate PDF
+        if not create_biweekly_report_pdf(results['report_content'], account_name, campaign_name, results['date_range'], temp_filepath):
+            st.error("❌ Failed to create PDF for upload")
+            return
+        
+        # Get Drive service
+        drive_service = get_drive_service()
+        if not drive_service:
+            st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            os.unlink(temp_filepath)
+            return
+        
+        # Use specific folder ID for biweekly reports
+        folder_id = DRIVE_FOLDER_IDS['biweekly_reports']
+        
+        # Upload file
+        filename = f"{account_name}_BiweeklyReport_{datetime.now().strftime('%Y%m%d')}.pdf"
+        file_id, file_link = upload_to_drive(drive_service, temp_filepath, filename, folder_id)
+        
+        # Clean up temp file
+        os.unlink(temp_filepath)
+        
+        if file_id and file_link:
+            st.success(f"✅ Successfully uploaded to Google Drive!")
+            st.markdown(f"📁 [View file in Google Drive]({file_link})")
+        else:
+            st.error("❌ Failed to upload to Google Drive")
+    except Exception as e:
+        st.error(f"❌ Error uploading to Google Drive: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
                         
             except Exception as e:
                 st.error(f"❌ Error generating report: {str(e)}")
@@ -621,6 +845,17 @@ def show_qa_chat():
     for message in st.session_state.qa_messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+    
+    # Save options (show if there are messages)
+    if st.session_state.qa_messages:
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save to PDF", use_container_width=True, key="qa_pdf"):
+                _save_qa_to_pdf()
+        with col2:
+            if st.button("📤 Upload to Google Drive", use_container_width=True, key="qa_drive"):
+                _upload_qa_to_drive()
     
     # User input
     user_question = st.chat_input("Ask Claude a question about Google Ads management...")
@@ -654,6 +889,92 @@ def show_qa_chat():
                     
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
+
+def _save_qa_to_pdf():
+    """Helper function to save Q&A chat to PDF."""
+    if 'qa_messages' not in st.session_state or not st.session_state.qa_messages:
+        st.error("No Q&A chat history to save. Please ask Claude a question first.")
+        return
+    
+    try:
+        from real_estate_analyzer import create_qa_chat_pdf
+        import tempfile
+        import os
+        from datetime import datetime
+        
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_filepath = temp_file.name
+        temp_file.close()
+        
+        # create_qa_chat_pdf requires account_name and campaign_name, but for Q&A we don't have those
+        # Use generic names
+        if create_qa_chat_pdf(st.session_state.qa_messages, "Q&A Session", "Claude Chat", temp_filepath):
+            with open(temp_filepath, 'rb') as f:
+                st.download_button(
+                    label="📥 Download PDF",
+                    data=f.read(),
+                    file_name=f"Claude_QA_Session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"download_qa_{datetime.now().timestamp()}"
+                )
+            os.unlink(temp_filepath)
+            st.success("✅ PDF created successfully! Click the download button above.")
+        else:
+            st.error("❌ Failed to create PDF")
+    except Exception as e:
+        st.error(f"❌ Error creating PDF: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+
+def _upload_qa_to_drive():
+    """Helper function to upload Q&A chat to Google Drive."""
+    if 'qa_messages' not in st.session_state or not st.session_state.qa_messages:
+        st.error("No Q&A chat history to upload. Please ask Claude a question first.")
+        return
+    
+    try:
+        from real_estate_analyzer import create_qa_chat_pdf, upload_to_drive, get_drive_service
+        import tempfile
+        import os
+        from datetime import datetime
+        
+        # Create temporary PDF
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_filepath = temp_file.name
+        temp_file.close()
+        
+        # Generate PDF (create_qa_chat_pdf requires account_name and campaign_name)
+        if not create_qa_chat_pdf(st.session_state.qa_messages, "Q&A Session", "Claude Chat", temp_filepath):
+            st.error("❌ Failed to create PDF for upload")
+            return
+        
+        # Get Drive service
+        drive_service = get_drive_service()
+        if not drive_service:
+            st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            os.unlink(temp_filepath)
+            return
+        
+        # Use specific folder ID for Q&A chats
+        folder_id = DRIVE_FOLDER_IDS['qa_chat']
+        
+        # Upload file
+        filename = f"Claude_QA_Session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        file_id, file_link = upload_to_drive(drive_service, temp_filepath, filename, folder_id)
+        
+        # Clean up temp file
+        os.unlink(temp_filepath)
+        
+        if file_id and file_link:
+            st.success(f"✅ Successfully uploaded to Google Drive!")
+            st.markdown(f"📁 [View file in Google Drive]({file_link})")
+        else:
+            st.error("❌ Failed to upload to Google Drive")
+    except Exception as e:
+        st.error(f"❌ Error uploading to Google Drive: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
 
 def show_create_account():
     """Create new sub-account page."""
