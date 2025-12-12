@@ -268,20 +268,10 @@ def show_comprehensive_analysis():
         st.markdown("### 📋 Optimization Recommendations")
         st.markdown(results['recommendations'])
         
-        # Save options (always visible when results exist)
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("💾 Save to PDF", use_container_width=True, key="save_pdf_analysis_stored"):
-                _save_analysis_to_pdf()
-        with col2:
-            if st.button("📤 Upload to Google Drive", use_container_width=True, key="upload_drive_analysis_stored"):
-                _upload_analysis_to_drive()
-        
-        # Change tracking section
+        # Change tracking section - Make it prominent right after recommendations
         st.markdown("---")
         st.markdown("### 📝 Track Changes Made")
-        st.info("💡 After implementing recommendations, document the changes here. This will help Claude provide better context-aware recommendations in future analyses.")
+        st.info("💡 **Important:** After implementing recommendations from the analysis above, document the changes here. This creates a changelog that will help Claude provide better, context-aware recommendations in future analyses (avoiding duplicates and building on successes).")
         
         # Show previous changelog if exists
         if results.get('changelog_content'):
@@ -293,33 +283,47 @@ def show_comprehensive_analysis():
             "Enter changes made to this campaign (one per line):",
             height=150,
             placeholder="Example:\n- Paused 8 underperforming keywords: 'sell my house as is', 'companies that buy houses'\n- Increased budget from $246/day to $275/day\n- Added 25 negative keywords (attorney, lawyer, agent, realtor)\n- Updated Foreclosure ad group copy with urgency messaging",
-            key="changes_input"
+            key="changes_input",
+            help="Enter each change on a new line. Be specific with details like keyword names, budget amounts, dates, etc."
         )
         
         # Save changes button
-        if st.button("💾 Save Changes to Changelog", use_container_width=True, type="secondary", key="save_changes"):
-            if changes_text.strip():
-                from changelog_manager import write_changelog_entry
-                account_name = results['account_display'].split(" (")[0] if results['account_display'] else None
-                campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else None
-                
-                success = write_changelog_entry(
-                    account_id=results['account_id'],
-                    campaign_id=results['campaign_id'],
-                    account_name=account_name,
-                    campaign_name=campaign_name,
-                    changes_text=changes_text
-                )
-                
-                if success:
-                    st.success("✅ Changes saved to changelog! They will be included in future analyses.")
-                    # Clear the text area
-                    st.session_state['changes_input'] = ""
-                    st.rerun()
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            if st.button("💾 Save Changes to Changelog", use_container_width=True, type="primary", key="save_changes"):
+                if changes_text.strip():
+                    from changelog_manager import write_changelog_entry
+                    account_name = results['account_display'].split(" (")[0] if results['account_display'] else None
+                    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else None
+                    
+                    success = write_changelog_entry(
+                        account_id=results['account_id'],
+                        campaign_id=results['campaign_id'],
+                        account_name=account_name,
+                        campaign_name=campaign_name,
+                        changes_text=changes_text
+                    )
+                    
+                    if success:
+                        st.success("✅ Changes saved to changelog! They will be included in future analyses.")
+                        # Clear the text area
+                        st.session_state['changes_input'] = ""
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to save changes. Please try again.")
                 else:
-                    st.error("❌ Failed to save changes. Please try again.")
-            else:
-                st.warning("⚠️ Please enter at least one change before saving.")
+                    st.warning("⚠️ Please enter at least one change before saving.")
+        
+        # Save options (PDF and Drive) - moved after change tracking
+        st.markdown("---")
+        st.markdown("### 💾 Export Options")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save to PDF", use_container_width=True, key="save_pdf_analysis_stored"):
+                _save_analysis_to_pdf()
+        with col2:
+            if st.button("📤 Upload to Google Drive", use_container_width=True, key="upload_drive_analysis_stored"):
+                _upload_analysis_to_drive()
     
     # Run analysis button
     if st.button("🚀 Run Comprehensive Analysis", type="primary", use_container_width=True):
