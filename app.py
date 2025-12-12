@@ -645,7 +645,6 @@ def _upload_ad_copy_to_drive():
         st.error(f"❌ Error uploading to Google Drive: {str(e)}")
         import traceback
         st.code(traceback.format_exc())
-                st.error(f"❌ Error running analysis: {str(e)}")
 
 def show_biweekly_reports():
     """Biweekly reports page."""
