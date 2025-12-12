@@ -96,6 +96,8 @@ if 'selected_account' not in st.session_state:
     st.session_state.selected_account = None
 if 'selected_campaign' not in st.session_state:
     st.session_state.selected_campaign = None
+if 'selected_model' not in st.session_state:
+    st.session_state.selected_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 
 def initialize_client():
     """Initialize Google Ads client."""
@@ -114,9 +116,10 @@ def initialize_client():
 
 def initialize_analyzer():
     """Initialize Claude analyzer."""
-    if st.session_state.analyzer is None:
+    if 'analyzer' not in st.session_state or st.session_state.analyzer is None:
         try:
-            model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+            # Use selected model from sidebar if available, otherwise use default
+            model = st.session_state.get('selected_model', os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514"))
             st.session_state.analyzer = RealEstateAnalyzer(model=model)
             return True
         except Exception as e:
@@ -158,12 +161,12 @@ def main():
             "Claude 3 Opus": "claude-3-opus-20240229"
         }
         selected_model = st.selectbox("Claude Model", list(model_options.keys()), index=0)
-        if st.session_state.analyzer:
-            st.session_state.analyzer.model = model_options[selected_model]
+        # Store selected model for later use (analyzer not initialized yet)
+        st.session_state.selected_model = model_options[selected_model]
         
         st.markdown("---")
         st.markdown("### Status")
-        if st.session_state.client:
+        if 'client' in st.session_state and st.session_state.client:
             st.success("✅ Connected")
         else:
             st.warning("⚠️ Not Connected")
@@ -175,6 +178,10 @@ def main():
     # Initialize analyzer if needed
     if not initialize_analyzer():
         st.stop()
+    
+    # Update analyzer model if it was changed in sidebar
+    if 'selected_model' in st.session_state and st.session_state.analyzer:
+        st.session_state.analyzer.model = st.session_state.selected_model
     
     # Route to appropriate page
     if page == "📊 Campaign Analysis":
