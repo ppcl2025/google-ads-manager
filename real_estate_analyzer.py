@@ -4536,7 +4536,12 @@ class RealEstateAnalyzer:
         # Get optimization goals (not needed for biweekly reports)
         if prompt_type != 'biweekly_report':
             if not optimization_goals:
-                optimization_goals = self.get_optimization_goals()
+                # Use default goals instead of prompting for input (for Streamlit/web compatibility)
+                optimization_goals = """1. Improve CTR (Click-Through Rate)
+2. Reduce cost per conversion
+3. Increase conversion rate
+4. Improve ROAS (Return on Ad Spend)
+5. Optimize budget allocation"""
         
         # Select prompt template based on prompt_type
         if prompt_type == 'ad_copy':
@@ -4574,7 +4579,7 @@ class RealEstateAnalyzer:
             ]
             
             # Conversation loop to handle clarifying questions
-            max_iterations = 5  # Prevent infinite loops
+            max_iterations = 3  # Reduced to prevent long waits (was 5)
             iteration = 0
             response_text = ""
             
@@ -4583,11 +4588,16 @@ class RealEstateAnalyzer:
                 
                 # Try with higher token limit, fallback to 8192 if model doesn't support it
                 try:
+                    # Add timeout to prevent hanging (30 seconds)
+                    import signal
+                    import time
+                    
                     message = self.claude.messages.create(
                         model=self.model,
                         max_tokens=16384,  # Increased for full detailed recommendations
                         system=system_message,
-                        messages=conversation_messages
+                        messages=conversation_messages,
+                        timeout=60.0  # 60 second timeout
                     )
                 except Exception as e:
                     if "max_tokens" in str(e).lower() or "token" in str(e).lower():
@@ -4648,29 +4658,14 @@ class RealEstateAnalyzer:
                                 break
                 
                 if is_asking_question and not has_recommendations:
-                    # Claude asked a question - display it and get user's answer
-                    print("\n" + "="*60)
-                    print("❓ Claude is asking for clarification:")
-                    print("="*60 + "\n")
-                    print(response_text)
-                    print("\n" + "="*60)
-                    
-                    # Get user's answer
-                    user_answer = input("\nEnter your answer (or press Enter to skip and let Claude proceed with assumptions): ").strip()
-                    
-                    if user_answer:
-                        # Add user's answer to conversation and continue
-                        conversation_messages.append({"role": "user", "content": user_answer})
-                        print("\n📤 Sending your answer to Claude...\n")
-                        continue  # Continue the loop with the new message
-                    else:
-                        # User skipped - tell Claude to proceed with assumptions
-                        conversation_messages.append({
-                            "role": "user", 
-                            "content": "Please proceed with your analysis using reasonable assumptions based on industry best practices and the data provided. Provide recommendations immediately."
-                        })
-                        print("\n📤 Instructing Claude to proceed with assumptions...\n")
-                        continue
+                    # Claude asked a question - in Streamlit/web context, automatically proceed with assumptions
+                    # Don't wait for user input (which would hang in Streamlit)
+                    conversation_messages.append({
+                        "role": "user", 
+                        "content": "Please proceed with your analysis using reasonable assumptions based on industry best practices and the data provided. Provide recommendations immediately without asking further questions."
+                    })
+                    print("\n📤 Instructing Claude to proceed with assumptions...\n")
+                    continue
                 
                 # If we have recommendations, break out of the loop
                 if has_recommendations:

@@ -37,7 +37,7 @@ if hasattr(st, 'secrets'):
 # Page configuration
 st.set_page_config(
     page_title="Google Ads Analyzer",
-    page_icon="🏠",
+        page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -130,7 +130,7 @@ def initialize_analyzer():
 def main():
     """Main application."""
     # Header
-    st.markdown('<h1 class="main-header">🏠 Real Estate Google Ads Analyzer</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">Google Ads Account Manager - AI Agent</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-header">AI-Powered Campaign Analysis & Management for Real Estate Investors</p>', unsafe_allow_html=True)
     
     # Sidebar navigation
