@@ -283,35 +283,50 @@ def get_client():
             st.error(f"❌ Error creating Google Ads client")
             
             # Provide helpful debugging info
-            if "DEVELOPER_TOKEN" in error_msg.upper() or "developer token" in error_msg.lower() or "DEVELOPER_TOKEN_INVALID" in error_msg or "UNAUTHENTICATED" in error_msg:
+            if "DEVELOPER_TOKEN" in error_msg.upper() or "developer token" in error_msg.lower() or "DEVELOPER_TOKEN_INVALID" in error_msg or "UNAUTHENTICATED" in error_msg or "PROHIBITED" in error_msg.upper():
                 st.error("🔴 **Authentication Failed**")
                 st.markdown("""
-                **Possible causes:**
-                1. **Developer Token Access Level**: Token must be approved for "Standard" access (not "Basic")
-                2. **OAuth Consent Screen**: If in "Testing" mode, refresh tokens expire after 7 days
-                3. **Project Association**: Developer token is permanently linked to first Google Cloud project
+                **Most Common Cause: PROJECT MISMATCH**
+                
+                ⚠️ **Your developer token and OAuth credentials MUST be from the SAME Google Cloud project.**
+                
+                **Other possible causes:**
+                1. **Project Mismatch**: Developer token and OAuth credentials from different projects
+                2. **Developer Token Access Level**: Token must be approved for "Standard" access (not "Basic")
+                3. **OAuth Consent Screen**: If in "Testing" mode, refresh tokens expire after 7 days
                 4. **Token Format**: Extra spaces or incorrect value in secrets
                 
                 **How to fix:**
                 
-                **Step 1: Check Developer Token**
+                **Step 1: Check Project Match (MOST IMPORTANT)**
+                1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+                2. Find your OAuth Client ID: `905635304992-j1usvu7fs29br04urlik91n3ohvhe2o2`
+                3. Note which **Project** it's in
+                4. Go to [Google Ads API Center](https://ads.google.com/aw/apicenter)
+                5. Check if developer token is associated with the SAME project
+                6. **If different projects:** You need to either:
+                   - Create new OAuth credentials in the project that has the developer token, OR
+                   - Use a developer token from the project that has your OAuth credentials
+                7. See `PROJECT_MISMATCH_FIX.md` for detailed steps
+                
+                **Step 2: Check Developer Token**
                 1. Go to [Google Ads API Center](https://ads.google.com/aw/apicenter)
                 2. Verify token: `goGGiR9m2FWr-3g82AonQ`
                 3. Check status is **"Approved"** for **"Standard"** access (not "Basic")
                 4. If only "Basic", you need to apply for "Standard" access
                 
-                **Step 2: Check OAuth Consent Screen**
+                **Step 3: Check OAuth Consent Screen**
                 1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials/consent)
                 2. Ensure OAuth consent screen is in **"Production"** mode (not "Testing")
                 3. If in Testing mode, tokens expire after 7 days
                 
-                **Step 3: Regenerate Token (if needed)**
+                **Step 4: Regenerate Token (if needed)**
                 1. Run `python3 authenticate.py` locally
                 2. Complete OAuth flow
                 3. Copy new `token.json` contents
                 4. Update `TOKEN_JSON` secret in Streamlit Cloud
                 
-                **Step 4: Verify Secrets**
+                **Step 5: Verify Secrets**
                 - Check all 6 secrets are present in Streamlit Cloud
                 - Verify no extra spaces in values
                 - Ensure TOKEN_JSON has triple quotes around the JSON
