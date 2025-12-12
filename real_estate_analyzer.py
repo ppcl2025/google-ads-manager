@@ -4567,6 +4567,24 @@ class RealEstateAnalyzer:
         if prompt_type != 'biweekly_report':
             prompt = prompt.replace('{OPTIMIZATION_GOALS}', optimization_goals if optimization_goals else '')
         
+        # Check prompt size and warn if very large (Claude has token limits)
+        prompt_size_chars = len(prompt)
+        prompt_size_tokens_approx = prompt_size_chars / 4  # Rough estimate: 1 token ≈ 4 characters
+        if not in_streamlit:
+            print(f"📏 Prompt size: ~{prompt_size_tokens_approx:.0f} tokens ({prompt_size_chars:,} characters)")
+        
+        # If prompt is extremely large (>200k tokens), truncate campaign data
+        if prompt_size_tokens_approx > 200000:
+            if not in_streamlit:
+                print("⚠️  Warning: Prompt is very large. Truncating campaign data to fit within limits...")
+            # Truncate campaign_data_str to ~150k tokens worth
+            max_campaign_chars = 150000 * 4  # ~150k tokens
+            if len(campaign_data_str) > max_campaign_chars:
+                campaign_data_str = campaign_data_str[:max_campaign_chars] + "\n\n[Data truncated due to size limits...]"
+                prompt = prompt_template.replace('{CAMPAIGN_DATA}', campaign_data_str)
+                if prompt_type != 'biweekly_report':
+                    prompt = prompt.replace('{OPTIMIZATION_GOALS}', optimization_goals if optimization_goals else '')
+        
         print("\n" + "="*60)
         print("🤖 Claude Analysis in Progress...")
         print("="*60 + "\n")
