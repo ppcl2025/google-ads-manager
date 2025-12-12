@@ -277,6 +277,49 @@ def show_comprehensive_analysis():
         with col2:
             if st.button("📤 Upload to Google Drive", use_container_width=True, key="upload_drive_analysis_stored"):
                 _upload_analysis_to_drive()
+        
+        # Change tracking section
+        st.markdown("---")
+        st.markdown("### 📝 Track Changes Made")
+        st.info("💡 After implementing recommendations, document the changes here. This will help Claude provide better context-aware recommendations in future analyses.")
+        
+        # Show previous changelog if exists
+        if results.get('changelog_content'):
+            with st.expander("📜 View Previous Changes", expanded=False):
+                st.text_area("Previous Changes", results['changelog_content'], height=200, disabled=True, key="prev_changelog_display")
+        
+        # Text area for entering new changes
+        changes_text = st.text_area(
+            "Enter changes made to this campaign (one per line):",
+            height=150,
+            placeholder="Example:\n- Paused 8 underperforming keywords: 'sell my house as is', 'companies that buy houses'\n- Increased budget from $246/day to $275/day\n- Added 25 negative keywords (attorney, lawyer, agent, realtor)\n- Updated Foreclosure ad group copy with urgency messaging",
+            key="changes_input"
+        )
+        
+        # Save changes button
+        if st.button("💾 Save Changes to Changelog", use_container_width=True, type="secondary", key="save_changes"):
+            if changes_text.strip():
+                from changelog_manager import write_changelog_entry
+                account_name = results['account_display'].split(" (")[0] if results['account_display'] else None
+                campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else None
+                
+                success = write_changelog_entry(
+                    account_id=results['account_id'],
+                    campaign_id=results['campaign_id'],
+                    account_name=account_name,
+                    campaign_name=campaign_name,
+                    changes_text=changes_text
+                )
+                
+                if success:
+                    st.success("✅ Changes saved to changelog! They will be included in future analyses.")
+                    # Clear the text area
+                    st.session_state['changes_input'] = ""
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to save changes. Please try again.")
+            else:
+                st.warning("⚠️ Please enter at least one change before saving.")
     
     # Run analysis button
     if st.button("🚀 Run Comprehensive Analysis", type="primary", use_container_width=True):
@@ -313,8 +356,19 @@ def show_comprehensive_analysis():
                 status_text.info("🔄 Step 2/3: Formatting data for analysis...")
                 campaign_data_str = format_campaign_data_for_prompt(data)
                 
-                # Step 3: Call Claude (pass pre-fetched data to avoid re-fetching)
-                status_text.info("🔄 Step 3/3: Claude is analyzing your campaign data... (this may take 1-2 minutes)")
+                # Step 3: Read changelog for context (if exists)
+                status_text.info("🔄 Step 3/4: Loading change history...")
+                from changelog_manager import read_changelog, format_changelog_for_prompt
+                changelog_content = read_changelog(
+                    account_id=selected_account_id,
+                    campaign_id=selected_campaign_id,
+                    account_name=selected_account_display.split(" (")[0] if selected_account_display else None,
+                    campaign_name=selected_campaign_display.split(" (")[0] if selected_campaign_display and selected_campaign_display != "All Campaigns" else None
+                )
+                changelog_context = format_changelog_for_prompt(changelog_content) if changelog_content else None
+                
+                # Step 4: Call Claude (pass pre-fetched data to avoid re-fetching)
+                status_text.info("🔄 Step 4/4: Claude is analyzing your campaign data... (this may take 1-2 minutes)")
                 
                 try:
                     recommendations = st.session_state.analyzer.analyze(
@@ -323,7 +377,8 @@ def show_comprehensive_analysis():
                         date_range_days=date_range,
                         optimization_goals=optimization_goals,
                         prompt_type='full',
-                        pre_fetched_data=data  # Pass pre-fetched data
+                        pre_fetched_data=data,  # Pass pre-fetched data
+                        changelog_context=changelog_context  # Pass changelog context
                     )
                     
                     # Store results in session state so they persist across button clicks
@@ -333,7 +388,8 @@ def show_comprehensive_analysis():
                         'account_display': selected_account_display,
                         'campaign_id': selected_campaign_id,
                         'campaign_display': selected_campaign_display,
-                        'date_range': date_range
+                        'date_range': date_range,
+                        'changelog_content': changelog_content  # Store for display
                     }
                     
                     status_text.empty()

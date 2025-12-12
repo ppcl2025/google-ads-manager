@@ -1218,6 +1218,8 @@ REAL_ESTATE_PROMPT_TEMPLATE = """# Google Ads Senior Account Manager & Strategis
 
 You are an elite Google Ads Senior Account Manager and Strategist with 10+ years of experience specializing exclusively in real estate investor marketing. You are an expert at generating high-quality leads from motivated and distressed home sellers for real estate investors, wholesalers, and house flippers. Your expertise spans campaign strategy, bid optimization, creative testing, audience targeting, and conversion rate optimization specifically for the real estate investor niche.
 
+{CHANGELOG_CONTEXT}
+
 **CAMPAIGN DATA TO ANALYZE:**
 
 <campaign_data>
@@ -4764,7 +4766,7 @@ class RealEstateAnalyzer:
 4. Improve ROAS (Return on Ad Spend)
 5. Optimize budget allocation"""
     
-    def analyze(self, customer_id, campaign_id=None, date_range_days=30, optimization_goals=None, prompt_type='full', pre_fetched_data=None):
+    def analyze(self, customer_id, campaign_id=None, date_range_days=30, optimization_goals=None, prompt_type='full', pre_fetched_data=None, changelog_context=None):
         """
         Analyze campaign using comprehensive data and custom prompt.
         
@@ -4775,6 +4777,7 @@ class RealEstateAnalyzer:
             optimization_goals: Custom optimization goals (optional)
             prompt_type: 'full' for comprehensive analysis, 'ad_copy' for ad copy optimization only
             pre_fetched_data: Optional pre-fetched data dict (to avoid re-fetching if already fetched)
+            changelog_context: Optional changelog text providing context about previous changes
         """
         # Initialize API call counter
         api_call_counter = {'count': 0}
@@ -4840,7 +4843,32 @@ class RealEstateAnalyzer:
         
         # Build the prompt using string replacement instead of .format() to avoid issues with curly braces in ad copy (DKI syntax)
         # This way, curly braces in campaign data like {KeyWord:...} won't be interpreted as format placeholders
-        prompt = prompt_template.replace('{CAMPAIGN_DATA}', campaign_data_str)
+        
+        # Add changelog context if provided (for full analysis only)
+        if changelog_context and prompt_type == 'full':
+            changelog_section = f"""
+**PREVIOUS CHANGES & CONTEXT:**
+
+The following information shows changes made to this campaign since the last analysis. Use this context to:
+- Recognize what was already implemented (don't repeat those recommendations)
+- Assess the impact of previous changes
+- Build on successes and address any issues that emerged
+- Provide NEW recommendations that haven't been tried yet
+
+{changelog_context}
+
+**IMPORTANT:** When making recommendations:
+1. Acknowledge which previous changes were successful or unsuccessful
+2. Do NOT recommend changes that were already implemented (check the changelog above)
+3. Build on what worked and avoid what didn't
+4. Provide NEW actionable recommendations based on current data
+
+"""
+        else:
+            changelog_section = ""
+        
+        prompt = prompt_template.replace('{CHANGELOG_CONTEXT}', changelog_section)
+        prompt = prompt.replace('{CAMPAIGN_DATA}', campaign_data_str)
         if prompt_type != 'biweekly_report':
             prompt = prompt.replace('{OPTIMIZATION_GOALS}', optimization_goals if optimization_goals else '')
         
