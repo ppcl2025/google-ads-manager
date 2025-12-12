@@ -16,7 +16,8 @@ Start here if you're new to the project:
 
 After setup, learn how to use the system:
 
-- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete web app user guide (includes usage instructions)
+- **[USER_GUIDE.md](USER_GUIDE.md)** ⭐ - Complete web app user guide (includes usage instructions for all pages)
+- **[USAGE.md](USAGE.md)** - CLI usage guide (legacy - for command-line interface)
 - **[MODEL_COMPARISON.md](MODEL_COMPARISON.md)** - Compare Claude AI models for optimal selection
 - **[PROMPT_RECOMMENDATIONS.md](PROMPT_RECOMMENDATIONS.md)** - Tips for optimizing Claude prompts
 
@@ -70,9 +71,10 @@ If you encounter issues:
 
 | File | Purpose | When to Read |
 |------|---------|--------------|
-| **USER_GUIDE.md** | Complete user guide | First (comprehensive overview) |
+| **USER_GUIDE.md** | Complete web app user guide | First (comprehensive overview) |
 | **SETUP.md** | Setup instructions | After USER_GUIDE, before first use |
 | **STREAMLIT_DEPLOYMENT.md** | Cloud deployment | When deploying to Streamlit Cloud |
+| **USAGE.md** | CLI usage (legacy) | If using command-line interface |
 | **AUTHENTICATION_TROUBLESHOOTING.md** | Fix auth issues | When encountering authentication errors |
 | **MODEL_COMPARISON.md** | Compare AI models | When choosing which Claude model to use |
 | **PROMPT_RECOMMENDATIONS.md** | Prompt optimization | Advanced: optimizing prompts |
