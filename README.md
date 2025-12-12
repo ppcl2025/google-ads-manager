@@ -61,13 +61,14 @@ GAds-Claude/
 
 ## Documentation
 
-All documentation is in the `docs/` folder:
+All documentation is in the `docs/` folder. **Start with the [User Guide](docs/USER_GUIDE.md)** for a comprehensive overview.
 
-- **[Setup Guide](docs/SETUP.md)** - Complete setup instructions
-- **[Usage Guide](docs/USAGE.md)** - How to use the analyzer
+- **[User Guide](docs/USER_GUIDE.md)** ⭐ **START HERE** - Complete guide to the web app, integrations, and all features
+- **[Setup Guide](docs/SETUP.md)** - Initial setup and installation
 - **[Streamlit Deployment](docs/STREAMLIT_DEPLOYMENT.md)** - Deploy to Streamlit Cloud
 - **[Authentication Troubleshooting](docs/AUTHENTICATION_TROUBLESHOOTING.md)** - Fix auth issues
 - **[Model Comparison](docs/MODEL_COMPARISON.md)** - Compare Claude models
+- **[Documentation Index](docs/README.md)** - Full documentation index
 
 ## Requirements
 
