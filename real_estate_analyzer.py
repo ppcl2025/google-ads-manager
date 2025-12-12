@@ -506,7 +506,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import inch
         from reportlab.lib.colors import HexColor, black, white
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, KeepTogether
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
         from reportlab.lib.enums import TA_LEFT, TA_CENTER
         from datetime import datetime, timedelta
         import re
@@ -766,12 +766,18 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                                 leading=10, spaceAfter=0
                             )
                             
-                            # Create a single paragraph with line breaks instead of multiple elements
+                            # Create a single paragraph with HTML formatting instead of multiple elements
                             # This avoids KeepTogether size calculation issues
-                            cell_text = f"<para><font name='Helvetica' size='9' color='{COLOR_GRAY.hexval()}'>{metric['name']}</font></para>"
-                            cell_text += f"<para><font name='Helvetica-Bold' size='18' color='{metric['color'].hexval()}'>{metric['value']}</font></para>"
+                            # Escape HTML special characters in text
+                            from xml.sax.saxutils import escape
+                            name_escaped = escape(str(metric['name']))
+                            value_escaped = escape(str(metric['value']))
+                            
+                            cell_text = f"<font name='Helvetica' size='9' color='{COLOR_GRAY.hexval()}'>{name_escaped}</font><br/>"
+                            cell_text += f"<font name='Helvetica-Bold' size='18' color='{metric['color'].hexval()}'>{value_escaped}</font>"
                             if metric['description']:
-                                cell_text += f"<para><font name='Helvetica' size='8' color='{COLOR_GRAY.hexval()}'>{metric['description']}</font></para>"
+                                desc_escaped = escape(str(metric['description']))
+                                cell_text += f"<br/><font name='Helvetica' size='8' color='{COLOR_GRAY.hexval()}'>{desc_escaped}</font>"
                             
                             cell_content = Paragraph(cell_text, body_style)
                             table_data.append([cell_content])
