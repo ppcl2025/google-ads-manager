@@ -581,8 +581,11 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 'logo.png',
                 'PPC_LAUNCH_logo.png',
                 'ppc_launch_logo.png',
+                'sidebar_logo.png',
                 os.path.join(os.path.dirname(output_path), 'logo.png'),
                 os.path.join(os.path.dirname(output_path), 'PPC_LAUNCH_logo.png'),
+                os.path.join(os.path.dirname(output_path), 'ppc_launch_logo.png'),
+                os.path.join(os.path.dirname(output_path), 'sidebar_logo.png'),
             ]
             logo_found = False
             for logo_path in logo_paths:
