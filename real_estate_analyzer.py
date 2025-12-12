@@ -571,12 +571,41 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         )
         
         # PAGE 1: Performance Overview
+        # Add logo if available (check for logo file in same directory or specified path)
+        try:
+            from reportlab.platypus import Image
+            import os
+            # Look for logo in common locations
+            logo_paths = [
+                'logo.png',
+                'PPC_LAUNCH_logo.png',
+                'ppc_launch_logo.png',
+                os.path.join(os.path.dirname(output_path), 'logo.png'),
+                os.path.join(os.path.dirname(output_path), 'PPC_LAUNCH_logo.png'),
+            ]
+            logo_found = False
+            for logo_path in logo_paths:
+                if os.path.exists(logo_path):
+                    # Add logo centered at top
+                    logo_img = Image(logo_path, width=2*inch, height=0.5*inch, kind='proportional')
+                    story.append(Spacer(1, 0.2*inch))
+                    story.append(logo_img)
+                    story.append(Spacer(1, 0.2*inch))
+                    logo_found = True
+                    break
+            if not logo_found:
+                # If no logo found, just add spacing
+                story.append(Spacer(1, 0.3*inch))
+        except:
+            # If logo loading fails, just add spacing
+            story.append(Spacer(1, 0.3*inch))
+        
         story.append(Paragraph("Google Ads Campaign Report", title_style))
         story.append(Paragraph(f"{account_name}", subtitle_style))
         if campaign_name and campaign_name != 'All Campaigns':
             story.append(Paragraph(f"Campaign: {campaign_name}", subtitle_style))
         story.append(Paragraph(f"Report Period: {date_range_str}", subtitle_style))
-        story.append(Spacer(1, 0.4*inch))
+        story.append(Spacer(1, 0.3*inch))
         
         # Parse metrics with emoji indicators
         lines = report_content.split('\n')
@@ -693,7 +722,15 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             if in_what_means and line_stripped and (line_stripped.startswith('•') or line_stripped.startswith('-')):
                 what_means.append(line_stripped.lstrip('•-').strip())
         
-        # Create Key Metrics table with color coding
+        # Remove duplicates from metrics_data (check by name)
+        seen_names = set()
+        unique_metrics = []
+        for metric in metrics_data:
+            if metric['name'] not in seen_names:
+                seen_names.add(metric['name'])
+                unique_metrics.append(metric)
+        metrics_data = unique_metrics
+        
         # If no metrics parsed, try to extract them more broadly
         if not metrics_data:
             # Fallback: try to find any lines with metrics even if section detection failed
