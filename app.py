@@ -659,7 +659,7 @@ def show_biweekly_reports():
         if mcc_id:
             try:
                 accounts = list_customer_accounts(st.session_state.client, mcc_id)
-                account_options = {f"{acc['name']} ({acc['id']})": acc['id'] for acc in accounts}
+                account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
                 selected_account_display = st.selectbox("Select Account", list(account_options.keys()), key="biweekly_account")
                 selected_account_id = account_options[selected_account_display]
             except Exception as e:
