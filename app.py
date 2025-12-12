@@ -229,6 +229,7 @@ def main():
         # Help Center button
         if st.button("❓ Help Center", use_container_width=True):
             st.session_state.help_page_triggered = True
+            st.session_state.current_page = "Help Center"  # Set current page to Help Center
             st.rerun()
         
         st.markdown("---")
@@ -250,8 +251,8 @@ def main():
     if 'selected_model' in st.session_state and st.session_state.analyzer:
         st.session_state.analyzer.model = st.session_state.selected_model
     
-    # Check if Help Center was triggered from Settings button
-    if st.session_state.get('help_page_triggered', False):
+    # Check if Help Center was triggered from Settings button or if we're on Help Center
+    if st.session_state.get('help_page_triggered', False) or page == "Help Center":
         st.session_state.help_page_triggered = False
         show_help_chat()
     # Route to appropriate page
@@ -2050,8 +2051,9 @@ def show_help_chat():
         with st.expander("More Suggested Questions"):
             for idx, question in enumerate(suggested_questions[9:], start=9):
                 if st.button(question, key=f"suggested_{idx}", use_container_width=True):
-                    # Set pending question to process
+                    # Set pending question to process and ensure we stay on Help Center
                     st.session_state.pending_help_question = question
+                    st.session_state.current_page = "Help Center"  # Ensure we stay on Help Center
                     st.rerun()
     
     st.markdown("---")
@@ -2074,62 +2076,73 @@ def show_help_chat():
     user_question = st.chat_input("Ask a question about the app...")
     
     if user_question:
-        # Set pending question to process
+        # Set pending question to process and ensure we stay on Help Center
         st.session_state.pending_help_question = user_question
+        st.session_state.current_page = "Help Center"  # Ensure we stay on Help Center
         st.rerun()
 
 
 def _process_help_question(user_question: str, help_docs: dict):
     """Process a help question and get answer from Claude."""
+    # Ensure we stay on Help Center page
+    st.session_state.current_page = "Help Center"
+    
+    # Debug: Check if docs are loaded
+    if not help_docs:
+        st.session_state.help_chat_history.append({
+            "role": "assistant",
+            "content": "⚠️ Error: Documentation not loaded. Please refresh the page.",
+            "sources": []
+        })
+        return
+    
     # Find relevant documentation
-    with st.spinner("🔍 Searching documentation..."):
-        relevant_docs = find_relevant_docs(user_question, help_docs)
+    relevant_docs = find_relevant_docs(user_question, help_docs)
+    
+    if not relevant_docs:
+        # No relevant docs found
+        st.session_state.help_chat_history.append({
+            "role": "assistant",
+            "content": "I couldn't find relevant information in the documentation for your question. Please try rephrasing or ask about a different topic.",
+            "sources": []
+        })
+        return
+    
+    # Format docs for prompt
+    formatted_docs = format_docs_for_prompt(relevant_docs)
+    citations = get_document_citations(relevant_docs)
+    
+    # Create prompt
+    help_prompt = create_help_prompt(user_question, formatted_docs)
+    
+    # Get answer from Claude (use Haiku for faster/cheaper responses)
+    try:
+        # Use Haiku model for help queries (faster and cheaper)
+        haiku_model = "claude-3-5-haiku-20241022"
         
-        if not relevant_docs:
-            # No relevant docs found
-            st.session_state.help_chat_history.append({
-                "role": "assistant",
-                "content": "I couldn't find relevant information in the documentation for your question. Please try rephrasing or ask about a different topic.",
-                "sources": []
-            })
-            return
+        response = st.session_state.analyzer.claude.messages.create(
+            model=haiku_model,
+            max_tokens=2048,
+            system="You are a helpful documentation assistant. Provide clear, concise answers based on the documentation provided.",
+            messages=[{"role": "user", "content": help_prompt}]
+        )
         
-        # Format docs for prompt
-        formatted_docs = format_docs_for_prompt(relevant_docs)
-        citations = get_document_citations(relevant_docs)
+        answer = response.content[0].text
         
-        # Create prompt
-        help_prompt = create_help_prompt(user_question, formatted_docs)
+        # Add assistant response to chat history
+        st.session_state.help_chat_history.append({
+            "role": "assistant",
+            "content": answer,
+            "sources": citations
+        })
         
-        # Get answer from Claude (use Haiku for faster/cheaper responses)
-        with st.spinner("🤖 Getting answer from Claude..."):
-            try:
-                # Use Haiku model for help queries (faster and cheaper)
-                haiku_model = "claude-3-5-haiku-20241022"
-                
-                response = st.session_state.analyzer.claude.messages.create(
-                    model=haiku_model,
-                    max_tokens=2048,
-                    system="You are a helpful documentation assistant. Provide clear, concise answers based on the documentation provided.",
-                    messages=[{"role": "user", "content": help_prompt}]
-                )
-                
-                answer = response.content[0].text
-                
-                # Add assistant response to chat history
-                st.session_state.help_chat_history.append({
-                    "role": "assistant",
-                    "content": answer,
-                    "sources": citations
-                })
-                
-            except Exception as e:
-                st.error(f"❌ Error getting answer: {str(e)}")
-                st.session_state.help_chat_history.append({
-                    "role": "assistant",
-                    "content": f"Sorry, I encountered an error: {str(e)}",
-                    "sources": []
-                })
+    except Exception as e:
+        error_msg = f"Sorry, I encountered an error: {str(e)}"
+        st.session_state.help_chat_history.append({
+            "role": "assistant",
+            "content": error_msg,
+            "sources": []
+        })
     
     # Clear chat button
     if st.session_state.help_chat_history:
