@@ -782,7 +782,8 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             while len(right_column_metrics) < 3 and len(right_column_metrics) < len(left_column_metrics):
                 right_column_metrics.append(None)
             
-            # Create rows: each row has one metric from left column and one from right column
+            # Build all rows first, then create ONE table
+            all_table_rows = []
             for i in range(3):
                 row_metrics = []
                 if i < len(left_column_metrics):
@@ -797,28 +798,9 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 
                 # Only create row if at least one metric exists
                 if row_metrics[0] or row_metrics[1]:
-                    table_data = []
+                    row_cells = []
                     for metric in row_metrics:
                         if metric:
-                            # Create styled paragraphs for each part
-                            name_style = ParagraphStyle(
-                                'MetricName', parent=styles['Normal'],
-                                fontSize=9, textColor=COLOR_GRAY, alignment=TA_LEFT,
-                                spaceAfter=2, leading=11
-                            )
-                            value_style = ParagraphStyle(
-                                'MetricValue', parent=styles['Heading2'],
-                                fontSize=18, textColor=metric['color'], alignment=TA_LEFT,
-                                fontName='Helvetica-Bold', spaceAfter=4, leading=22
-                            )
-                            desc_style = ParagraphStyle(
-                                'MetricDesc', parent=styles['Normal'],
-                                fontSize=8, textColor=COLOR_GRAY, alignment=TA_LEFT,
-                                leading=10, spaceAfter=0
-                            )
-                            
-                            # Create a single paragraph with HTML formatting instead of multiple elements
-                            # This avoids KeepTogether size calculation issues
                             # Escape HTML special characters in text
                             from xml.sax.saxutils import escape
                             name_escaped = escape(str(metric['name']))
@@ -833,33 +815,31 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                             cell_text += "</para>"
                             
                             cell_content = Paragraph(cell_text, body_style)
-                            table_data.append([cell_content])
+                            row_cells.append(cell_content)
                         else:
-                            table_data.append([Paragraph("", styles['Normal'])])
+                            row_cells.append(Paragraph("", styles['Normal']))
                     
-                    # Calculate column widths to use more of the page (7.5 inches available with 0.5 inch margins)
-                    # Leave 0.2 inch gap between columns
-                    available_width = 7.5*inch
-                    gap = 0.2*inch
-                    col_width = (available_width - gap) / 2
-                    
-                    metric_table = Table(table_data, colWidths=[col_width, col_width])
-                    # Set row height to make boxes more square-like
-                    row_height = 1.2*inch
-                    metric_table.setStyle(TableStyle([
-                        ('BACKGROUND', (0, 0), (-1, -1), COLOR_BG_LIGHT),
-                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-                        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-                        ('TOPPADDING', (0, 0), (-1, -1), 12),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                        ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
-                        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [COLOR_BG_LIGHT, COLOR_BG_LIGHT]),
-                    ]))
-                    story.append(metric_table)
-                    # Minimal spacing between rows to fit all 3 rows on first page
-                    if i < 2:  # Don't add spacer after last row
-                        story.append(Spacer(1, 0.08*inch))
+                    # Add this row to the table data
+                    all_table_rows.append(row_cells)
+            
+            # Create ONE table with all rows (2 columns, 3 rows)
+            if all_table_rows:
+                # Calculate column widths to use more of the page (7.5 inches available with 0.5 inch margins)
+                available_width = 7.5*inch
+                gap = 0.2*inch
+                col_width = (available_width - gap) / 2
+                
+                metric_table = Table(all_table_rows, colWidths=[col_width, col_width])
+                metric_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), COLOR_BG_LIGHT),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                    ('TOPPADDING', (0, 0), (-1, -1), 12),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                    ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
+                ]))
+                story.append(metric_table)
             
             story.append(Spacer(1, 0.15*inch))
         
