@@ -67,7 +67,11 @@ def authenticate():
                 
                 if STREAMLIT_AVAILABLE:
                     # Debug: verify token was loaded
-                    st.info(f"✅ Loaded TOKEN_JSON from Streamlit secrets (expiry: {token_data.get('expiry', 'unknown')})")
+                    expiry = token_data.get('expiry', 'unknown')
+                    has_refresh = 'refresh_token' in token_data and token_data['refresh_token']
+                    st.success(f"✅ Loaded TOKEN_JSON from Streamlit secrets")
+                    st.info(f"   Expiry: {expiry}")
+                    st.info(f"   Has refresh_token: {has_refresh}")
         except Exception as e:
             # Fall back to local file if secrets fail
             if STREAMLIT_AVAILABLE:
