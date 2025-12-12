@@ -756,16 +756,17 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                             leading=10, spaceAfter=0
                         )
                         
-                        # Create cell content using line breaks
+                        # Create cell content using stacked elements
                         cell_elements = [
                             Paragraph(metric['name'], name_style),
+                            Spacer(1, 2),
                             Paragraph(metric['value'], value_style)
                         ]
                         if metric['description']:
+                            cell_elements.append(Spacer(1, 2))
                             cell_elements.append(Paragraph(metric['description'], desc_style))
                         
-                        # Use a simple approach - create a table cell with stacked elements
-                        from reportlab.platypus import KeepTogether
+                        # Use KeepTogether to keep elements together in the cell
                         cell_content = KeepTogether(cell_elements)
                         table_data.append([cell_content])
                     else:

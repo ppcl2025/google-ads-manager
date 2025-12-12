@@ -756,20 +756,25 @@ def _save_biweekly_to_pdf():
         temp_filepath = temp_file.name
         temp_file.close()
         
-        if create_biweekly_report_pdf(results['report_content'], account_name, campaign_name, results['date_range'], temp_filepath):
-            with open(temp_filepath, 'rb') as f:
-                st.download_button(
-                    label="📥 Download PDF",
-                    data=f.read(),
-                    file_name=f"{account_name}_BiweeklyReport_{datetime.now().strftime('%Y%m%d')}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    key=f"download_biweekly_{datetime.now().timestamp()}"
-                )
-            os.unlink(temp_filepath)
-            st.success("✅ PDF created successfully! Click the download button above.")
-        else:
-            st.error("❌ Failed to create PDF")
+        try:
+            if create_biweekly_report_pdf(results['report_content'], account_name, campaign_name, results['date_range'], temp_filepath):
+                with open(temp_filepath, 'rb') as f:
+                    st.download_button(
+                        label="📥 Download PDF",
+                        data=f.read(),
+                        file_name=f"{account_name}_BiweeklyReport_{datetime.now().strftime('%Y%m%d')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key=f"download_biweekly_{datetime.now().timestamp()}"
+                    )
+                os.unlink(temp_filepath)
+                st.success("✅ PDF created successfully! Click the download button above.")
+            else:
+                st.error("❌ Failed to create PDF. Check the logs for details.")
+        except Exception as e:
+            st.error(f"❌ Error creating PDF: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
     except Exception as e:
         st.error(f"❌ Error creating PDF: {str(e)}")
         import traceback
@@ -797,8 +802,15 @@ def _upload_biweekly_to_drive():
         temp_file.close()
         
         # Generate PDF
-        if not create_biweekly_report_pdf(results['report_content'], account_name, campaign_name, results['date_range'], temp_filepath):
-            st.error("❌ Failed to create PDF for upload")
+        try:
+            if not create_biweekly_report_pdf(results['report_content'], account_name, campaign_name, results['date_range'], temp_filepath):
+                st.error("❌ Failed to create PDF for upload. Check the logs for details.")
+                return
+        except Exception as e:
+            st.error(f"❌ Error creating PDF: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
+            os.unlink(temp_filepath) if os.path.exists(temp_filepath) else None
             return
         
         # Get Drive service
