@@ -11,6 +11,10 @@
 - **[Authentication Troubleshooting](AUTHENTICATION_TROUBLESHOOTING.md)** - Fix authentication issues
 - **[Model Comparison](MODEL_COMPARISON.md)** - Compare Claude models
 
+## Reference
+
+- **[Prompt Recommendations](PROMPT_RECOMMENDATIONS.md)** - Claude prompt optimization tips
+
 ## Project Structure
 
 ```
@@ -25,6 +29,13 @@ GAds-Claude/
 ├── requirements.txt                # Python dependencies
 ├── README.md                       # Main project README
 └── docs/                           # All documentation
+    ├── README.md                   # This file
+    ├── SETUP.md                    # Setup guide
+    ├── USAGE.md                    # Usage guide
+    ├── STREAMLIT_DEPLOYMENT.md     # Streamlit Cloud deployment
+    ├── AUTHENTICATION_TROUBLESHOOTING.md
+    ├── MODEL_COMPARISON.md         # Claude model comparison
+    └── PROMPT_RECOMMENDATIONS.md   # Prompt optimization tips
 ```
 
 ## Quick Links
