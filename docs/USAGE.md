@@ -1,7 +1,6 @@
-# 5. Usage Guide (CLI - Legacy)
+# Usage Guide
 
-**Documentation Order:** #5 (Usage Guides)  
-Complete guide for using the Real Estate Google Ads Analyzer via command-line interface.
+Complete guide for using the Real Estate Google Ads Analyzer.
 
 ## Quick Start
 

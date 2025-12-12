@@ -1,9 +1,8 @@
-# 1. Google Ads Account Manager - AI Agent
+# Google Ads Account Manager - AI Agent
 ## Comprehensive User Guide
 
 **Version:** 1.0  
-**Last Updated:** December 2024  
-**Documentation Order:** #1 (Getting Started - Read First)
+**Last Updated:** December 2024
 
 ---
 
@@ -62,8 +61,6 @@
    - Generates optimization recommendations
    - Creates client-friendly reports
    - Answers Google Ads management questions
-   - Uses modular prompt system for efficient token usage (20-60% reduction)
-   - See [Claude Prompt System](CLAUDE_PROMPT_SYSTEM.md) for architecture details
 
 4. **Google Drive API** - Report storage
    - Uploads PDF reports to organized folders
@@ -133,12 +130,8 @@ Campaign Data    AI Analysis          Report Storage
 - Answers Google Ads management questions
 - Assesses impact of previous changes (with changelog context)
 
-**Claude Prompt System:**
-- Modular prompt architecture (core + optional modules)
-- Dynamic module loading based on feature/page
-- Reduced token usage (20-60% savings per analysis)
-- Each page loads only the modules it needs
-- See [Claude Prompt System Documentation](CLAUDE_PROMPT_SYSTEM.md) for complete details
+**Prompt Engineering:**
+- Specialized prompts for real estate investor campaigns
 - Context-aware analysis using changelog history
 - Character limit compliance for ad copy
 - Client-friendly report formatting
@@ -670,7 +663,6 @@ For more troubleshooting, see [AUTHENTICATION_TROUBLESHOOTING.md](AUTHENTICATION
 
 - [Setup Guide](SETUP.md) - Initial setup instructions
 - [Streamlit Deployment](STREAMLIT_DEPLOYMENT.md) - Deploy to Streamlit Cloud
-- [Claude Prompt System](CLAUDE_PROMPT_SYSTEM.md) - Modular prompt architecture and module usage
 - [Authentication Troubleshooting](AUTHENTICATION_TROUBLESHOOTING.md) - Fix auth issues
 - [Model Comparison](MODEL_COMPARISON.md) - Compare Claude models
 - [Prompt Recommendations](PROMPT_RECOMMENDATIONS.md) - Optimize prompts

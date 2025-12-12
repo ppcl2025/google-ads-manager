@@ -99,49 +99,6 @@ def fetch_keyword_planner_data(client, customer_id, keywords_list, geo_targets=N
         raise Exception(f"Error fetching Keyword Planner data: {str(e)}")
 
 
-def get_campaign_geo_targets(client, customer_id, campaign_id):
-    """
-    Fetch geo-targeting locations from a campaign.
-    
-    Args:
-        client: Google Ads API client
-        customer_id: Customer account ID (format: 123-456-7890)
-        campaign_id: Campaign ID
-    
-    Returns:
-        List of geo target constant resource names (e.g., ['geoTargetConstants/2840'])
-        Returns empty list if no geo-targeting found or error occurs
-    """
-    try:
-        customer_id_numeric = customer_id.replace("-", "")
-        ga_service = client.get_service("GoogleAdsService")
-        
-        # Query campaign criteria for location targeting
-        query = f"""
-            SELECT
-                campaign_criterion.geo_target_constant
-            FROM campaign_criterion
-            WHERE campaign_criterion.campaign = 'customers/{customer_id_numeric}/campaigns/{campaign_id}'
-                AND campaign_criterion.type = 'LOCATION'
-                AND campaign_criterion.status != 'REMOVED'
-        """
-        
-        geo_targets = []
-        response = ga_service.search(customer_id=customer_id_numeric, query=query)
-        
-        for row in response:
-            if hasattr(row.campaign_criterion, 'geo_target_constant') and row.campaign_criterion.geo_target_constant:
-                geo_target = row.campaign_criterion.geo_target_constant.resource_name
-                if geo_target not in geo_targets:
-                    geo_targets.append(geo_target)
-        
-        return geo_targets
-        
-    except Exception as e:
-        print(f"Warning: Could not fetch campaign geo-targeting: {e}")
-        return []
-
-
 def get_geo_target_constants(client, location_names):
     """
     Get geo target constant resource names from location names.

@@ -21,16 +21,7 @@ from keyword_planner_fetcher import (
     fetch_keyword_planner_data, 
     get_related_keyword_suggestions,
     format_keyword_planner_for_prompt,
-    get_geo_target_constants,
-    get_campaign_geo_targets
-)
-from help_system import (
-    load_documentation,
-    find_relevant_docs,
-    format_docs_for_prompt,
-    get_document_citations,
-    create_help_prompt,
-    get_suggested_questions
+    get_geo_target_constants
 )
 
 # Load environment variables (works with .env file locally or Streamlit Cloud secrets)
@@ -98,35 +89,6 @@ st.markdown("""
         border: none;
         padding: 0.5rem 1rem;
         font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    /* Sidebar navigation button styles - unselected */
-    div[data-testid*="nav_"] > button[kind="secondary"] {
-        background-color: #2d3748 !important;
-        border: 2px solid #1a202c !important;
-        color: #e2e8f0 !important;
-    }
-    div[data-testid*="nav_"] > button[kind="secondary"]:hover {
-        background-color: #374151 !important;
-        border-color: #4b5563 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    /* Selected button style - lighter shade with darker outline */
-    div[data-testid*="nav_"] > button[kind="primary"] {
-        background-color: #4a5568 !important;
-        border: 2px solid #2d3748 !important;
-        color: white !important;
-    }
-    div[data-testid*="nav_"] > button[kind="primary"]:hover {
-        background-color: #556270 !important;
-        border-color: #374151 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -142,10 +104,6 @@ if 'selected_campaign' not in st.session_state:
     st.session_state.selected_campaign = None
 if 'selected_model' not in st.session_state:
     st.session_state.selected_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = "📊 Campaign Analysis"
-if 'help_page_triggered' not in st.session_state:
-    st.session_state.help_page_triggered = False
 
 def initialize_client():
     """Initialize Google Ads client."""
@@ -196,26 +154,19 @@ def main():
             st.image("https://via.placeholder.com/200x60/1a5490/ffffff?text=Google+Ads", use_container_width=True)
         st.markdown("---")
         
-        # Navigation buttons
-        nav_items = [
-            ("📊 Campaign Analysis", "📊 Campaign Analysis"),
-            ("📝 Ad Copy Optimization", "📝 Ad Copy Optimization"),
-            ("🔍 Keyword Research", "🔍 Keyword Research"),
-            ("📄 Biweekly Reports", "📄 Biweekly Reports"),
-            ("💬 Ask Claude", "💬 Ask Claude"),
-            ("➕ Create Account", "➕ Create Account"),
-            ("🎯 Create Campaign", "🎯 Create Campaign")
-        ]
-        
-        for nav_text, nav_value in nav_items:
-            is_selected = (st.session_state.current_page == nav_value)
-            button_type = "primary" if is_selected else "secondary"
-            
-            if st.button(nav_text, key=f"nav_{nav_value}", use_container_width=True, type=button_type):
-                st.session_state.current_page = nav_value
-                st.rerun()
-        
-        page = st.session_state.current_page
+        page = st.radio(
+            "Navigation",
+            [
+                "📊 Campaign Analysis",
+                "📝 Ad Copy Optimization",
+                "🔍 Keyword Research",
+                "📄 Biweekly Reports",
+                "💬 Ask Claude",
+                "➕ Create Account",
+                "🎯 Create Campaign"
+            ],
+            label_visibility="collapsed"
+        )
         
         st.markdown("---")
         st.markdown("### Settings")
@@ -229,11 +180,6 @@ def main():
         selected_model = st.selectbox("Claude Model", list(model_options.keys()), index=0)
         # Store selected model for later use (analyzer not initialized yet)
         st.session_state.selected_model = model_options[selected_model]
-        
-        # Help Center button
-        if st.button("❓ Help Center", use_container_width=True):
-            st.session_state.help_page_triggered = True
-            st.rerun()
         
         st.markdown("---")
         st.markdown("### Status")
@@ -254,12 +200,8 @@ def main():
     if 'selected_model' in st.session_state and st.session_state.analyzer:
         st.session_state.analyzer.model = st.session_state.selected_model
     
-    # Check if Help Center was triggered from Settings button
-    if st.session_state.get('help_page_triggered', False):
-        st.session_state.help_page_triggered = False
-        show_help_chat()
     # Route to appropriate page
-    elif page == "📊 Campaign Analysis":
+    if page == "📊 Campaign Analysis":
         show_comprehensive_analysis()
     elif page == "📝 Ad Copy Optimization":
         show_ad_copy_optimization()
@@ -1197,16 +1139,9 @@ def show_qa_chat():
         with st.chat_message("assistant"):
             with st.spinner("Claude is thinking..."):
                 try:
-                    # Use modular prompt system for Q&A
-                    from prompt_loader import get_prompt_for_page
-                    try:
-                        qa_prompt = get_prompt_for_page('qa', user_question=user_question)
-                        qa_prompt = f"{qa_prompt}\n\n## Campaign Data Context:\n\nNo campaign data provided.\n\n## User Question:\n\n{user_question}"
-                    except Exception as e:
-                        # Fallback to legacy template
-                        from real_estate_analyzer import QA_PROMPT_TEMPLATE
-                        qa_prompt = QA_PROMPT_TEMPLATE.replace('{user_question}', user_question)
-                        qa_prompt = qa_prompt.replace('{campaign_data_context}', "No campaign data provided.")
+                    from real_estate_analyzer import QA_PROMPT_TEMPLATE
+                    qa_prompt = QA_PROMPT_TEMPLATE.replace('{user_question}', user_question)
+                    qa_prompt = qa_prompt.replace('{campaign_data_context}', "No campaign data provided.")
                     
                     system_message = "You are a Google Ads Senior Account Manager and Strategist. Answer the user's question with expert knowledge and actionable advice."
                     
@@ -1503,61 +1438,24 @@ def show_keyword_research():
     st.markdown("---")
     
     # Geo targeting (optional)
-    geo_targeting = st.checkbox("Specify geographic targeting", help="Override campaign location targeting. If unchecked and a campaign is selected, uses campaign's geo-targeting automatically.")
+    geo_targeting = st.checkbox("Specify geographic targeting", help="Match your campaign's location targeting for accurate search volume")
     geo_targets = None
-    geo_display_names = []
-    
-    # Auto-detect campaign geo-targeting if checkbox is unchecked and campaign is selected
-    # Store in session state to avoid re-fetching on every rerun
-    campaign_geo_cache_key = f'campaign_geo_{selected_campaign_id}' if selected_campaign_id else None
-    
-    if not geo_targeting and selected_campaign_id:
-        # Check cache first
-        if campaign_geo_cache_key and campaign_geo_cache_key in st.session_state:
-            geo_targets = st.session_state[campaign_geo_cache_key]
-            if geo_targets:
-                st.info(f"📍 Using campaign's geo-targeting ({len(geo_targets)} location(s))")
-            else:
-                st.info("📍 Campaign has no specific geo-targeting (using national/global data)")
-        else:
-            # Fetch campaign geo-targeting
-            try:
-                campaign_geo_targets = get_campaign_geo_targets(st.session_state.client, selected_account_id, selected_campaign_id)
-                if campaign_geo_targets:
-                    geo_targets = campaign_geo_targets
-                    if campaign_geo_cache_key:
-                        st.session_state[campaign_geo_cache_key] = campaign_geo_targets
-                    st.info(f"📍 Using campaign's geo-targeting ({len(campaign_geo_targets)} location(s))")
-                else:
-                    geo_targets = None
-                    if campaign_geo_cache_key:
-                        st.session_state[campaign_geo_cache_key] = []
-                    st.info("📍 Campaign has no specific geo-targeting (using national/global data)")
-            except Exception as e:
-                geo_targets = None
-                if campaign_geo_cache_key:
-                    st.session_state[campaign_geo_cache_key] = []
-                st.info(f"📍 Could not detect campaign geo-targeting: {e}. Using national/global data.")
-    
     if geo_targeting:
         geo_input = st.text_input(
             "Location (e.g., 'United States', 'Cleveland', 'New York')",
             placeholder="United States",
-            help="Enter location name. This will override campaign geo-targeting. Leave blank for national data."
+            help="Enter location name. Leave blank for national data."
         )
         if geo_input:
             with st.spinner("Looking up location..."):
                 try:
                     geo_targets = get_geo_target_constants(st.session_state.client, [geo_input])
                     if geo_targets:
-                        geo_display_names = [geo_input]
                         st.success(f"✅ Location set: {geo_input}")
                     else:
                         st.warning(f"⚠️ Could not find location '{geo_input}'. Using national data.")
-                        geo_targets = None
                 except Exception as e:
                     st.warning(f"⚠️ Error looking up location: {e}. Using national data.")
-                    geo_targets = None
     
     # Analyze button
     if st.button("🚀 Analyze Keywords", type="primary", use_container_width=True):
@@ -1618,26 +1516,8 @@ def show_keyword_research():
                 # Format data for Claude prompt
                 planner_formatted = format_keyword_planner_for_prompt(planner_data, current_performance)
                 
-                # Use modular prompt system for keyword research
-                from prompt_loader import get_prompt_for_page
-                try:
-                    keyword_research_prompt = get_prompt_for_page('keyword_research')
-                    # Replace placeholders
-                    keyword_research_prompt = keyword_research_prompt.replace('{KEYWORD_PLANNER_DATA}', planner_formatted)
-                    # Build geo context string
-                    if geo_display_names:
-                        geo_context = f"Location Targeting: {', '.join(geo_display_names)}"
-                    elif geo_targets and selected_campaign_id and not geo_targeting:
-                        geo_context = f"Location Targeting: Campaign's geo-targeting ({len(geo_targets)} location(s))"
-                    elif geo_targets:
-                        geo_context = f"Location Targeting: {len(geo_targets)} location(s)"
-                    else:
-                        geo_context = "Location Targeting: None (National/Global)"
-                    keyword_research_prompt = keyword_research_prompt.replace('{GEO_TARGETING_CONTEXT}', geo_context)
-                except Exception as e:
-                    # Fallback to inline prompt if modular system fails
-                    st.warning(f"⚠️  Using fallback prompt: {e}")
-                    keyword_research_prompt = f"""# Keyword Research & Competitive Analysis
+                # Create keyword research prompt
+                keyword_research_prompt = f"""# Keyword Research & Competitive Analysis
 
 You are an elite Google Ads Senior Account Manager specializing in real estate investor marketing. Analyze the following Keyword Planner data and provide strategic recommendations.
 
@@ -1714,14 +1594,6 @@ Provide specific, actionable recommendations with expected impact.
                         recommendations = response.content[0].text
                         
                         # Store results
-                        geo_targeting_display = None
-                        if geo_targeting and geo_input:
-                            geo_targeting_display = geo_input
-                        elif geo_targets and selected_campaign_id and not geo_targeting:
-                            geo_targeting_display = f"Campaign geo-targeting ({len(geo_targets)} location(s))"
-                        elif geo_targets:
-                            geo_targeting_display = f"{len(geo_targets)} location(s)"
-                        
                         st.session_state['keyword_research_results'] = {
                             'recommendations': recommendations,
                             'planner_data': planner_data,
@@ -1730,7 +1602,7 @@ Provide specific, actionable recommendations with expected impact.
                             'account_display': selected_account_display,
                             'campaign_id': selected_campaign_id,
                             'campaign_display': selected_campaign_display if selected_campaign_id else None,
-                            'geo_targeting': geo_targeting_display
+                            'geo_targeting': geo_input if geo_targeting and geo_input else None
                         }
                         
                         st.success("✅ Keyword Research Analysis Complete!")
@@ -2003,136 +1875,6 @@ def show_create_campaign():
                             st.info("💡 The campaign has been created in PAUSED status. You can enable it after adding ad groups, ads, and keywords.")
                     except Exception as e:
                         st.error(f"❌ Error creating campaign: {str(e)}")
-
-
-def show_help_chat():
-    """Help & Documentation chat page."""
-    st.header("❓ Help Center")
-    st.markdown("Ask questions about the app and get instant answers from the documentation.")
-    
-    # Initialize chat history in session state
-    if 'help_chat_history' not in st.session_state:
-        st.session_state.help_chat_history = []
-    
-    # Load documentation (cache in session state)
-    if 'help_docs' not in st.session_state:
-        with st.spinner("Loading documentation..."):
-            st.session_state.help_docs = load_documentation()
-    
-    # Display suggested questions
-    st.markdown("### 💡 Suggested Questions")
-    suggested_questions = get_suggested_questions()
-    
-    # Create columns for suggested questions
-    cols = st.columns(3)
-    for idx, question in enumerate(suggested_questions[:9]):  # Show first 9 in 3 columns
-        col_idx = idx % 3
-        with cols[col_idx]:
-            if st.button(question, key=f"suggested_{idx}", use_container_width=True):
-                # Add question to chat
-                st.session_state.help_chat_history.append({
-                    "role": "user",
-                    "content": question
-                })
-                st.rerun()
-    
-    # Show more suggestions in expander
-    if len(suggested_questions) > 9:
-        with st.expander("More Suggested Questions"):
-            for idx, question in enumerate(suggested_questions[9:], start=9):
-                if st.button(question, key=f"suggested_{idx}", use_container_width=True):
-                    st.session_state.help_chat_history.append({
-                        "role": "user",
-                        "content": question
-                    })
-                    st.rerun()
-    
-    st.markdown("---")
-    
-    # Display chat history
-    if st.session_state.help_chat_history:
-        st.markdown("### 💬 Chat History")
-        for idx, message in enumerate(st.session_state.help_chat_history):
-            if message["role"] == "user":
-                with st.chat_message("user"):
-                    st.write(message["content"])
-            else:
-                with st.chat_message("assistant"):
-                    st.markdown(message["content"])
-                    if "sources" in message:
-                        st.caption(f"📚 Sources: {', '.join(message['sources'])}")
-    
-    # Chat input
-    st.markdown("---")
-    user_question = st.chat_input("Ask a question about the app...")
-    
-    if user_question:
-        # Add user question to chat history
-        st.session_state.help_chat_history.append({
-            "role": "user",
-            "content": user_question
-        })
-        
-        # Find relevant documentation
-        with st.spinner("🔍 Searching documentation..."):
-            relevant_docs = find_relevant_docs(user_question, st.session_state.help_docs)
-            
-            if not relevant_docs:
-                # No relevant docs found
-                st.session_state.help_chat_history.append({
-                    "role": "assistant",
-                    "content": "I couldn't find relevant information in the documentation for your question. Please try rephrasing or ask about a different topic.",
-                    "sources": []
-                })
-                st.rerun()
-            
-            # Format docs for prompt
-            formatted_docs = format_docs_for_prompt(relevant_docs)
-            citations = get_document_citations(relevant_docs)
-            
-            # Create prompt
-            help_prompt = create_help_prompt(user_question, formatted_docs)
-            
-            # Get answer from Claude (use Haiku for faster/cheaper responses)
-            with st.spinner("🤖 Getting answer from Claude..."):
-                try:
-                    # Use Haiku model for help queries (faster and cheaper)
-                    haiku_model = "claude-3-5-haiku-20241022"
-                    
-                    response = st.session_state.analyzer.claude.messages.create(
-                        model=haiku_model,
-                        max_tokens=2048,
-                        system="You are a helpful documentation assistant. Provide clear, concise answers based on the documentation provided.",
-                        messages=[{"role": "user", "content": help_prompt}]
-                    )
-                    
-                    answer = response.content[0].text
-                    
-                    # Add assistant response to chat history
-                    st.session_state.help_chat_history.append({
-                        "role": "assistant",
-                        "content": answer,
-                        "sources": citations
-                    })
-                    
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"❌ Error getting answer: {str(e)}")
-                    st.session_state.help_chat_history.append({
-                        "role": "assistant",
-                        "content": f"Sorry, I encountered an error: {str(e)}",
-                        "sources": []
-                    })
-                    st.rerun()
-    
-    # Clear chat button
-    if st.session_state.help_chat_history:
-        st.markdown("---")
-        if st.button("🗑️ Clear Chat History", type="secondary"):
-            st.session_state.help_chat_history = []
-            st.rerun()
-
 
 if __name__ == "__main__":
     main()

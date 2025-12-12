@@ -469,22 +469,18 @@ This section details which modules are loaded for each page/feature and why each
 **Use Case:**
 - Analyzing keyword competition levels
 - Assessing search volume opportunities
-  - **Automatically matches campaign geo-targeting** when campaign is selected and "Specify geographic targeting" is unchecked
-  - Uses manually specified location when checkbox is checked
 - Getting bid estimate recommendations
 - Finding new keywords to add
 - Identifying negative keyword opportunities
 - Understanding market competition landscape
-- Geographic keyword insights (auto-detected from campaign or manually specified)
+- Geographic keyword insights (if geo-targeting provided)
 
 **What This Page Does:**
 - Fetches Keyword Planner data (search volume, competition, suggested bids)
-- **Automatically detects campaign geo-targeting** when a campaign is selected (unless overridden)
 - Analyzes keyword opportunities vs. saturated areas
 - Provides prioritized keyword expansion recommendations
 - Suggests budget allocation across competition tiers
 - Identifies Quality Score issues from bid comparisons
-- Provides location-specific search volume data matching campaign targeting
 
 **Why Not Other Modules:**
 - Bidding Strategy: Not evaluating campaign bidding (this is keyword research)
@@ -776,9 +772,9 @@ Potential improvements to the modular system:
 
 ## Related Documentation
 
-- [User Guide](01_USER_GUIDE.md) - Complete web app usage guide
-- [Prompt Recommendations](08_PROMPT_RECOMMENDATIONS.md) - Tips for optimizing prompts
-- [Setup Guide](02_SETUP.md) - Installation and configuration
+- [User Guide](USER_GUIDE.md) - Complete web app usage guide
+- [Prompt Recommendations](PROMPT_RECOMMENDATIONS.md) - Tips for optimizing prompts
+- [Setup Guide](SETUP.md) - Installation and configuration
 
 ---
 

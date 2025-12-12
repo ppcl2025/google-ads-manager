@@ -1,6 +1,5 @@
-# 3. Streamlit Cloud Deployment Guide
+# Streamlit Cloud Deployment Guide
 
-**Documentation Order:** #3 (Getting Started)  
 Complete guide for deploying the Google Ads Analyzer to Streamlit Cloud.
 
 ## Prerequisites
