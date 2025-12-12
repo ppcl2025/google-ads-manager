@@ -257,16 +257,48 @@ def show_comprehensive_analysis():
             st.error("Please select an account.")
             return
         
-        with st.spinner("🤖 Claude is analyzing your campaign data..."):
+        # Create progress container
+        progress_container = st.container()
+        with progress_container:
+            status_text = st.empty()
+            status_text.info("🔄 Step 1/3: Fetching campaign data from Google Ads API...")
+            
             try:
+                # Step 1: Fetch data (this might take time)
+                status_text.info("🔄 Step 1/3: Fetching campaign data from Google Ads API...")
+                
+                # We need to fetch data first to show progress
+                from comprehensive_data_fetcher import fetch_comprehensive_campaign_data, format_campaign_data_for_prompt
+                api_call_counter = {'count': 0}
+                data = fetch_comprehensive_campaign_data(
+                    st.session_state.client,
+                    selected_account_id,
+                    campaign_id=selected_campaign_id,
+                    date_range_days=date_range,
+                    api_call_counter=api_call_counter
+                )
+                
+                if not data['campaigns']:
+                    st.error("No campaign data found for the selected account/campaign.")
+                    return
+                
+                # Step 2: Format data
+                status_text.info("🔄 Step 2/3: Formatting data for analysis...")
+                campaign_data_str = format_campaign_data_for_prompt(data)
+                
+                # Step 3: Call Claude (pass pre-fetched data to avoid re-fetching)
+                status_text.info("🔄 Step 3/3: Claude is analyzing your campaign data... (this may take 1-2 minutes)")
+                
                 recommendations = st.session_state.analyzer.analyze(
                     customer_id=selected_account_id,
                     campaign_id=selected_campaign_id,
                     date_range_days=date_range,
                     optimization_goals=optimization_goals,
-                    prompt_type='full'
+                    prompt_type='full',
+                    pre_fetched_data=data  # Pass pre-fetched data
                 )
                 
+                status_text.empty()
                 st.success("✅ Analysis Complete!")
                 st.markdown("---")
                 st.markdown("### 📋 Optimization Recommendations")

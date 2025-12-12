@@ -4494,7 +4494,7 @@ class RealEstateAnalyzer:
 4. Improve ROAS (Return on Ad Spend)
 5. Optimize budget allocation"""
     
-    def analyze(self, customer_id, campaign_id=None, date_range_days=30, optimization_goals=None, prompt_type='full'):
+    def analyze(self, customer_id, campaign_id=None, date_range_days=30, optimization_goals=None, prompt_type='full', pre_fetched_data=None):
         """
         Analyze campaign using comprehensive data and custom prompt.
         
@@ -4504,35 +4504,41 @@ class RealEstateAnalyzer:
             date_range_days: Number of days to analyze
             optimization_goals: Custom optimization goals (optional)
             prompt_type: 'full' for comprehensive analysis, 'ad_copy' for ad copy optimization only
+            pre_fetched_data: Optional pre-fetched data dict (to avoid re-fetching if already fetched)
         """
         # Initialize API call counter
         api_call_counter = {'count': 0}
         
-        print(f"\n📊 Fetching comprehensive campaign data...")
-        print(f"📅 Date range: Last {date_range_days} days")
-        if campaign_id:
-            print(f"🎯 Campaign ID: {campaign_id}")
+        # Use pre-fetched data if provided (for Streamlit to show progress)
+        if pre_fetched_data:
+            data = pre_fetched_data
+            campaign_data_str = format_campaign_data_for_prompt(data)
         else:
-            print(f"🎯 Analyzing all campaigns")
-        print()
-        
-        # Fetch comprehensive data
-        try:
-            data = fetch_comprehensive_campaign_data(
-                self.ads_client, 
-                customer_id, 
-                campaign_id=campaign_id,
-                date_range_days=date_range_days,
-                api_call_counter=api_call_counter
-            )
-        except Exception as e:
-            raise Exception(f"Error fetching data: {str(e)}")
-        
-        if not data['campaigns']:
-            raise Exception("No campaign data found for the selected account/campaign.")
-        
-        # Format data for prompt
-        campaign_data_str = format_campaign_data_for_prompt(data)
+            print(f"\n📊 Fetching comprehensive campaign data...")
+            print(f"📅 Date range: Last {date_range_days} days")
+            if campaign_id:
+                print(f"🎯 Campaign ID: {campaign_id}")
+            else:
+                print(f"🎯 Analyzing all campaigns")
+            print()
+            
+            # Fetch comprehensive data
+            try:
+                data = fetch_comprehensive_campaign_data(
+                    self.ads_client, 
+                    customer_id, 
+                    campaign_id=campaign_id,
+                    date_range_days=date_range_days,
+                    api_call_counter=api_call_counter
+                )
+            except Exception as e:
+                raise Exception(f"Error fetching data: {str(e)}")
+            
+            if not data['campaigns']:
+                raise Exception("No campaign data found for the selected account/campaign.")
+            
+            # Format data for prompt
+            campaign_data_str = format_campaign_data_for_prompt(data)
         
         # Get optimization goals (not needed for biweekly reports)
         if prompt_type != 'biweekly_report':
@@ -4589,12 +4595,19 @@ class RealEstateAnalyzer:
                 
                 # Try with higher token limit, fallback to 8192 if model doesn't support it
                 try:
+                    # Make API call with explicit error handling
+                    if not in_streamlit:
+                        print(f"📤 Sending request to Claude (iteration {iteration}/{max_iterations})...")
+                    
                     message = self.claude.messages.create(
                         model=self.model,
                         max_tokens=16384,  # Increased for full detailed recommendations
                         system=system_message,
                         messages=conversation_messages
                     )
+                    
+                    if not in_streamlit:
+                        print("✅ Received response from Claude\n")
                 except Exception as e:
                     if "max_tokens" in str(e).lower() or "token" in str(e).lower():
                         # Fallback to 8192 if 16384 is too high for this model
