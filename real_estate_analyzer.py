@@ -500,20 +500,20 @@ def create_pdf_report(recommendations, account_name, campaign_name, date_range_d
         return False
 
 def create_biweekly_report_pdf(report_content, account_name, campaign_name, date_range_days, output_path):
-    """Create a professional 2-page biweekly client report PDF with company branding."""
+    """Create a professional 2-page biweekly client report PDF with color coding and improved formatting."""
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import inch
-        from reportlab.lib.colors import HexColor, black, darkblue, darkred, darkgreen, white
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, KeepTogether
-        from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-        from reportlab.pdfgen import canvas
+        from reportlab.lib.colors import HexColor, black, white
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER
         from datetime import datetime, timedelta
+        import re
         
         doc = SimpleDocTemplate(output_path, pagesize=letter,
                               rightMargin=0.75*inch, leftMargin=0.75*inch,
-                              topMargin=1*inch, bottomMargin=0.75*inch)
+                              topMargin=0.75*inch, bottomMargin=0.75*inch)
         
         story = []
         styles = getSampleStyleSheet()
@@ -523,207 +523,187 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         start_date = end_date - timedelta(days=date_range_days)
         date_range_str = f"{start_date.strftime('%B %d')} - {end_date.strftime('%B %d, %Y')}"
         
-        # Custom styles for biweekly report
+        # Color definitions matching web app
+        COLOR_GREEN = HexColor('#10b981')  # 🟢
+        COLOR_YELLOW = HexColor('#f59e0b')  # 🟡
+        COLOR_RED = HexColor('#ef4444')  # 🔴
+        COLOR_BLUE = HexColor('#1a5490')
+        COLOR_BLUE_LIGHT = HexColor('#2c5f8d')
+        COLOR_GRAY = HexColor('#666666')
+        COLOR_BG_LIGHT = HexColor('#f8f9fa')
+        COLOR_BORDER = HexColor('#e5e7eb')
+        
+        # Custom styles
         title_style = ParagraphStyle(
-            'ReportTitle',
-            parent=styles['Heading1'],
-            fontSize=20,
-            textColor=HexColor('#1a5490'),
-            spaceAfter=6,
-            alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
+            'ReportTitle', parent=styles['Heading1'],
+            fontSize=22, textColor=COLOR_BLUE, spaceAfter=8,
+            alignment=TA_CENTER, fontName='Helvetica-Bold'
         )
         
         subtitle_style = ParagraphStyle(
-            'ReportSubtitle',
-            parent=styles['Normal'],
-            fontSize=11,
-            textColor=HexColor('#666666'),
-            spaceAfter=20,
-            alignment=TA_CENTER,
-            fontName='Helvetica'
+            'ReportSubtitle', parent=styles['Normal'],
+            fontSize=11, textColor=COLOR_GRAY, spaceAfter=4,
+            alignment=TA_CENTER, fontName='Helvetica'
         )
         
         page_title_style = ParagraphStyle(
-            'PageTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
-            textColor=HexColor('#1a5490'),
-            spaceAfter=12,
-            spaceBefore=0,
-            fontName='Helvetica-Bold',
-            alignment=TA_LEFT
+            'PageTitle', parent=styles['Heading1'],
+            fontSize=18, textColor=COLOR_BLUE, spaceAfter=16,
+            spaceBefore=0, fontName='Helvetica-Bold', alignment=TA_LEFT
         )
         
         section_style = ParagraphStyle(
-            'Section',
-            parent=styles['Heading2'],
-            fontSize=13,
-            textColor=HexColor('#2c5f8d'),
-            spaceAfter=10,
-            spaceBefore=16,
-            fontName='Helvetica-Bold',
-            alignment=TA_LEFT
-        )
-        
-        metric_label_style = ParagraphStyle(
-            'MetricLabel',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=HexColor('#666666'),
-            spaceAfter=2,
-            alignment=TA_CENTER,
-            fontName='Helvetica'
-        )
-        
-        metric_value_style = ParagraphStyle(
-            'MetricValue',
-            parent=styles['Heading2'],
-            fontSize=18,
-            textColor=HexColor('#1a5490'),
-            spaceAfter=4,
-            alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
-        )
-        
-        metric_change_style = ParagraphStyle(
-            'MetricChange',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=HexColor('#28a745'),  # Green for positive
-            spaceAfter=0,
-            alignment=TA_CENTER,
-            fontName='Helvetica'
+            'Section', parent=styles['Heading2'],
+            fontSize=14, textColor=COLOR_BLUE_LIGHT, spaceAfter=10,
+            spaceBefore=20, fontName='Helvetica-Bold', alignment=TA_LEFT
         )
         
         body_style = ParagraphStyle(
-            'Body',
-            parent=styles['BodyText'],
-            fontSize=10,
-            leading=14,
-            alignment=TA_LEFT,
-            spaceAfter=8,
-            leftIndent=0
+            'Body', parent=styles['BodyText'],
+            fontSize=10, leading=16, alignment=TA_LEFT,
+            spaceAfter=10, leftIndent=0
         )
         
         bullet_style = ParagraphStyle(
-            'Bullet',
-            parent=styles['BodyText'],
-            fontSize=10,
-            leading=14,
-            leftIndent=20,
-            bulletIndent=10,
-            spaceAfter=6,
-            spaceBefore=0
+            'Bullet', parent=styles['BodyText'],
+            fontSize=10, leading=16, leftIndent=20,
+            bulletIndent=10, spaceAfter=8, spaceBefore=0
         )
         
         # PAGE 1: Performance Overview
-        # Header with company branding area
         story.append(Paragraph("Google Ads Campaign Report", title_style))
         story.append(Paragraph(f"{account_name}", subtitle_style))
         if campaign_name and campaign_name != 'All Campaigns':
             story.append(Paragraph(f"Campaign: {campaign_name}", subtitle_style))
         story.append(Paragraph(f"Report Period: {date_range_str}", subtitle_style))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 0.4*inch))
         
-        # Parse report content to extract metrics
-        # Look for key metrics in the report content
+        # Parse metrics with emoji indicators
+        lines = report_content.split('\n')
         metrics_data = []
         trend_text = ""
         what_means = []
         
-        lines = report_content.split('\n')
-        current_section = None
+        in_key_metrics = False
+        in_trend = False
+        in_what_means = False
         
         for i, line in enumerate(lines):
             line_stripped = line.strip()
             
-            # Extract key metrics
-            if "Total Leads:" in line_stripped or "Cost Per Lead:" in line_stripped or "Ad Spend:" in line_stripped:
-                # Parse metric line: "- Total Leads: [number] ([↑/↓X%] vs. last period)"
-                parts = line_stripped.split(':')
-                if len(parts) >= 2:
-                    metric_name = parts[0].replace('-', '').replace('*', '').strip()
-                    metric_value = parts[1].strip()
-                    metrics_data.append((metric_name, metric_value))
-            
-            # Extract trend text
+            # Detect sections
+            if "Key Metrics:" in line_stripped or "**Key Metrics:**" in line_stripped:
+                in_key_metrics = True
+                continue
             if "Two-Week Trend:" in line_stripped or "**Two-Week Trend:**" in line_stripped:
-                # Get next few lines as trend description
-                trend_lines = []
-                for j in range(i+1, min(i+5, len(lines))):
-                    if lines[j].strip() and not lines[j].strip().startswith('**'):
-                        trend_lines.append(lines[j].strip())
-                    elif lines[j].strip().startswith('**'):
-                        break
-                trend_text = ' '.join(trend_lines)
-            
-            # Extract "What This Means" bullets
+                in_key_metrics = False
+                in_trend = True
+                continue
             if "What This Means:" in line_stripped or "**What This Means:**" in line_stripped:
-                for j in range(i+1, min(i+10, len(lines))):
-                    if lines[j].strip().startswith('•') or lines[j].strip().startswith('-'):
-                        what_means.append(lines[j].strip().lstrip('•-').strip())
-                    elif lines[j].strip().startswith('**') and 'PAGE' in lines[j].strip():
-                        break
-        
-        # Key Metrics Cards (as a table)
-        if metrics_data:
-            # Create metrics table
-            metrics_table_data = []
-            for metric_name, metric_value in metrics_data[:6]:  # Max 6 metrics
-                # Parse metric value to separate number and change
-                if '↑' in metric_value or '↓' in metric_value or 'stable' in metric_value.lower():
-                    # Extract number and change
-                    parts = metric_value.split('(')
-                    value = parts[0].strip()
-                    change = '(' + parts[1] if len(parts) > 1 else ''
-                else:
-                    value = metric_value
-                    change = ''
-                
-                metrics_table_data.append([metric_name, value, change])
+                in_trend = False
+                in_what_means = True
+                continue
+            if "PAGE 2:" in line_stripped or "**PAGE 2:" in line_stripped:
+                break
             
-            # Create 2-column layout for metrics
-            if len(metrics_table_data) > 0:
-                # Group into rows of 2
-                metrics_rows = []
-                for i in range(0, len(metrics_table_data), 2):
-                    row = []
-                    row.append(metrics_table_data[i])
-                    if i+1 < len(metrics_table_data):
-                        row.append(metrics_table_data[i+1])
+            # Extract metrics with emoji
+            if in_key_metrics and ':' in line_stripped:
+                # Parse: "Metric Name: value 🟢 (description)"
+                match = re.match(r'[-•]?\s*(.+?):\s*(.+?)(\s*[🟢🟡🔴])\s*(?:\((.+?)\))?', line_stripped)
+                if match:
+                    metric_name = match.group(1).strip()
+                    metric_value = match.group(2).strip()
+                    emoji = match.group(3).strip()
+                    description = match.group(4).strip() if match.group(4) else ""
+                    
+                    # Determine color from emoji
+                    if '🟢' in emoji:
+                        status_color = COLOR_GREEN
+                    elif '🟡' in emoji:
+                        status_color = COLOR_YELLOW
+                    elif '🔴' in emoji:
+                        status_color = COLOR_RED
                     else:
-                        row.append(['', '', ''])
-                    metrics_rows.append(row)
-                
-                # Flatten for table
+                        status_color = COLOR_GRAY
+                    
+                    metrics_data.append({
+                        'name': metric_name,
+                        'value': metric_value,
+                        'description': description,
+                        'color': status_color
+                    })
+            
+            # Extract trend
+            if in_trend and line_stripped and not line_stripped.startswith('**'):
+                trend_text += line_stripped + " "
+            
+            # Extract what means bullets
+            if in_what_means and (line_stripped.startswith('•') or line_stripped.startswith('-')):
+                what_means.append(line_stripped.lstrip('•-').strip())
+        
+        # Create Key Metrics table with color coding
+        if metrics_data:
+            story.append(Paragraph("Key Metrics:", section_style))
+            
+            # Create metric cards in a 2-column layout
+            metric_cards = []
+            for i in range(0, len(metrics_data), 2):
+                row_metrics = []
+                row_metrics.append(metrics_data[i])
+                if i+1 < len(metrics_data):
+                    row_metrics.append(metrics_data[i+1])
+                else:
+                    row_metrics.append(None)
+                metric_cards.append(row_metrics)
+            
+            for row_metrics in metric_cards:
                 table_data = []
-                for row in metrics_rows:
-                    table_row = []
-                    for cell in row:
-                        table_row.append(Paragraph(cell[0], metric_label_style))
-                        table_row.append(Paragraph(cell[1], metric_value_style))
-                        table_row.append(Paragraph(cell[2], metric_change_style))
-                    table_data.append(table_row)
+                for metric in row_metrics:
+                    if metric:
+                        # Create styled metric cell
+                        name_para = Paragraph(metric['name'], ParagraphStyle(
+                            'MetricName', parent=styles['Normal'],
+                            fontSize=9, textColor=COLOR_GRAY, alignment=TA_LEFT
+                        ))
+                        value_para = Paragraph(metric['value'], ParagraphStyle(
+                            'MetricValue', parent=styles['Heading2'],
+                            fontSize=16, textColor=metric['color'], alignment=TA_LEFT,
+                            fontName='Helvetica-Bold', spaceAfter=4
+                        ))
+                        desc_para = Paragraph(metric['description'], ParagraphStyle(
+                            'MetricDesc', parent=styles['Normal'],
+                            fontSize=8, textColor=COLOR_GRAY, alignment=TA_LEFT,
+                            leading=10
+                        )) if metric['description'] else Paragraph("", styles['Normal'])
+                        
+                        # Combine into one cell
+                        cell_content = f"{name_para}<br/>{value_para}"
+                        if metric['description']:
+                            cell_content += f"<br/>{desc_para}"
+                        
+                        table_data.append([Paragraph(cell_content, styles['Normal'])])
+                    else:
+                        table_data.append([Paragraph("", styles['Normal'])])
                 
-                metrics_table = Table(table_data, colWidths=[2.5*inch, 2.5*inch])
-                metrics_table.setStyle(TableStyle([
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ('BACKGROUND', (0, 0), (-1, -1), HexColor('#f8f9fa')),
-                    ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#dee2e6')),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 10),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+                metric_table = Table(table_data, colWidths=[3*inch, 3*inch])
+                metric_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), COLOR_BG_LIGHT),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 12),
                     ('TOPPADDING', (0, 0), (-1, -1), 12),
                     ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                    ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
                 ]))
-                story.append(metrics_table)
-                story.append(Spacer(1, 0.3*inch))
+                story.append(metric_table)
+                story.append(Spacer(1, 0.15*inch))
+            
+            story.append(Spacer(1, 0.2*inch))
         
         # Two-Week Trend
-        if trend_text:
+        if trend_text.strip():
             story.append(Paragraph("Two-Week Trend", section_style))
-            story.append(Paragraph(trend_text, body_style))
+            story.append(Paragraph(trend_text.strip(), body_style))
             story.append(Spacer(1, 0.2*inch))
         
         # What This Means
@@ -736,7 +716,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         
         # PAGE 2: Actions & Insights
         story.append(Paragraph("Actions & Insights", page_title_style))
-        story.append(Spacer(1, 0.2*inch))
+        story.append(Spacer(1, 0.3*inch))
         
         # Extract "What's Working" table
         whats_working = []
@@ -769,7 +749,6 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 continue
             
             if in_whats_working and '|' in line_stripped and not line_stripped.startswith('|--'):
-                # Parse table row
                 parts = [p.strip() for p in line_stripped.split('|') if p.strip()]
                 if len(parts) >= 4 and parts[0] != 'Keyword/Ad Group':
                     whats_working.append(parts[:4])
@@ -784,24 +763,27 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         if whats_working:
             story.append(Paragraph("What's Working", section_style))
             table_data = [['Keyword/Ad Group', 'Leads', 'Cost/Lead', 'Why It\'s Working']]
-            for row in whats_working[:5]:  # Max 5 rows
+            for row in whats_working[:5]:
                 table_data.append(row)
             
-            working_table = Table(table_data, colWidths=[2*inch, 0.8*inch, 1*inch, 2.2*inch])
+            working_table = Table(table_data, colWidths=[2.2*inch, 0.8*inch, 1*inch, 2*inch])
             working_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1a5490')),
+                ('BACKGROUND', (0, 0), (-1, 0), COLOR_BLUE),
                 ('TEXTCOLOR', (0, 0), (-1, 0), white),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ALIGN', (1, 1), (2, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), white),
-                ('GRID', (0, 0), (-1, -1), 1, HexColor('#dee2e6')),
+                ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 8),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+                ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+                ('TOPPADDING', (0, 1), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
             ]))
             story.append(working_table)
             story.append(Spacer(1, 0.3*inch))
@@ -809,22 +791,15 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         # What We're Optimizing
         if optimizations:
             story.append(Paragraph("What We're Optimizing", section_style))
-            for opt in optimizations[:3]:  # Max 3 items
+            for opt in optimizations[:5]:
                 story.append(Paragraph(f"• {opt}", bullet_style))
             story.append(Spacer(1, 0.2*inch))
         
         # Next Steps
         if next_steps:
             story.append(Paragraph("Next Steps (Next 2 Weeks)", section_style))
-            for step in next_steps[:3]:  # Max 3 items
+            for step in next_steps[:5]:
                 story.append(Paragraph(f"• {step}", bullet_style))
-        
-        # Footer
-        story.append(Spacer(1, 0.4*inch))
-        story.append(Paragraph("Questions? Contact us for more details.", 
-                              ParagraphStyle('Footer', parent=styles['Normal'], 
-                                           fontSize=9, textColor=HexColor('#666666'),
-                                           alignment=TA_CENTER, spaceBefore=20)))
         
         # Build PDF
         doc.build(story)
