@@ -745,55 +745,51 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                     row_metrics.append(None)
                 metric_cards.append(row_metrics)
             
-            for row_metrics in metric_cards:
-                table_data = []
-                for metric in row_metrics:
-                    if metric:
-                        # Create styled paragraphs for each part
-                        name_style = ParagraphStyle(
-                            'MetricName', parent=styles['Normal'],
-                            fontSize=9, textColor=COLOR_GRAY, alignment=TA_LEFT,
-                            spaceAfter=4
-                        )
-                        value_style = ParagraphStyle(
-                            'MetricValue', parent=styles['Heading2'],
-                            fontSize=18, textColor=metric['color'], alignment=TA_LEFT,
-                            fontName='Helvetica-Bold', spaceAfter=6
-                        )
-                        desc_style = ParagraphStyle(
-                            'MetricDesc', parent=styles['Normal'],
-                            fontSize=8, textColor=COLOR_GRAY, alignment=TA_LEFT,
-                            leading=10, spaceAfter=0
-                        )
-                        
-                        # Create cell content using stacked elements
-                        cell_elements = [
-                            Paragraph(metric['name'], name_style),
-                            Spacer(1, 2),
-                            Paragraph(metric['value'], value_style)
-                        ]
-                        if metric['description']:
-                            cell_elements.append(Spacer(1, 2))
-                            cell_elements.append(Paragraph(metric['description'], desc_style))
-                        
-                        # Use KeepTogether to keep elements together in the cell
-                        cell_content = KeepTogether(cell_elements)
-                        table_data.append([cell_content])
-                    else:
-                        table_data.append([Paragraph("", styles['Normal'])])
-                
-                metric_table = Table(table_data, colWidths=[3*inch, 3*inch])
-                metric_table.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, -1), COLOR_BG_LIGHT),
-                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 12),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-                    ('TOPPADDING', (0, 0), (-1, -1), 12),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                    ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
-                ]))
-                story.append(metric_table)
-                story.append(Spacer(1, 0.15*inch))
+                for row_metrics in metric_cards:
+                    table_data = []
+                    for metric in row_metrics:
+                        if metric:
+                            # Create styled paragraphs for each part
+                            name_style = ParagraphStyle(
+                                'MetricName', parent=styles['Normal'],
+                                fontSize=9, textColor=COLOR_GRAY, alignment=TA_LEFT,
+                                spaceAfter=2, leading=11
+                            )
+                            value_style = ParagraphStyle(
+                                'MetricValue', parent=styles['Heading2'],
+                                fontSize=18, textColor=metric['color'], alignment=TA_LEFT,
+                                fontName='Helvetica-Bold', spaceAfter=4, leading=22
+                            )
+                            desc_style = ParagraphStyle(
+                                'MetricDesc', parent=styles['Normal'],
+                                fontSize=8, textColor=COLOR_GRAY, alignment=TA_LEFT,
+                                leading=10, spaceAfter=0
+                            )
+                            
+                            # Create a single paragraph with line breaks instead of multiple elements
+                            # This avoids KeepTogether size calculation issues
+                            cell_text = f"<para><font name='Helvetica' size='9' color='{COLOR_GRAY.hexval()}'>{metric['name']}</font></para>"
+                            cell_text += f"<para><font name='Helvetica-Bold' size='18' color='{metric['color'].hexval()}'>{metric['value']}</font></para>"
+                            if metric['description']:
+                                cell_text += f"<para><font name='Helvetica' size='8' color='{COLOR_GRAY.hexval()}'>{metric['description']}</font></para>"
+                            
+                            cell_content = Paragraph(cell_text, body_style)
+                            table_data.append([cell_content])
+                        else:
+                            table_data.append([Paragraph("", styles['Normal'])])
+                    
+                    metric_table = Table(table_data, colWidths=[3*inch, 3*inch])
+                    metric_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, -1), COLOR_BG_LIGHT),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                        ('TOPPADDING', (0, 0), (-1, -1), 12),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                        ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
+                    ]))
+                    story.append(metric_table)
+                    story.append(Spacer(1, 0.15*inch))
             
             story.append(Spacer(1, 0.2*inch))
         
