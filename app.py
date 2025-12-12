@@ -214,8 +214,12 @@ def main():
     if 'selected_model' in st.session_state and st.session_state.analyzer:
         st.session_state.analyzer.model = st.session_state.selected_model
     
+    # Check if Help Center was triggered from Settings button
+    if st.session_state.get('help_page_triggered', False):
+        st.session_state.help_page_triggered = False
+        show_help_chat()
     # Route to appropriate page
-    if page == "📊 Campaign Analysis":
+    elif page == "📊 Campaign Analysis":
         show_comprehensive_analysis()
     elif page == "📝 Ad Copy Optimization":
         show_ad_copy_optimization()
@@ -225,8 +229,6 @@ def main():
         show_biweekly_reports()
     elif page == "💬 Ask Claude":
         show_qa_chat()
-    elif page == "❓ Help":
-        show_help_chat()
     elif page == "➕ Create Account":
         show_create_account()
     elif page == "🎯 Create Campaign":
