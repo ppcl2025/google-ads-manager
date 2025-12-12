@@ -726,13 +726,48 @@ def show_biweekly_reports():
         st.markdown("### 📄 Biweekly Report Preview")
         # Format the content to ensure bullet points are on separate lines
         formatted_content = results['report_content']
-        # Replace bullet points that run together with proper line breaks
-        # Pattern: "• text • text" -> "• text\n\n• text"
         import re
-        # Add double newline before bullets in "What This Means", "What We're Optimizing", "Next Steps" sections
-        formatted_content = re.sub(r'(What This Means:|What We\'re Optimizing:|Next Steps.*?:)\s*\n\s*•', r'\1\n\n•', formatted_content)
-        # Ensure bullets are separated by blank lines
-        formatted_content = re.sub(r'•\s+([^\n•]+)\s+•', r'• \1\n\n•', formatted_content)
+        # Split content by sections and format bullets
+        # For sections with bullets, ensure each bullet is on its own line
+        # Pattern: Find bullets that are on the same line and separate them
+        lines = formatted_content.split('\n')
+        formatted_lines = []
+        in_bullet_section = False
+        
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            # Detect bullet sections
+            if re.match(r'^\*\*?(What This Means|What We\'re Optimizing|Next Steps)', stripped, re.IGNORECASE):
+                in_bullet_section = True
+                formatted_lines.append(line)
+                continue
+            # Detect end of bullet section (next section header or blank line followed by header)
+            if stripped and not stripped.startswith('•') and not stripped.startswith('-') and re.match(r'^\*\*?[A-Z]', stripped):
+                in_bullet_section = False
+                formatted_lines.append(line)
+                continue
+            
+            if in_bullet_section and stripped:
+                # If line contains multiple bullets, split them
+                if '•' in stripped and stripped.count('•') > 1:
+                    # Split by bullet and add each on new line
+                    parts = re.split(r'(•\s+)', stripped)
+                    for j in range(1, len(parts), 2):
+                        if j+1 < len(parts):
+                            bullet_text = parts[j] + parts[j+1].strip()
+                            formatted_lines.append(bullet_text)
+                            formatted_lines.append('')  # Add blank line after each bullet
+                else:
+                    formatted_lines.append(line)
+                    # Add blank line after bullet if not already present
+                    if (stripped.startswith('•') or stripped.startswith('-')) and i+1 < len(lines):
+                        next_line = lines[i+1].strip() if i+1 < len(lines) else ''
+                        if next_line and (next_line.startswith('•') or next_line.startswith('-')):
+                            formatted_lines.append('')  # Add blank line between bullets
+            else:
+                formatted_lines.append(line)
+        
+        formatted_content = '\n'.join(formatted_lines)
         st.markdown(formatted_content)
         
         # Save options
