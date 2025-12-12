@@ -142,6 +142,10 @@ if 'selected_campaign' not in st.session_state:
     st.session_state.selected_campaign = None
 if 'selected_model' not in st.session_state:
     st.session_state.selected_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = "📊 Campaign Analysis"
+if 'help_page_triggered' not in st.session_state:
+    st.session_state.help_page_triggered = False
 
 def initialize_client():
     """Initialize Google Ads client."""
