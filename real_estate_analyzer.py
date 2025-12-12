@@ -660,28 +660,35 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 table_data = []
                 for metric in row_metrics:
                     if metric:
-                        # Create styled metric cell
-                        name_para = Paragraph(metric['name'], ParagraphStyle(
+                        # Create styled paragraphs for each part
+                        name_style = ParagraphStyle(
                             'MetricName', parent=styles['Normal'],
-                            fontSize=9, textColor=COLOR_GRAY, alignment=TA_LEFT
-                        ))
-                        value_para = Paragraph(metric['value'], ParagraphStyle(
+                            fontSize=9, textColor=COLOR_GRAY, alignment=TA_LEFT,
+                            spaceAfter=4
+                        )
+                        value_style = ParagraphStyle(
                             'MetricValue', parent=styles['Heading2'],
-                            fontSize=16, textColor=metric['color'], alignment=TA_LEFT,
-                            fontName='Helvetica-Bold', spaceAfter=4
-                        ))
-                        desc_para = Paragraph(metric['description'], ParagraphStyle(
+                            fontSize=18, textColor=metric['color'], alignment=TA_LEFT,
+                            fontName='Helvetica-Bold', spaceAfter=6
+                        )
+                        desc_style = ParagraphStyle(
                             'MetricDesc', parent=styles['Normal'],
                             fontSize=8, textColor=COLOR_GRAY, alignment=TA_LEFT,
-                            leading=10
-                        )) if metric['description'] else Paragraph("", styles['Normal'])
+                            leading=10, spaceAfter=0
+                        )
                         
-                        # Combine into one cell
-                        cell_content = f"{name_para}<br/>{value_para}"
+                        # Create cell content using line breaks
+                        cell_elements = [
+                            Paragraph(metric['name'], name_style),
+                            Paragraph(metric['value'], value_style)
+                        ]
                         if metric['description']:
-                            cell_content += f"<br/>{desc_para}"
+                            cell_elements.append(Paragraph(metric['description'], desc_style))
                         
-                        table_data.append([Paragraph(cell_content, styles['Normal'])])
+                        # Use a simple approach - create a table cell with stacked elements
+                        from reportlab.platypus import KeepTogether
+                        cell_content = KeepTogether(cell_elements)
+                        table_data.append([cell_content])
                     else:
                         table_data.append([Paragraph("", styles['Normal'])])
                 
