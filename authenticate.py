@@ -297,7 +297,6 @@ def get_client():
     
     # Create Google Ads client configuration
     # IMPORTANT: All credentials must be from the SAME Google Cloud project
-    # Also include the current access token if available (helps with initial auth)
     config = {
         "developer_token": developer_token.strip(),  # Remove any whitespace
         "client_id": client_id.strip() if client_id else None,
@@ -305,11 +304,6 @@ def get_client():
         "refresh_token": creds.refresh_token,
         "use_proto_plus": True
     }
-    
-    # Include access token if we have a valid one (helps with initial authentication)
-    # GoogleAdsClient can use this immediately, then refresh as needed
-    if creds.token and creds.valid:
-        config["access_token"] = creds.token
     
     # Add login_customer_id if it's an MCC account (for listing sub-accounts)
     if login_customer_id:
@@ -329,8 +323,7 @@ def get_client():
                 st.error("❌ Missing refresh_token")
             return None
         
-        # Create the client - GoogleAdsClient will use access_token if provided,
-        # then automatically refresh using refresh_token when needed
+        # Create the client - GoogleAdsClient will use refresh_token to get access tokens automatically
         client = GoogleAdsClient.load_from_dict(config)
         
         # Test that the client can authenticate by making a lightweight API call
@@ -382,7 +375,7 @@ def get_client():
                 
                 **Step 2: Check Developer Token**
                 1. Go to [Google Ads API Center](https://ads.google.com/aw/apicenter)
-                2. Verify token: `goGGiR9m2FWr-3g82AonQ`
+                2. Verify token: `goGGiR9m2FWr-3g82AonmQ`
                 3. Check status is **"Approved"** for **"Standard"** access (not "Basic")
                 4. If only "Basic", you need to apply for "Standard" access
                 
@@ -407,10 +400,10 @@ def get_client():
                 if developer_token:
                     preview = developer_token[:15] + "..." if len(developer_token) > 15 else developer_token
                     st.code(f"Developer token (preview): {preview}")
-                    expected_preview = "goGGiR9m2FWr-3g82AonQ"[:15]
+                    expected_preview = "goGGiR9m2FWr-3g82AonmQ"[:15]
                     st.code(f"Expected (preview): {expected_preview}")
                     
-                    if developer_token.strip() != "goGGiR9m2FWr-3g82AonQ":
+                    if developer_token.strip() != "goGGiR9m2FWr-3g82AonmQ":
                         st.warning("⚠️ Token doesn't match expected value. Please verify in Streamlit secrets.")
         else:
             print(f"Error creating Google Ads client: {e}")
