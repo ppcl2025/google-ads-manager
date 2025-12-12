@@ -608,30 +608,72 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             
             # Extract metrics with emoji
             if in_key_metrics and ':' in line_stripped:
-                # Parse: "Metric Name: value 🟢 (description)"
-                match = re.match(r'[-•]?\s*(.+?):\s*(.+?)(\s*[🟢🟡🔴])\s*(?:\((.+?)\))?', line_stripped)
-                if match:
-                    metric_name = match.group(1).strip()
-                    metric_value = match.group(2).strip()
-                    emoji = match.group(3).strip()
-                    description = match.group(4).strip() if match.group(4) else ""
-                    
-                    # Determine color from emoji
-                    if '🟢' in emoji:
-                        status_color = COLOR_GREEN
-                    elif '🟡' in emoji:
-                        status_color = COLOR_YELLOW
-                    elif '🔴' in emoji:
-                        status_color = COLOR_RED
-                    else:
-                        status_color = COLOR_GRAY
-                    
-                    metrics_data.append({
-                        'name': metric_name,
-                        'value': metric_value,
-                        'description': description,
-                        'color': status_color
-                    })
+                # Parse various formats:
+                # "Metric Name: value 🟢 (description)"
+                # "- Metric Name: value 🟢 (description)"
+                # "Metric Name: value 🟢 description"
+                
+                # Try multiple regex patterns
+                patterns = [
+                    # Pattern 1: "Name: value 🟢 (description)"
+                    r'[-•]?\s*(.+?):\s*([^🟢🟡🔴]+?)([🟢🟡🔴])\s*(?:\((.+?)\))?',
+                    # Pattern 2: "Name: value 🟢 description" (no parentheses)
+                    r'[-•]?\s*(.+?):\s*([^🟢🟡🔴]+?)([🟢🟡🔴])\s+(.+?)$',
+                    # Pattern 3: "Name: value" (no emoji, fallback)
+                    r'[-•]?\s*(.+?):\s*(.+?)$',
+                ]
+                
+                matched = False
+                for pattern in patterns:
+                    match = re.match(pattern, line_stripped)
+                    if match:
+                        metric_name = match.group(1).strip()
+                        metric_value = match.group(2).strip()
+                        
+                        # Try to get emoji and description
+                        if len(match.groups()) >= 3:
+                            emoji = match.group(3) if match.group(3) else ""
+                            description = match.group(4).strip() if len(match.groups()) >= 4 and match.group(4) else ""
+                        else:
+                            emoji = ""
+                            description = ""
+                        
+                        # If no emoji found but value contains it, extract it
+                        if not emoji and ('🟢' in line_stripped or '🟡' in line_stripped or '🔴' in line_stripped):
+                            if '🟢' in line_stripped:
+                                emoji = '🟢'
+                            elif '🟡' in line_stripped:
+                                emoji = '🟡'
+                            elif '🔴' in line_stripped:
+                                emoji = '🔴'
+                            
+                            # Extract description after emoji
+                            emoji_pos = line_stripped.find(emoji)
+                            if emoji_pos > 0:
+                                desc_part = line_stripped[emoji_pos + len(emoji):].strip()
+                                # Remove parentheses if present
+                                desc_part = desc_part.lstrip('(').rstrip(')').strip()
+                                if desc_part:
+                                    description = desc_part
+                        
+                        # Determine color from emoji
+                        if '🟢' in emoji:
+                            status_color = COLOR_GREEN
+                        elif '🟡' in emoji:
+                            status_color = COLOR_YELLOW
+                        elif '🔴' in emoji:
+                            status_color = COLOR_RED
+                        else:
+                            status_color = COLOR_GRAY
+                        
+                        metrics_data.append({
+                            'name': metric_name,
+                            'value': metric_value,
+                            'description': description,
+                            'color': status_color
+                        })
+                        matched = True
+                        break
             
             # Extract trend
             if in_trend and line_stripped and not line_stripped.startswith('**'):
