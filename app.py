@@ -289,20 +289,27 @@ def show_comprehensive_analysis():
                 # Step 3: Call Claude (pass pre-fetched data to avoid re-fetching)
                 status_text.info("🔄 Step 3/3: Claude is analyzing your campaign data... (this may take 1-2 minutes)")
                 
-                recommendations = st.session_state.analyzer.analyze(
-                    customer_id=selected_account_id,
-                    campaign_id=selected_campaign_id,
-                    date_range_days=date_range,
-                    optimization_goals=optimization_goals,
-                    prompt_type='full',
-                    pre_fetched_data=data  # Pass pre-fetched data
-                )
-                
-                status_text.empty()
-                st.success("✅ Analysis Complete!")
-                st.markdown("---")
-                st.markdown("### 📋 Optimization Recommendations")
-                st.markdown(recommendations)
+                try:
+                    recommendations = st.session_state.analyzer.analyze(
+                        customer_id=selected_account_id,
+                        campaign_id=selected_campaign_id,
+                        date_range_days=date_range,
+                        optimization_goals=optimization_goals,
+                        prompt_type='full',
+                        pre_fetched_data=data  # Pass pre-fetched data
+                    )
+                    
+                    status_text.empty()
+                    st.success("✅ Analysis Complete!")
+                    st.markdown("---")
+                    st.markdown("### 📋 Optimization Recommendations")
+                    st.markdown(recommendations)
+                except Exception as e:
+                    status_text.empty()
+                    st.error(f"❌ Error during analysis: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                    return
                 
                 # Save options
                 st.markdown("---")

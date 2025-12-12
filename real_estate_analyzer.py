@@ -4617,12 +4617,19 @@ class RealEstateAnalyzer:
                     if not in_streamlit:
                         print(f"📤 Sending request to Claude (iteration {iteration}/{max_iterations})...")
                     
+                    import time
+                    start_time = time.time()
+                    
                     message = self.claude.messages.create(
                         model=self.model,
                         max_tokens=16384,  # Increased for full detailed recommendations
                         system=system_message,
                         messages=conversation_messages
                     )
+                    
+                    elapsed_time = time.time() - start_time
+                    if not in_streamlit:
+                        print(f"✅ Received response from Claude ({elapsed_time:.1f}s)\n")
                     
                     if not in_streamlit:
                         print("✅ Received response from Claude\n")
