@@ -827,9 +827,6 @@ def _upload_biweekly_to_drive():
         st.error(f"❌ Error uploading to Google Drive: {str(e)}")
         import traceback
         st.code(traceback.format_exc())
-                        
-            except Exception as e:
-                st.error(f"❌ Error generating report: {str(e)}")
 
 def show_qa_chat():
     """Q&A chat with Claude."""
