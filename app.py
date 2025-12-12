@@ -724,7 +724,16 @@ def show_biweekly_reports():
         results = st.session_state['biweekly_results']
         st.markdown("---")
         st.markdown("### 📄 Biweekly Report Preview")
-        st.markdown(results['report_content'])
+        # Format the content to ensure bullet points are on separate lines
+        formatted_content = results['report_content']
+        # Replace bullet points that run together with proper line breaks
+        # Pattern: "• text • text" -> "• text\n\n• text"
+        import re
+        # Add double newline before bullets in "What This Means", "What We're Optimizing", "Next Steps" sections
+        formatted_content = re.sub(r'(What This Means:|What We\'re Optimizing:|Next Steps.*?:)\s*\n\s*•', r'\1\n\n•', formatted_content)
+        # Ensure bullets are separated by blank lines
+        formatted_content = re.sub(r'•\s+([^\n•]+)\s+•', r'• \1\n\n•', formatted_content)
+        st.markdown(formatted_content)
         
         # Save options
         st.markdown("---")

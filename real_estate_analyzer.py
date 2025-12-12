@@ -679,8 +679,8 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             if in_trend and line_stripped and not line_stripped.startswith('**'):
                 trend_text += line_stripped + " "
             
-            # Extract what means bullets
-            if in_what_means and (line_stripped.startswith('•') or line_stripped.startswith('-')):
+            # Extract what means bullets (skip blank lines)
+            if in_what_means and line_stripped and (line_stripped.startswith('•') or line_stripped.startswith('-')):
                 what_means.append(line_stripped.lstrip('•-').strip())
         
         # Create Key Metrics table with color coding
@@ -798,6 +798,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             story.append(Paragraph("What This Means", section_style))
             for bullet in what_means:
                 story.append(Paragraph(f"• {bullet}", bullet_style))
+                story.append(Spacer(1, 6))  # Add space between bullets
         
         story.append(PageBreak())
         
@@ -840,10 +841,10 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 if len(parts) >= 4 and parts[0] != 'Keyword/Ad Group':
                     whats_working.append(parts[:4])
             
-            if in_optimizations and (line_stripped.startswith('•') or line_stripped.startswith('-')):
+            if in_optimizations and line_stripped and (line_stripped.startswith('•') or line_stripped.startswith('-')):
                 optimizations.append(line_stripped.lstrip('•-').strip())
             
-            if in_next_steps and (line_stripped.startswith('•') or line_stripped.startswith('-')):
+            if in_next_steps and line_stripped and (line_stripped.startswith('•') or line_stripped.startswith('-')):
                 next_steps.append(line_stripped.lstrip('•-').strip())
         
         # What's Working table
@@ -880,6 +881,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             story.append(Paragraph("What We're Optimizing", section_style))
             for opt in optimizations[:5]:
                 story.append(Paragraph(f"• {opt}", bullet_style))
+                story.append(Spacer(1, 6))  # Add space between bullets
             story.append(Spacer(1, 0.2*inch))
         
         # Next Steps
@@ -887,6 +889,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             story.append(Paragraph("Next Steps (Next 2 Weeks)", section_style))
             for step in next_steps[:5]:
                 story.append(Paragraph(f"• {step}", bullet_style))
+                story.append(Spacer(1, 6))  # Add space between bullets
         
         # Build PDF
         doc.build(story)
@@ -4428,10 +4431,16 @@ Format: "Metric Name: value 🟢 (description)"
 [Brief 2-3 sentence description of daily lead trends and patterns]
 
 **What This Means:**
+
 • [Bullet point 1 - plain English explanation]
+
 • [Bullet point 2 - plain English explanation]
+
 • [Bullet point 3 - plain English explanation]
+
 • [Bullet point 4 if needed]
+
+**IMPORTANT**: Each bullet point MUST be on its own line with a blank line between bullets for proper formatting.
 
 **PAGE 2: ACTIONS & INSIGHTS**
 
@@ -4444,14 +4453,24 @@ Format: "Metric Name: value 🟢 (description)"
 | [Name] | [Number] | $[Amount] | [One sentence reason] |
 
 **What We're Optimizing:**
-• [Action taken] → [Expected impact]
-• [Action taken] → [Expected impact]
+
 • [Action taken] → [Expected impact]
 
+• [Action taken] → [Expected impact]
+
+• [Action taken] → [Expected impact]
+
+**IMPORTANT**: Each bullet point MUST be on its own line with a blank line between bullets for proper formatting.
+
 **Next Steps (Next 2 Weeks):**
+
 • [Specific action 1]
+
 • [Specific action 2]
+
 • [Specific action 3]
+
+**IMPORTANT**: Each bullet point MUST be on its own line with a blank line between bullets for proper formatting.
 
 </biweekly_report>
 
