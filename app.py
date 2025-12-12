@@ -98,6 +98,30 @@ st.markdown("""
         border: none;
         padding: 0.5rem 1rem;
         font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    /* Sidebar navigation button styles */
+    div[data-testid*="nav_"] > button {
+        background-color: #2d3748 !important;
+        border: 2px solid #1a202c !important;
+        color: #e2e8f0 !important;
+    }
+    div[data-testid*="nav_"] > button:hover {
+        background-color: #374151 !important;
+        border-color: #4b5563 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    /* Selected button style - lighter shade with darker outline */
+    div[data-testid*="nav_"] > button[kind="primary"],
+    .sidebar-nav-selected > button {
+        background-color: #4a5568 !important;
+        border: 2px solid #2d3748 !important;
+        color: white !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -163,19 +187,26 @@ def main():
             st.image("https://via.placeholder.com/200x60/1a5490/ffffff?text=Google+Ads", use_container_width=True)
         st.markdown("---")
         
-        page = st.radio(
-            "Navigation",
-            [
-                "📊 Campaign Analysis",
-                "📝 Ad Copy Optimization",
-                "🔍 Keyword Research",
-                "📄 Biweekly Reports",
-                "💬 Ask Claude",
-                "➕ Create Account",
-                "🎯 Create Campaign"
-            ],
-            label_visibility="collapsed"
-        )
+        # Navigation buttons
+        nav_items = [
+            ("📊 Campaign Analysis", "📊 Campaign Analysis"),
+            ("📝 Ad Copy Optimization", "📝 Ad Copy Optimization"),
+            ("🔍 Keyword Research", "🔍 Keyword Research"),
+            ("📄 Biweekly Reports", "📄 Biweekly Reports"),
+            ("💬 Ask Claude", "💬 Ask Claude"),
+            ("➕ Create Account", "➕ Create Account"),
+            ("🎯 Create Campaign", "🎯 Create Campaign")
+        ]
+        
+        for nav_text, nav_value in nav_items:
+            is_selected = (st.session_state.current_page == nav_value)
+            button_type = "primary" if is_selected else "secondary"
+            
+            if st.button(nav_text, key=f"nav_{nav_value}", use_container_width=True, type=button_type):
+                st.session_state.current_page = nav_value
+                st.rerun()
+        
+        page = st.session_state.current_page
         
         st.markdown("---")
         st.markdown("### Settings")
