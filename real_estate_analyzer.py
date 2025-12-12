@@ -1220,6 +1220,80 @@ You are an elite Google Ads Senior Account Manager and Strategist with 10+ years
 
 {CHANGELOG_CONTEXT}
 
+## Change Tracking & Context-Aware Analysis
+
+**CRITICAL: You have NO memory between conversations unless changelog context is provided above.**
+
+When changelog context is provided (in the "PREVIOUS CHANGES & CONTEXT" section above), you MUST:
+
+### 1. Recognize What Was Implemented
+- Review the changelog to see what changes were already made
+- Acknowledge in your analysis: "I see you paused those 8 keywords as recommended in the last report"
+- NEVER recommend changes that were already implemented (check the changelog first)
+
+### 2. Assess Impact of Changes
+For each change listed in the changelog, provide IMPACT ANALYSIS:
+
+**Format for Impact Analysis:**
+```
+[Change Name] (Implemented [Date]):
+- Before: [Previous metrics - spend, leads, CPA, etc.]
+- After: [Current metrics from campaign data]
+- Impact: [Quantify the change - % improvement, $ saved, leads gained, etc.]
+- Verdict: SUCCESS ✅ / PARTIAL SUCCESS ⚠️ / NEEDS ADJUSTMENT ❌
+```
+
+**Example:**
+```
+Keyword Pauses (Implemented Feb 3):
+- Before: $6,847 spend, 28 leads, $244 CPA
+- After: $7,425 spend, 32 leads, $228 CPA
+- Impact: CPA improved 7%, freed $450/week for top performers, lead volume increased 14%
+- Verdict: SUCCESS ✅
+```
+
+### 3. Avoid Duplicate Recommendations
+**CRITICAL RULE:** If a change is listed in the changelog as already implemented, DO NOT recommend it again.
+
+**BAD Example (Without Context):**
+- Period 1: "Pause these 8 underperforming keywords"
+- Period 2: "Pause these 8 underperforming keywords" ← DUPLICATE! Don't do this.
+
+**GOOD Example (With Context):**
+- Period 1: "Pause these 8 underperforming keywords" [implemented]
+- Period 2: "I see you paused those 8 keywords. The impact was positive (CPA improved 7%). Now let's focus on scaling the winners..."
+
+### 4. Build on Successes
+When a change was successful:
+- Identify what made it successful
+- Recommend scaling or expanding that success
+- Example: "The Foreclosure ad group responded extremely well to the budget increase (8 leads → 12 leads). Recommend increasing its allocation further from $80/day to $120/day."
+
+### 5. Address Failures
+When a change didn't work or had negative impact:
+- Acknowledge the failure honestly
+- Explain why it might not have worked
+- Recommend corrective action
+- Example: "The Probate ad group launched Feb 7 only generated 2 leads at $450 CPA - 5x your target. Recommend pausing and reallocating that $40/day to the proven Foreclosure ad group."
+
+### 6. Track Long-Term Progress
+When multiple periods of changelog data are available:
+- Show trend analysis across periods
+- Identify compound effects of multiple optimizations
+- Example: "3-Period Trend: Period 1: 25 leads/$265 CPA → Period 2: 28 leads/$244 CPA → Period 3: 32 leads/$228 CPA. Overall: +28% more leads, -14% lower CPA. Total improvement: 48% efficiency gain."
+
+### 7. Provide NEW Recommendations
+After acknowledging previous changes and their impact:
+- Focus on NEW opportunities that haven't been tried
+- Build on what worked, avoid what didn't
+- Provide specific, actionable next steps
+
+**Questions to Address When Changelog Context Exists:**
+1. What was the impact of each change made? (Show before/after metrics)
+2. Which changes worked well? Which didn't? Why?
+3. What are new opportunities or issues that emerged this period?
+4. What should we do next? (Don't repeat what was already done)
+
 **CAMPAIGN DATA TO ANALYZE:**
 
 <campaign_data>
@@ -4849,19 +4923,38 @@ class RealEstateAnalyzer:
             changelog_section = f"""
 **PREVIOUS CHANGES & CONTEXT:**
 
-The following information shows changes made to this campaign since the last analysis. Use this context to:
-- Recognize what was already implemented (don't repeat those recommendations)
-- Assess the impact of previous changes
-- Build on successes and address any issues that emerged
-- Provide NEW recommendations that haven't been tried yet
+The following changelog shows changes made to this campaign since the last analysis. This is CRITICAL context - you have no memory between conversations, so this changelog is your only way to know what was already done.
 
 {changelog_context}
 
-**IMPORTANT:** When making recommendations:
-1. Acknowledge which previous changes were successful or unsuccessful
-2. Do NOT recommend changes that were already implemented (check the changelog above)
-3. Build on what worked and avoid what didn't
-4. Provide NEW actionable recommendations based on current data
+**YOUR RESPONSIBILITIES WITH THIS CONTEXT:**
+
+1. **Review the changelog carefully** - Every change listed above was already implemented. Do NOT recommend them again.
+
+2. **Assess Impact** - For each change in the changelog, compare the "Before" metrics (if provided) with current campaign data to determine:
+   - Did it improve performance? (Show before/after metrics)
+   - What was the quantifiable impact? (% change, $ saved, leads gained)
+   - Was it successful, partial, or unsuccessful?
+
+3. **Acknowledge Previous Work** - Start your analysis by recognizing what was implemented:
+   - "I see you paused those 8 keywords as recommended in the last report..."
+   - "The budget increase from $246/day to $275/day shows positive results..."
+
+4. **Build on Successes** - If a change worked well:
+   - Recommend scaling or expanding that success
+   - Example: "The Foreclosure ad group responded well to budget increase. Recommend increasing allocation further..."
+
+5. **Address Failures** - If a change didn't work:
+   - Acknowledge it honestly
+   - Explain why it might not have worked
+   - Recommend corrective action or reallocation
+
+6. **Provide NEW Recommendations** - After analyzing previous changes:
+   - Focus on NEW opportunities that haven't been tried
+   - Don't repeat what's already in the changelog
+   - Build on what worked, avoid what didn't
+
+**REMEMBER:** The changelog above is your memory. Use it to provide intelligent, context-aware recommendations that build on previous work rather than starting from scratch.
 
 """
         else:
