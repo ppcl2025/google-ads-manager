@@ -845,7 +845,9 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                         ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
                     ]))
                     story.append(metric_table)
-                    story.append(Spacer(1, 0.15*inch))
+                    # Reduce spacing between rows to fit all 3 rows on first page
+                    if i < 2:  # Don't add spacer after last row
+                        story.append(Spacer(1, 0.1*inch))
             
             story.append(Spacer(1, 0.2*inch))
         
