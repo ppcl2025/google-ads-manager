@@ -684,6 +684,43 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 what_means.append(line_stripped.lstrip('•-').strip())
         
         # Create Key Metrics table with color coding
+        # If no metrics parsed, try to extract them more broadly
+        if not metrics_data:
+            # Fallback: try to find any lines with metrics even if section detection failed
+            for i, line in enumerate(lines):
+                line_stripped = line.strip()
+                # Look for common metric patterns
+                if any(x in line_stripped for x in ['Total Leads:', 'Cost Per Lead:', 'Ad Spend:', 'Conversion Rate:', 'Return on Ad Spend:', 'ROAS:']):
+                    # Try to parse it
+                    for pattern in [
+                        r'[-•]?\s*(.+?):\s*([^🟢🟡🔴]+?)([🟢🟡🔴])\s*(?:\((.+?)\))?',
+                        r'[-•]?\s*(.+?):\s*([^🟢🟡🔴]+?)([🟢🟡🔴])\s+(.+?)$',
+                    ]:
+                        match = re.match(pattern, line_stripped)
+                        if match:
+                            metric_name = match.group(1).strip()
+                            metric_value = match.group(2).strip()
+                            emoji = match.group(3) if len(match.groups()) >= 3 and match.group(3) else ""
+                            description = match.group(4).strip() if len(match.groups()) >= 4 and match.group(4) else ""
+                            
+                            # Determine color
+                            if '🟢' in emoji:
+                                status_color = COLOR_GREEN
+                            elif '🟡' in emoji:
+                                status_color = COLOR_YELLOW
+                            elif '🔴' in emoji:
+                                status_color = COLOR_RED
+                            else:
+                                status_color = COLOR_GRAY
+                            
+                            metrics_data.append({
+                                'name': metric_name,
+                                'value': metric_value,
+                                'description': description,
+                                'color': status_color
+                            })
+                            break
+        
         if metrics_data:
             story.append(Paragraph("Key Metrics:", section_style))
             
