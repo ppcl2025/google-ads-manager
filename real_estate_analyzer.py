@@ -771,6 +771,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         
         if metrics_data:
             story.append(Paragraph("Key Metrics:", section_style))
+            story.append(Spacer(1, 0.1*inch))  # Reduced spacing after header
             
             # Create metric cards in a 2-column layout with 3 metrics per column
             # Split metrics into two columns: first 3 in left column, next 3 in right column
@@ -838,16 +839,16 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                     metric_table.setStyle(TableStyle([
                         ('BACKGROUND', (0, 0), (-1, -1), COLOR_BG_LIGHT),
                         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-                        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-                        ('TOPPADDING', (0, 0), (-1, -1), 14),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+                        ('TOPPADDING', (0, 0), (-1, -1), 10),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
                         ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
                     ]))
                     story.append(metric_table)
-                    # Reduce spacing between rows to fit all 3 rows on first page
+                    # Minimal spacing between rows to fit all 3 rows on first page
                     if i < 2:  # Don't add spacer after last row
-                        story.append(Spacer(1, 0.1*inch))
+                        story.append(Spacer(1, 0.05*inch))
             
             story.append(Spacer(1, 0.2*inch))
         
