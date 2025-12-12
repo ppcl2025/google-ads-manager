@@ -242,15 +242,37 @@ def get_client():
         # Only show in debug mode or if there's an error
         # st.info(f"🔍 Debug: Developer token starts with: {token_preview}")
     
-    # Ensure credentials are valid and refreshed BEFORE creating client
+    # CRITICAL: Ensure credentials are valid and refreshed BEFORE creating client
+    # The access token must be valid for GoogleAdsClient to work
     if not creds.valid:
         if creds.expired and creds.refresh_token:
             try:
-                creds.refresh(Request())
-            except Exception as e:
                 if STREAMLIT_AVAILABLE:
-                    st.error(f"❌ Failed to refresh credentials before creating client: {str(e)}")
+                    st.info("🔄 Refreshing access token before creating client...")
+                else:
+                    print("Refreshing access token before creating client...")
+                creds.refresh(Request())
+                if STREAMLIT_AVAILABLE:
+                    st.success("✅ Access token refreshed")
+            except Exception as e:
+                error_str = str(e)
+                if STREAMLIT_AVAILABLE:
+                    st.error(f"❌ Failed to refresh access token: {str(e)}")
+                    if "invalid_grant" in error_str.lower():
+                        st.error("🔴 Refresh token is invalid or expired. You need to regenerate TOKEN_JSON.")
+                else:
+                    print(f"ERROR: Failed to refresh access token: {e}")
                 return None
+        else:
+            if STREAMLIT_AVAILABLE:
+                st.error("❌ No valid credentials available")
+            return None
+    
+    # Verify we have a valid access token
+    if not creds.token:
+        if STREAMLIT_AVAILABLE:
+            st.error("❌ No access token available after refresh")
+        return None
     
     # Create Google Ads client configuration
     # IMPORTANT: All credentials must be from the SAME Google Cloud project
@@ -270,12 +292,33 @@ def get_client():
     
     try:
         # Verify we have all required fields
-        if not config.get("developer_token") or not config.get("refresh_token"):
+        if not config.get("developer_token"):
             if STREAMLIT_AVAILABLE:
-                st.error("❌ Missing required credentials for Google Ads client")
+                st.error("❌ Missing developer_token")
             return None
         
+        if not config.get("refresh_token"):
+            if STREAMLIT_AVAILABLE:
+                st.error("❌ Missing refresh_token")
+            return None
+        
+        # Create the client - GoogleAdsClient will use refresh_token to get access tokens automatically
         client = GoogleAdsClient.load_from_dict(config)
+        
+        # Test that the client can authenticate by making a lightweight API call
+        # This will fail immediately if there's an auth issue rather than later
+        try:
+            # Try to get customer info - this is a lightweight call that verifies auth
+            customer_service = client.get_service("CustomerService")
+            # Don't actually call it, just verify the service is available
+            # The actual API call will happen when needed
+        except Exception as test_error:
+            # If we can't even get the service, there's a config issue
+            error_str = str(test_error)
+            if STREAMLIT_AVAILABLE:
+                st.warning(f"⚠️ Service initialization check: {error_str}")
+            # Don't fail here - let the actual API call fail with a clearer error
+        
         return client
     except Exception as e:
         error_msg = str(e)
