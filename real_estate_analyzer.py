@@ -828,8 +828,8 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                         ('LEFTPADDING', (0, 0), (-1, -1), 12),
                         ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-                        ('TOPPADDING', (0, 0), (-1, -1), 12),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                        ('TOPPADDING', (0, 0), (-1, -1), 14),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
                         ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
                     ]))
                     story.append(metric_table)
