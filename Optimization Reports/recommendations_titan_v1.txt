@@ -1,0 +1,185 @@
+============================================================
+Real Estate Google Ads Optimization Recommendations
+============================================================
+
+Account: 000 - Titan Home Solutions
+Campaign: PPCL - Central NC - v3
+Date Range: Last 60 days
+
+**EXECUTIVE SUMMARY**
+Campaign is performing well with 28.24% conversion rate and 3.33 ROAS, but has critical budget limitations and keyword optimization opportunities. The campaign is using Smart Bidding (Maximize Conversions) with 37 conversions in the last period, indicating readiness to progress to Target CPA bidding. Top issues include 60.83% rank lost impression share, underperforming ad groups consuming budget with zero conversions, and 180 of 191 keywords generating no conversions.
+
+**PRIORITY RECOMMENDATIONS (Top 5)**
+
+1. **CRITICAL - Pause Zero-Converting Ad Groups**
+   - Pause 14 ad groups with 0 conversions consuming impression share: "Fast (EM)", "As-Is (EM)", "Foreclosure (PM)", "Cash For House (EM)", "Inherited (EM)", "As-Is (PM)", "Cash Buyers (EM)", "Fast (PM)", "Without A Realtor (PM)", "Who Buys Houses (EM)", "Cash For House (PM)", "Companies That Buy Houses (PM)", "Without A Realtor (EM)"
+   - Expected impact: Reallocate budget to the 3 converting ad groups, potentially increase conversions by 25-40%
+   - Implementation priority: Critical
+
+2. **CRITICAL - Progress to Target CPA Bidding Strategy**
+   - Change from Maximize Conversions to Target CPA with initial target of $320 (10% higher than current $291.68 CPA)
+   - Campaign has 37 conversions with stable performance, meeting progression criteria
+   - Expected impact: Maintain conversion volume while reducing cost per conversion by 8-12%
+   - Implementation priority: Critical
+
+3. **HIGH - Remove High-Cost Zero-Converting Keywords**
+   - Pause 180 keywords generating 0 conversions, including expensive terms like "home cash offer" (phrase) - $807 spent, 0 conversions
+   - Focus algorithm budget on the 11 converting keywords
+   - Expected impact: Save $2,000+ monthly in wasted spend, improve overall campaign efficiency by 20%
+   - Implementation priority: High
+
+4. **HIGH - Increase Campaign Budget**
+   - Current impression share only 32.74% with 60.83% rank lost share indicates severe budget constraints
+   - Increase daily budget from $246.71 to $400 (62% increase) to capture more motivated seller searches
+   - Expected impact: Increase conversions by 40-60% based on lost impression share recovery
+   - Implementation priority: High
+
+5. **MEDIUM - Add High-Intent Negative Keywords**
+   - Add negatives based on search terms: "attorney", "lawyer", "law", "legal", "diy", "fsbo", "agent", "realtor", "listing", "mls"
+   - Prevent irrelevant traffic from legal/DIY searches consuming budget
+   - Expected impact: Improve conversion rate by 3-5%, reduce cost per conversion by $15-25
+   - Implementation priority: Medium
+
+**AD GROUP OPTIMIZATIONS**
+
+**Top Performing Ad Groups (Scale/Maintain):**
+1. **"Need (EM)" (ID: 179164575586)** - Maximize Conversions Campaign
+   - Current: $3,264 cost, 16 conversions, 34.04% conversion rate, $204 CPA
+   - Action: Maintain current structure, add more "sell my house" keyword variations
+   - Expected: Continue strong performance as top converter
+
+2. **"Cash Buyers (PM)" (ID: 179164574306)** - Maximize Conversions Campaign  
+   - Current: $3,887 cost, 12 conversions, 27.27% conversion rate, $324 CPA
+   - Action: Expand with more cash buyer keywords, test broader match types
+   - Expected: Increase conversion volume by 20-30%
+
+3. **"Who Buys Houses (PM)" (ID: 179164575306)** - Maximize Conversions Campaign
+   - Current: $789 cost, 3 conversions, 60% conversion rate, $263 CPA
+   - Action: Increase keyword coverage in this high-converting theme
+   - Expected: Scale this successful ad group for more volume
+
+**Ad Groups to Pause (Zero Conversions):**
+1. **"Fast (EM)" through "Without A Realtor (EM)"** - 14 ad groups with 0 conversions
+   - These ad groups are consuming impression share but generating no leads
+   - Action: Pause immediately to reallocate budget to converting ad groups
+   - Expected: 25-40% improvement in overall campaign efficiency
+
+**AD COPY OPTIMIZATIONS**
+
+**Top Priority Ad Rewrites:**
+
+1. **Ad ID 752630856404 (Cash Buyers PM)**
+   - Current: "Get {KeyWord:Cash Offer} For Home | #1 Cash Buyer in NC | We Buy Houses For Cash"
+   - Issue: Generic messaging, not addressing seller pain points
+   - New Headlines: "Cash For Your House This Week | Sell House Fast - No Repairs Needed | Skip Realtor Fees - Get Cash Offer"
+   - New Descriptions: "Facing Foreclosure? Inherited Property? We Buy Houses AS-IS In Any Condition. Close In 7 Days. No Fees, No Commissions, No Hassle."
+   - Expected: 15-25% CTR improvement, better motivated seller attraction
+
+2. **Ad ID 752630856410 (Need EM)**
+   - Current top performer but can improve urgency messaging  
+   - Add Headlines: "Stop Foreclosure Fast | Sell Before Bank Takes House | Quick Cash - Close This Week"
+   - Expected: 10-15% conversion rate improvement
+
+**KEYWORD OPTIMIZATIONS**
+
+**Keywords to Pause (High Cost, Zero Conversions):**
+
+1. **"home cash offer" (phrase)** - $807 spent, 0 conversions, consuming significant budget
+2. **"we buy houses nc" (phrase)** - $232 spent, 0 conversions
+3. **"vets buy houses" (phrase)** - $78 spent, 0 conversions
+4. **"how to sell your house for cash" (phrase)** - $44 spent, 0 conversions
+5. **All keywords with 0 impressions and 0 clicks** - 150+ keywords to remove entirely
+
+**Keywords to Change Match Type:**
+
+1. **"cash home buyer" (phrase) → exact** - Converting well at $80 CPC, 31% conversion rate
+2. **"sell my house" (phrase) → exact** - Strong performer, focus budget on exact intent
+3. **"who will buy my home" (phrase) → exact** - 60% conversion rate, make more targeted
+
+**New Keywords to Add (Based on Search Terms):**
+
+High-performing search terms to add as keywords:
+1. **"sell my home"** - exact match - generated 3 clicks, 66.67% conversion rate
+2. **"short sale home buyers"** - exact match - 150% CTR, 33% conversion rate  
+3. **"home investors"** - exact match - 100% CTR, 50% conversion rate
+4. **"cash buyers near me"** - exact match - 150% CTR, 33% conversion rate
+5. **"instant cash offer for house"** - exact match - 100% CTR, 100% conversion rate
+
+**NEGATIVE KEYWORD RECOMMENDATIONS**
+
+Add to Campaign Level:
+- "attorney", "lawyer", "law", "legal" (prevent legal searches)
+- "diy", "fsbo", "by owner" (prevent DIY sellers)
+- "agent", "realtor", "listing", "mls" (prevent agent searches)  
+- "estimate", "value", "worth", "appraisal" (prevent valuation-only searches)
+- "rent", "rental", "lease" (prevent rental searches)
+- "loan", "mortgage", "financing" (prevent financing searches)
+
+**SEARCH TERMS INSIGHTS**
+
+**Top Converting Search Terms to Scale:**
+1. "sell my home" - 75% CTR, 66.67% conversion rate - Add as exact match keyword
+2. "short sale home buyers" - 150% CTR, 33.33% conversion rate - High-intent distressed seller
+3. "instant cash offer for house" - 100% CTR, 100% conversion rate - Perfect motivated seller query
+4. "home investors" - 100% CTR, 50% conversion rate - Seller looking for investors specifically
+5. "we buy houses any condition" - 50% CTR, 100% conversion rate - As-is property seller
+
+**Irrelevant Terms to Block:**
+1. "probate lawyers near me" - $67 spent, legal search not seller
+2. "foreclosure attorney near me" - $34 spent, legal help not selling
+3. "north carolina probate laws" - $30 spent, legal research
+4. "mark spain guaranteed offer" - $66 spent, competitor traffic
+5. "reality com", "earnest deposit" - Low-intent browsing
+
+**BIDDING STRATEGY RECOMMENDATIONS**
+
+**Campaign: PPCL - Central NC - v3**
+- Current: Maximize Conversions (Smart Bidding)
+- Conversion data: 37 conversions with stable $291.68 CPA
+- Assessment: Ready for Target CPA progression (exceeds 30 conversion threshold)
+- Recommended change: Switch to Target CPA with $320 initial target (10% higher than current CPA)
+- Allow 2-week learning period, then gradually reduce target by $10-15 every 2 weeks
+- Expected impact: Maintain conversion volume while reducing CPA by 8-15% over 6 weeks
+
+**BUDGET REALLOCATION**
+
+Current daily budget: $246.71 with only 32.74% impression share
+- Increase to $400/day (62% increase) to address 60.83% rank lost impression share
+- With 14 zero-converting ad groups paused, budget will concentrate on 3 high-performing ad groups
+- Expected results: 40-60% increase in conversion volume, improved impression share to 50-60%
+
+**QUALITY SCORE IMPROVEMENTS**
+
+**Keywords Below QS 7:**
+1. **"we buy houses" (exact)** - QS 4, below average creative quality
+   - Action: Create dedicated ad copy highlighting "we buy houses" messaging
+   - Test headlines: "We Buy Houses Fast | We Buy Houses Cash | We Buy Houses AS-IS"
+
+2. **"sell my house as is" (exact)** - QS 3, below average across all components  
+   - Action: Create as-is focused landing page and ad copy
+   - New ad: "Sell House AS-IS | No Repairs Required | Cash Offer This Week"
+
+3. **"companies that buy houses" (exact)** - QS 3, below average creative
+   - Action: Emphasize company credibility and local presence
+   - Headlines: "Top Home Buying Company NC | Licensed Local House Buyers | A+ Rated Home Buyers"
+
+**PERFORMANCE PROJECTIONS**
+
+Based on implementing all recommendations:
+
+**Current Performance:**
+- CTR: 4.96%
+- Conversion Rate: 28.24%  
+- Cost per Conversion: $291.68
+- ROAS: 3.33
+
+**Projected Performance (30-60 days):**
+- CTR: 6.2-6.8% (+25-37% improvement from better ad copy and keyword focus)
+- Conversion Rate: 35-40% (+24-42% improvement from budget reallocation to converting ad groups)
+- Cost per Conversion: $245-265 (-9-16% improvement from Target CPA and waste elimination)
+- ROAS: 4.2-4.8 (+26-44% improvement from efficiency gains)
+
+**Expected Monthly Impact:**
+- Cost savings from waste elimination: $2,000-2,500
+- Additional conversions from budget increase: 15-25 per month
+- Revenue increase from improved ROAS: $8,000-12,000 per month

@@ -1,0 +1,236 @@
+============================================================
+Real Estate Google Ads Optimization Recommendations
+============================================================
+
+Account: 027 - Ironclad Equity Group
+Campaign: PPCL | MSL | Nov 2025
+Date Range: Last 30 days
+
+**EXECUTIVE SUMMARY**
+Campaign performance shows concerning inefficiencies with 0.99 ROAS and $504.63 cost per conversion, far above profitable ranges for real estate investors. Critical issues: 70% of ad groups (16 of 23) generating zero conversions while consuming significant budget, bidding strategy stuck in manual Target Spend limiting optimization potential, and massive budget constraints with 21.96% lost impression share. Implementing recommended optimizations should reduce CPA to $250-300 range and improve ROAS to 1.5-2.0 within 30 days.
+
+**PRIORITY RECOMMENDATIONS (Top 5)**
+
+1. **CRITICAL - Pause Zero-Converting Ad Groups**
+   - Action: Immediately pause 16 ad groups generating 0 conversions after spending $1,521.74 (50% of budget)
+   - Expected Impact: Save $760/month in wasted spend, improve overall ROAS from 0.99 to 1.8-2.2
+   - Implementation Priority: Critical
+   - Specific ad groups to pause: As-Is (PM), Companies That Buy Houses (PM), Inherited (PM), Fast (PM), Home Buyer (PM), Who Buys Houses (PM), all Exact Match ad groups except Home Buyer (EM), Foreclosure (PM), Without A Realtor (PM)
+
+2. **CRITICAL - Switch to Smart Bidding Strategy**
+   - Action: Change from Manual Target Spend to Maximize Conversions (6 conversions meets minimum threshold)
+   - Expected Impact: 15-25% CPA improvement through algorithm optimization, better budget utilization
+   - Implementation Priority: Critical
+   - Current manual bidding is preventing Google's algorithm from optimizing toward conversions
+
+3. **HIGH - Increase Campaign Budget**
+   - Action: Increase daily budget from $98.68 to $150-180 to capture 21.96% lost impression share
+   - Expected Impact: 30-45% increase in conversions (from 6 to 8-9 monthly), maintain CPA with smart bidding
+   - Implementation Priority: High
+   - Budget constraint is limiting reach to motivated sellers during peak search times
+
+4. **HIGH - Add High-Performing Search Terms as Keywords**
+   - Action: Add "webuyhouses com", "liz buys houses", "sell my house for cash near me" as exact match keywords
+   - Expected Impact: 20-30% CTR improvement on high-intent searches currently triggering through broad match
+   - Implementation Priority: High
+   - These search terms show strong conversion intent but limited impression share
+
+5. **HIGH - Implement Aggressive Negative Keyword List**
+   - Action: Add 50+ negative keywords to block low-intent searches (attorney, lawyer, fsbo, agent, realtor, diy, worth, value, estimate)
+   - Expected Impact: 10-15% budget savings by eliminating irrelevant clicks, improve conversion rate
+   - Implementation Priority: High
+   - Search terms data shows significant waste on informational and professional service queries
+
+**AD GROUP OPTIMIZATIONS**
+
+**Top Performers to Scale:**
+- **Cash Buyers (PM) - ID: 192028327830** (Smart Bidding - Target Spend)
+  - Performance: $612.48 cost, 3 conversions, $204.16 CPA, 2.94% CTR
+  - Action: Maintain as primary ad group after pausing underperformers (will automatically receive more budget share)
+  - Expected outcome: 40-60% increase in impression share and conversions
+
+- **Need (PM) - ID: 192028328070** (Smart Bidding - Target Spend)
+  - Performance: $483.15 cost, 1 conversion, $483.15 CPA, 2.03% CTR
+  - Action: Keep active but monitor CPA closely; add more exact match keywords from search terms
+  - Expected outcome: CPA should decrease to $250-300 range with better keyword targeting
+
+- **We Buy [Ugly] Houses (PM) - ID: 192028328590** (Smart Bidding - Target Spend)
+  - Performance: $407.44 cost, 1 conversion, $407.44 CPA, 4.17% CTR
+  - Action: Keep active; strong CTR indicates good message-market fit
+  - Expected outcome: CPA improvement to $200-250 with smart bidding optimization
+
+**Ad Groups to Pause (Zero Conversions):**
+- **As-Is (PM) - ID: 192028328350**: $301.90 spent, 0 conversions, 14 clicks
+- **Companies That Buy Houses (PM) - ID: 192028327630**: $253.42 spent, 0 conversions, 25 clicks
+- **Inherited (PM) - ID: 192028327910**: $212.78 spent, 0 conversions, 16 clicks
+- **Fast (PM) - ID: 192028328390**: $153.32 spent, 0 conversions, 15 clicks
+- **All Exact Match ad groups except Home Buyer (EM)**: Combined $213.93 spent, 0 conversions
+- **Total Savings**: $1,521.74 (50% of total spend) to be reallocated to converting ad groups
+
+**AD COPY OPTIMIZATIONS**
+
+**Ad ID: 782482632694 (Cash Buyers PM)**
+- Current Headlines: "#1 Cash Buyer Near Me | Get {KeyWord:Cash Offer} For Home | We Buy Houses For Cash"
+- Performance Issue: Good conversion rate but could improve CTR (2.94% vs 4%+ target)
+- New Headline Recommendations:
+  - H1: "Cash Offer This Week | Sell House Fast"
+  - H2: "We Buy Houses Any Condition | No Repairs"
+  - H3: "Close in 7 Days | Fair Cash Offer"
+- Expected Improvement: 25-35% CTR increase, maintain conversion rate
+
+**Ad ID: 782482632688 (Need PM)**
+- Current Headlines: "#1 Home Buyer In {LOCATION(City)} | Need To Sell Your House? | We Buy Houses In {LOCATION(City)}"
+- Performance Issue: Low CTR (1.92%) indicating weak urgency messaging
+- New Headline Recommendations:
+  - H1: "Need To Sell Your House Fast?"
+  - H2: "Get Cash Offer Today | Any Situation"
+  - H3: "Facing Foreclosure? We Can Help"
+- Expected Improvement: 40-50% CTR increase with stronger pain point messaging
+
+**New A/B Testing Recommendations:**
+Test emotional vs. transactional messaging across all active ad groups:
+- Emotional: "Behind on Payments? We Help Homeowners"
+- Transactional: "Sell House Fast | Cash Offer Today"
+
+**KEYWORD OPTIMIZATIONS**
+
+**Keywords to Pause (High Cost, Zero Conversions):**
+- "sell my house as is" (PHRASE) - $179.29 spent, 0 conversions, Quality Score 0
+- "companies that buy houses" (PHRASE) - $164.60 spent, 0 conversions, Quality Score 0
+- "sell property cash" (BROAD) - $162.83 spent, 1 conversion but $162.83 CPA too high
+- "sell my probate house" (PHRASE) - $100.38 spent, 0 conversions, Quality Score 0
+- "who buys homes fast" (PHRASE) - $97.28 spent, 0 conversions, Quality Score 0
+- **Expected Savings**: $704.28/month in wasted keyword spend
+
+**Keywords to Change Match Type:**
+- "cash home buyer" (PHRASE) → Add as EXACT MATCH in Cash Buyers (PM)
+  - Rationale: Currently getting conversions but broad match is likely wasting budget
+- "we buy houses" (PHRASE) → Add as EXACT MATCH in We Buy Houses (PM)
+  - Rationale: High search volume term needs exact match control
+
+**New Keywords to Add (Based on Search Terms Data):**
+- "webuyhouses com" - EXACT MATCH → We Buy Houses (PM) (search term converting at 33% rate)
+- "liz buys houses" - EXACT MATCH → Home Buyer (PM) (100% conversion rate on 2 clicks)
+- "sell my house for cash near me" - EXACT MATCH → Cash Buyers (PM)
+- "we buy houses cleveland" - EXACT MATCH → We Buy Houses (PM)
+- "buy houses as is near me" - PHRASE MATCH → Cash Buyers (PM)
+
+**Note: Campaign uses Smart Bidding (Target Spend), so no manual bid adjustments recommended. Algorithm will automatically optimize bids based on conversion probability.**
+
+**NEGATIVE KEYWORD RECOMMENDATIONS**
+
+**Immediate Negatives to Add (Campaign Level):**
+- attorney, lawyer, law, legal, court, advice
+- agent, realtor, broker, listing, mls, commission
+- worth, value, estimate, appraisal, zillow, zestimate
+- fsbo, "for sale by owner", "sell myself", diy
+- rent, rental, lease, tenant, landlord
+- loan, mortgage, refinance, lender, financing
+- how, guide, tips, steps, process, "how to"
+- free, cheap, discount, wholesale (to avoid DIY searchers)
+
+**Geographic Negatives:**
+- Add cities/states outside service area based on search terms showing irrelevant locations
+
+**Competitor Negatives:**
+- Add specific competitor company names appearing in search terms
+
+**SEARCH TERMS INSIGHTS**
+
+**Top Converting Search Terms to Promote:**
+1. "webuyhouses com" - 33.33% conversion rate, add as exact match keyword
+2. "liz buys houses" - 100% conversion rate (small sample), add as exact match
+3. "sell my house" - Multiple variations showing, create dedicated ad group
+4. "buy house as is near me" - Strong intent indicator, add as phrase match
+5. "cash offer for home" - 100% CTR, add as exact match
+
+**High-Volume Waste Terms to Block:**
+1. "homevestors" - 95 impressions, 1 click, 0 conversions (competitor traffic)
+2. "assist2sell" - 7 impressions showing agent-seeking intent
+3. "how" queries - Multiple informational searches with no conversion intent
+4. Location searches outside service area
+5. Valuation-only searches ("worth", "value" terms)
+
+**Search Query Patterns:**
+- 60% searches show high buyer intent ("cash", "sell fast", "as is")
+- 25% searches are informational/research phase
+- 15% searches are seeking real estate professionals
+- Opportunity: Create dedicated ad groups for inheritance/probate situations (strong search volume)
+
+**BIDDING STRATEGY RECOMMENDATIONS**
+
+**Current Campaign: PPCL | MSL | Nov 2025**
+- Current Strategy: TARGET_SPEND (Manual Bidding)
+- Conversion Data: 6 conversions in reporting period (sufficient for smart bidding)
+- CPA Pattern: $504.63 average (too high and unstable)
+- Recommendation: **Switch to Maximize Conversions immediately**
+- Rationale: Target Spend is focusing on spend rather than conversions; 6+ conversions meets threshold for smart bidding
+- Implementation: Change bid strategy to Maximize Conversions, allow 2-week learning period
+- Expected Impact: 15-25% CPA improvement, better budget utilization across high-performing keywords
+- Timeline: 2-3 weeks to see stabilized performance
+
+**Target CPA Progression Plan:**
+- Phase 1: Maximize Conversions for 4-6 weeks to build conversion data
+- Phase 2: Switch to Target CPA when reaching 20+ conversions/month
+- Recommended Target CPA: Start at $350 (current average minus 30%), gradually decrease to $250-275
+
+**BUDGET REALLOCATION**
+
+**Current Budget Issues:**
+- Daily budget: $98.68 causing 21.96% lost impression share
+- 50% of budget wasted on zero-converting ad groups
+- Missing motivated seller searches during peak hours
+
+**Recommended Budget Changes:**
+1. **Immediate**: Increase daily budget to $150 (+52% increase)
+2. **After pausing waste**: Budget reallocation will improve efficiency by 40-60%
+3. **Target monthly spend**: $4,500 (vs current $2,960)
+4. **Expected ROI**: Additional $1,540 monthly spend should generate 5-7 additional conversions
+
+**Budget Allocation by Ad Group (After Optimization):**
+- Cash Buyers (PM): 40% of budget (highest converting)
+- Need (PM): 35% of budget (good volume potential)
+- We Buy Houses (PM): 25% of budget (strong CTR)
+
+**QUALITY SCORE IMPROVEMENTS**
+
+**Critical Quality Score Issues (Score 1-4):**
+- "need to sell my house fast" - QS 1: Create dedicated SKAG, improve ad relevance
+- "I need to sell my house fast" - QS 5: Add keyword to headline, improve landing page match
+- "we buy houses fast" - QS 3: Separate from generic "we buy houses" ad group
+
+**Specific Improvement Actions:**
+1. **Creative Quality Issues**: 75% of keywords show "UNSPECIFIED" - indicates ad relevance problems
+2. **Expected CTR Issues**: Create more compelling headlines with urgency indicators
+3. **Landing Page Issues**: Ensure each ad group has situation-specific landing pages
+
+**Expected Impact**: Improving QS from 3.5 average to 6+ average would reduce CPCs by 20-30%
+
+**PERFORMANCE PROJECTIONS**
+
+**Current Performance Baseline:**
+- CTR: 3.53%
+- Conversion Rate: 3.02%
+- Cost Per Conversion: $504.63
+- ROAS: 0.99
+- Monthly Conversions: ~6
+
+**Projected Performance (30-60 days post-implementation):**
+- CTR: 4.8-5.5% (+36-56% improvement from better ad copy and keyword targeting)
+- Conversion Rate: 4.2-5.8% (+39-92% improvement from eliminating waste, smart bidding)
+- Cost Per Conversion: $250-300 (-40-50% improvement from efficiency gains)
+- ROAS: 1.67-2.0 (+68-102% improvement)
+- Monthly Conversions: 12-18 (+100-200% increase from budget increase and efficiency)
+
+**Financial Impact Summary:**
+- Monthly Cost Savings: $760 from eliminating waste
+- Additional Investment: $1,540 budget increase
+- Net Additional Spend: $780/month
+- Additional Conversions: 8-12 monthly
+- ROI: 150-200% improvement in campaign efficiency
+
+**Implementation Timeline:**
+- Week 1: Pause waste, switch bidding strategy, increase budget
+- Week 2-3: Algorithm learning period, monitor performance
+- Week 4-6: Add new keywords, implement negative keywords, optimize ad copy
+- Week 8+: Consider Target CPA progression based on conversion volume

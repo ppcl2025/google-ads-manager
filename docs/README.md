@@ -1,33 +1,34 @@
-# Documentation
+# Documentation Index
 
-This folder contains all documentation for the Real Estate Google Ads Analyzer.
+## Getting Started
 
-## Documentation Files
+- **[Setup Guide](SETUP.md)** - Complete setup instructions for local development
+- **[Usage Guide](USAGE.md)** - How to use the CLI analyzer
+- **[Streamlit Deployment](STREAMLIT_DEPLOYMENT.md)** - Deploy to Streamlit Cloud
 
-- **[SETUP.md](SETUP.md)** - Complete setup instructions including Google Ads API and Claude API configuration
-- **[USAGE.md](USAGE.md)** - Comprehensive usage guide with examples and best practices
-- **[MODEL_COMPARISON.md](MODEL_COMPARISON.md)** - Guide to choosing between Claude models (Sonnet vs Opus)
+## Troubleshooting
 
-## Quick Links
-
-- **Getting Started**: Start with [SETUP.md](SETUP.md)
-- **Using the Tool**: See [USAGE.md](USAGE.md) for detailed usage instructions
-- **Model Selection**: Check [MODEL_COMPARISON.md](MODEL_COMPARISON.md) to choose the right Claude model
+- **[Authentication Troubleshooting](AUTHENTICATION_TROUBLESHOOTING.md)** - Fix authentication issues
+- **[Model Comparison](MODEL_COMPARISON.md)** - Compare Claude models
 
 ## Project Structure
 
 ```
-.
-├── real_estate_analyzer.py    # Main CLI application
-├── account_manager.py          # MCC/campaign selection
-├── comprehensive_data_fetcher.py  # Data fetching
-├── authenticate.py             # OAuth2 authentication
-├── requirements.txt            # Dependencies
-├── run_real_estate.sh          # Quick start script
-├── README.md                   # Project overview
-└── docs/                       # This folder
-    ├── SETUP.md                # Setup guide
-    ├── USAGE.md                # Usage guide
-    └── MODEL_COMPARISON.md     # Model comparison
+GAds-Claude/
+├── app.py                          # Streamlit web application
+├── real_estate_analyzer.py         # Core analyzer with Claude integration
+├── authenticate.py                 # Google Ads API authentication
+├── account_manager.py              # Account selection utilities
+├── account_campaign_manager.py     # Account/campaign creation
+├── comprehensive_data_fetcher.py   # Google Ads API data fetching
+├── google_ads_manager.py          # Streamlit entry point wrapper
+├── requirements.txt                # Python dependencies
+├── README.md                       # Main project README
+└── docs/                           # All documentation
 ```
 
+## Quick Links
+
+- **Local Development**: See [SETUP.md](SETUP.md)
+- **Web App**: See [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md)
+- **Troubleshooting**: See [AUTHENTICATION_TROUBLESHOOTING.md](AUTHENTICATION_TROUBLESHOOTING.md)
