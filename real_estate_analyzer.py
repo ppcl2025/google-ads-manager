@@ -506,10 +506,11 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import inch
         from reportlab.lib.colors import HexColor, black, white
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, KeepTogether, Image
         from reportlab.lib.enums import TA_LEFT, TA_CENTER
         from datetime import datetime, timedelta
         import re
+        import os
         
         doc = SimpleDocTemplate(output_path, pagesize=letter,
                               rightMargin=0.75*inch, leftMargin=0.75*inch,
@@ -782,7 +783,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                     row_metrics.append(None)
                 metric_cards.append(row_metrics)
             
-                for row_metrics in metric_cards:
+            for row_metrics in metric_cards:
                     table_data = []
                     for metric in row_metrics:
                         if metric:
