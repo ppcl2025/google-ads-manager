@@ -602,6 +602,16 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             if "What This Means:" in line_stripped or "**What This Means:**" in line_stripped:
                 in_trend = False
                 in_what_means = True
+                # Check if there's a bullet on the same line after the colon
+                # Pattern: "What This Means: • text" or "What This Means:• text"
+                colon_pos = line_stripped.find(':')
+                if colon_pos > 0:
+                    after_colon = line_stripped[colon_pos + 1:].strip()
+                    # Check for bullet after colon
+                    if after_colon.startswith('•') or after_colon.startswith('-'):
+                        bullet_text = after_colon.lstrip('•-').strip()
+                        if bullet_text:
+                            what_means.append(bullet_text)
                 continue
             if "PAGE 2:" in line_stripped or "**PAGE 2:" in line_stripped:
                 break
@@ -796,6 +806,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         # What This Means
         if what_means:
             story.append(Paragraph("What This Means", section_style))
+            story.append(Spacer(1, 8))  # Add space after section header
             for bullet in what_means:
                 story.append(Paragraph(f"• {bullet}", bullet_style))
                 story.append(Spacer(1, 6))  # Add space between bullets
@@ -828,12 +839,30 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 in_whats_working = False
                 in_optimizations = True
                 in_next_steps = False
+                # Check if there's a bullet on the same line after the colon
+                colon_pos = line_stripped.find(':')
+                if colon_pos > 0:
+                    after_colon = line_stripped[colon_pos + 1:].strip()
+                    # Check for bullet after colon
+                    if after_colon.startswith('•') or after_colon.startswith('-'):
+                        bullet_text = after_colon.lstrip('•-').strip()
+                        if bullet_text:
+                            optimizations.append(bullet_text)
                 continue
             
             if "Next Steps:" in line_stripped or "**Next Steps:**" in line_stripped:
                 in_whats_working = False
                 in_optimizations = False
                 in_next_steps = True
+                # Check if there's a bullet on the same line after the colon
+                colon_pos = line_stripped.find(':')
+                if colon_pos > 0:
+                    after_colon = line_stripped[colon_pos + 1:].strip()
+                    # Check for bullet after colon
+                    if after_colon.startswith('•') or after_colon.startswith('-'):
+                        bullet_text = after_colon.lstrip('•-').strip()
+                        if bullet_text:
+                            next_steps.append(bullet_text)
                 continue
             
             if in_whats_working and '|' in line_stripped and not line_stripped.startswith('|--'):
@@ -879,6 +908,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         # What We're Optimizing
         if optimizations:
             story.append(Paragraph("What We're Optimizing", section_style))
+            story.append(Spacer(1, 8))  # Add space after section header
             for opt in optimizations[:5]:
                 story.append(Paragraph(f"• {opt}", bullet_style))
                 story.append(Spacer(1, 6))  # Add space between bullets
@@ -887,6 +917,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         # Next Steps
         if next_steps:
             story.append(Paragraph("Next Steps (Next 2 Weeks)", section_style))
+            story.append(Spacer(1, 8))  # Add space after section header
             for step in next_steps[:5]:
                 story.append(Paragraph(f"• {step}", bullet_style))
                 story.append(Spacer(1, 6))  # Add space between bullets
