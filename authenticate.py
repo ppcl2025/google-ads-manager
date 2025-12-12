@@ -196,11 +196,17 @@ def get_client():
             st.error("❌ GOOGLE_ADS_DEVELOPER_TOKEN is empty. Please check your Streamlit secrets.")
         return None
     
+    # Debug: Show partial token for verification (first 10 chars)
+    if STREAMLIT_AVAILABLE:
+        token_preview = developer_token[:10] + "..." if len(developer_token) > 10 else developer_token
+        # Only show in debug mode or if there's an error
+        # st.info(f"🔍 Debug: Developer token starts with: {token_preview}")
+    
     # Create Google Ads client configuration
     config = {
-        "developer_token": developer_token,
-        "client_id": client_id,
-        "client_secret": client_secret,
+        "developer_token": developer_token.strip(),  # Remove any whitespace
+        "client_id": client_id.strip() if client_id else None,
+        "client_secret": client_secret.strip() if client_secret else None,
         "refresh_token": creds.refresh_token,
         "use_proto_plus": True
     }
@@ -217,11 +223,35 @@ def get_client():
     except Exception as e:
         error_msg = str(e)
         if STREAMLIT_AVAILABLE:
-            st.error(f"❌ Error creating Google Ads client: {error_msg}")
+            st.error(f"❌ Error creating Google Ads client")
+            
             # Provide helpful debugging info
-            if "DEVELOPER_TOKEN" in error_msg.upper() or "developer token" in error_msg.lower():
-                st.info("💡 The developer token may be invalid or not properly set in Streamlit secrets.")
-                st.info("💡 Verify GOOGLE_ADS_DEVELOPER_TOKEN is correct in Settings → Secrets.")
+            if "DEVELOPER_TOKEN" in error_msg.upper() or "developer token" in error_msg.lower() or "DEVELOPER_TOKEN_INVALID" in error_msg:
+                st.error("🔴 **Developer Token Invalid**")
+                st.markdown("""
+                **Possible causes:**
+                1. Token is incorrect in Streamlit secrets
+                2. Token is not approved in Google Ads API Center
+                3. Token has extra spaces or formatting issues
+                
+                **How to fix:**
+                1. Go to [Google Ads API Center](https://ads.google.com/aw/apicenter)
+                2. Verify your developer token matches: `goGGiR9m2FWr-3g82AonQ`
+                3. Ensure token status is **"Approved"** (not "Pending")
+                4. Copy the token exactly (no extra spaces)
+                5. Update `GOOGLE_ADS_DEVELOPER_TOKEN` in Streamlit Cloud → Settings → Secrets
+                6. Save and wait for redeploy
+                """)
+                
+                # Show what we're trying to use (first few chars for debugging)
+                if developer_token:
+                    preview = developer_token[:15] + "..." if len(developer_token) > 15 else developer_token
+                    st.code(f"Current token (preview): {preview}")
+                    expected_preview = "goGGiR9m2FWr-3g82AonQ"[:15]
+                    st.code(f"Expected (preview): {expected_preview}")
+                    
+                    if developer_token.strip() != "goGGiR9m2FWr-3g82AonQ":
+                        st.warning("⚠️ Token doesn't match expected value. Please verify in Streamlit secrets.")
         else:
             print(f"Error creating Google Ads client: {e}")
         return None
