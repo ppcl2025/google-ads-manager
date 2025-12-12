@@ -268,10 +268,42 @@ def show_comprehensive_analysis():
         st.markdown("### 📋 Optimization Recommendations")
         st.markdown(results['recommendations'])
         
-        # Change tracking section - Make it prominent right after recommendations
+        # Snapshot and Change Detection section
         st.markdown("---")
-        st.markdown("### 📝 Track Changes Made")
-        st.info("💡 **Important:** After implementing recommendations from the analysis above, document the changes here. This creates a changelog that will help Claude provide better, context-aware recommendations in future analyses (avoiding duplicates and building on successes).")
+        st.markdown("### 📸 Snapshot & Change Detection")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save Snapshot", use_container_width=True, type="secondary", key="save_snapshot", 
+                        help="Save current campaign state for automatic change detection later"):
+                from snapshot_manager import save_snapshot
+                account_name = results['account_display'].split(" (")[0] if results['account_display'] else None
+                campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else None
+                
+                if 'campaign_data' in results:
+                    snapshot_path = save_snapshot(
+                        account_id=results['account_id'],
+                        campaign_id=results['campaign_id'],
+                        account_name=account_name,
+                        campaign_name=campaign_name,
+                        campaign_data=results['campaign_data']
+                    )
+                    if snapshot_path:
+                        st.success("✅ Snapshot saved! You can now detect changes automatically after making updates in Google Ads.")
+                    else:
+                        st.error("❌ Failed to save snapshot.")
+                else:
+                    st.warning("⚠️ Campaign data not available. Please run analysis again.")
+        
+        with col2:
+            if st.button("🔍 Detect Changes", use_container_width=True, type="secondary", key="detect_changes",
+                        help="Compare current campaign state with saved snapshot and auto-generate changelog"):
+                _detect_and_save_changes(results)
+        
+        # Change tracking section - Manual entry (still available)
+        st.markdown("---")
+        st.markdown("### 📝 Track Changes Made (Manual Entry)")
+        st.info("💡 **Option 1 - Manual:** After implementing recommendations, document the changes here. **Option 2 - Automatic:** Use 'Save Snapshot' above, then 'Detect Changes' after making updates in Google Ads.")
         
         # Show previous changelog if exists
         if results.get('changelog_content'):
@@ -393,7 +425,8 @@ def show_comprehensive_analysis():
                         'campaign_id': selected_campaign_id,
                         'campaign_display': selected_campaign_display,
                         'date_range': date_range,
-                        'changelog_content': changelog_content  # Store for display
+                        'changelog_content': changelog_content,  # Store for display
+                        'campaign_data': data  # Store campaign data for snapshot
                     }
                     
                     status_text.empty()

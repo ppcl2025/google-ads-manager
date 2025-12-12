@@ -84,15 +84,18 @@ def fetch_comprehensive_campaign_data(client, customer_id, campaign_id=None, dat
             # Get bidding strategy information
             bidding_strategy = row.campaign.bidding_strategy_type.name if hasattr(row.campaign, 'bidding_strategy_type') else 'UNKNOWN'
             
-            # Target CPA is not directly queryable in campaign queries
-            # We'll set it to None and note that it's a Target CPA campaign if applicable
-            target_cpa = None
-            # Note: Target CPA value would need to be fetched separately via bidding_strategy resource
-            # For now, we'll identify Target CPA campaigns by their bidding_strategy_type
-            
             # Determine if using smart bidding
             smart_bidding_strategies = ['TARGET_CPA', 'TARGET_ROAS', 'MAXIMIZE_CONVERSIONS', 'MAXIMIZE_CONVERSION_VALUE', 'MAXIMIZE_CLICKS']
             is_smart_bidding = bidding_strategy in smart_bidding_strategies
+            
+            # Target CPA and Target ROAS - fetch from bidding strategy resource if available
+            target_cpa = None
+            target_roas = None
+            bidding_strategy_id = None
+            
+            # Try to get bidding strategy ID from campaign
+            if hasattr(row.campaign, 'bidding_strategy') and row.campaign.bidding_strategy:
+                bidding_strategy_id = row.campaign.bidding_strategy.split('/')[-1] if '/' in row.campaign.bidding_strategy else row.campaign.bidding_strategy
             
             campaign_data.append({
                 'campaign_id': row.campaign.id,
