@@ -985,20 +985,21 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             working_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), COLOR_BLUE),
                 ('TEXTCOLOR', (0, 0), (-1, 0), white),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('ALIGN', (1, 1), (2, -1), 'CENTER'),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),  # Header alignment
+                ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Keyword/Ad Group column left-aligned
+                ('ALIGN', (1, 1), (2, -1), 'CENTER'),  # Leads and Cost/Lead centered
+                ('ALIGN', (3, 1), (3, -1), 'LEFT'),  # Why It's Working left-aligned with wrapping
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('TOPPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), white),
                 ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 10),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-                ('TOPPADDING', (0, 1), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Top align for multi-line text
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
             ]))
             story.append(working_table)
             story.append(Spacer(1, 0.3*inch))
