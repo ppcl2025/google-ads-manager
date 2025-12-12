@@ -21,7 +21,7 @@ Each document's title includes its number (e.g., "1. User Guide", "6. Claude Pro
 **1. [01_USER_GUIDE.md](01_USER_GUIDE.md)** ⭐ **START HERE**
    - Comprehensive overview of the web app
    - System architecture and integrations
-   - All features and pages explained (including Help Center)
+   - All features and pages explained
    - Best practices and troubleshooting
    - **Read this first** to understand the entire system
 

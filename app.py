@@ -27,9 +27,6 @@ from keyword_planner_fetcher import (
 from help_system import (
     load_documentation,
     find_relevant_docs,
-    find_relevant_docs_from_index,
-    create_documentation_index,
-    load_doc_content,
     format_docs_for_prompt,
     get_document_citations,
     create_help_prompt,
@@ -207,14 +204,14 @@ def main():
         ]
         
         for nav_text, nav_value in nav_items:
-            is_selected = (st.session_state.get('current_page', '📊 Campaign Analysis') == nav_value)
+            is_selected = (st.session_state.current_page == nav_value)
             button_type = "primary" if is_selected else "secondary"
             
             if st.button(nav_text, key=f"nav_{nav_value}", use_container_width=True, type=button_type):
                 st.session_state.current_page = nav_value
                 st.rerun()
         
-        page = st.session_state.get('current_page', '📊 Campaign Analysis')
+        page = st.session_state.current_page
         
         st.markdown("---")
         st.markdown("### Settings")
@@ -232,7 +229,6 @@ def main():
         # Help Center button
         if st.button("❓ Help Center", use_container_width=True):
             st.session_state.help_page_triggered = True
-            st.session_state.current_page = "Help Center"  # Set current page to Help Center
             st.rerun()
         
         st.markdown("---")
@@ -254,8 +250,8 @@ def main():
     if 'selected_model' in st.session_state and st.session_state.analyzer:
         st.session_state.analyzer.model = st.session_state.selected_model
     
-    # Check if Help Center was triggered from Settings button or if we're on Help Center
-    if st.session_state.get('help_page_triggered', False) or page == "Help Center":
+    # Check if Help Center was triggered from Settings button
+    if st.session_state.get('help_page_triggered', False):
         st.session_state.help_page_triggered = False
         show_help_chat()
     # Route to appropriate page
@@ -2014,34 +2010,10 @@ def show_help_chat():
     if 'help_chat_history' not in st.session_state:
         st.session_state.help_chat_history = []
     
-    # Load documentation index (lightweight, cached in session state)
-    if 'help_docs_index' not in st.session_state:
-        with st.spinner("Loading documentation index..."):
-            st.session_state.help_docs_index = create_documentation_index()
-            if st.session_state.help_docs_index:
-                st.success(f"✅ Loaded index for {len(st.session_state.help_docs_index)} documentation files")
-            else:
-                st.warning("⚠️ No documentation files found. Please check the docs folder.")
-    
-    # Cache for loaded document content (loaded on-demand)
-    if 'help_docs_cache' not in st.session_state:
-        st.session_state.help_docs_cache = {}
-    
-    # Check if there's a pending question to process
-    if 'pending_help_question' in st.session_state and st.session_state.pending_help_question:
-        user_question = st.session_state.pending_help_question
-        st.session_state.pending_help_question = None  # Clear it
-        
-        # Add user question to chat history if not already there
-        if not st.session_state.help_chat_history or st.session_state.help_chat_history[-1].get("content") != user_question:
-            st.session_state.help_chat_history.append({
-                "role": "user",
-                "content": user_question
-            })
-        
-        # Process the question
-        _process_help_question(user_question, st.session_state.help_docs_index, st.session_state.help_docs_cache)
-        st.rerun()
+    # Load documentation (cache in session state)
+    if 'help_docs' not in st.session_state:
+        with st.spinner("Loading documentation..."):
+            st.session_state.help_docs = load_documentation()
     
     # Display suggested questions
     st.markdown("### 💡 Suggested Questions")
@@ -2053,8 +2025,11 @@ def show_help_chat():
         col_idx = idx % 3
         with cols[col_idx]:
             if st.button(question, key=f"suggested_{idx}", use_container_width=True):
-                # Set pending question to process
-                st.session_state.pending_help_question = question
+                # Add question to chat
+                st.session_state.help_chat_history.append({
+                    "role": "user",
+                    "content": question
+                })
                 st.rerun()
     
     # Show more suggestions in expander
@@ -2062,9 +2037,10 @@ def show_help_chat():
         with st.expander("More Suggested Questions"):
             for idx, question in enumerate(suggested_questions[9:], start=9):
                 if st.button(question, key=f"suggested_{idx}", use_container_width=True):
-                    # Set pending question to process and ensure we stay on Help Center
-                    st.session_state.pending_help_question = question
-                    st.session_state.current_page = "Help Center"  # Ensure we stay on Help Center
+                    st.session_state.help_chat_history.append({
+                        "role": "user",
+                        "content": question
+                    })
                     st.rerun()
     
     st.markdown("---")
@@ -2087,104 +2063,64 @@ def show_help_chat():
     user_question = st.chat_input("Ask a question about the app...")
     
     if user_question:
-        # Set pending question to process and ensure we stay on Help Center
-        st.session_state.pending_help_question = user_question
-        st.session_state.current_page = "Help Center"  # Ensure we stay on Help Center
-        st.rerun()
-
-
-def _process_help_question(user_question: str, docs_index: dict, docs_cache: dict):
-    """
-    Process a help question and get answer from Claude.
-    Uses index-based loading to optimize token usage.
-    
-    Args:
-        user_question: User's question
-        docs_index: Documentation index (lightweight metadata)
-        docs_cache: Cache for loaded document content (loaded on-demand)
-    """
-    # Ensure we stay on Help Center page
-    st.session_state.current_page = "Help Center"
-    
-    # Check if index is loaded
-    if not docs_index:
+        # Add user question to chat history
         st.session_state.help_chat_history.append({
-            "role": "assistant",
-            "content": "⚠️ Error: Documentation index not loaded. Please refresh the page.",
-            "sources": []
-        })
-        return
-    
-    # Step 1: Find relevant docs using index (fast, lightweight)
-    relevant_doc_names = find_relevant_docs_from_index(user_question, docs_index, top_n=2)
-    
-    if not relevant_doc_names:
-        # No relevant docs found
-        st.session_state.help_chat_history.append({
-            "role": "assistant",
-            "content": "I couldn't find relevant information in the documentation for your question. Please try rephrasing or ask about a different topic.",
-            "sources": []
-        })
-        return
-    
-    # Step 2: Load document content on-demand (from cache or file)
-    relevant_docs = []
-    for doc_name, score in relevant_doc_names:
-        # Check cache first
-        if doc_name in docs_cache:
-            content = docs_cache[doc_name]
-        else:
-            # Load from file and cache it
-            content = load_doc_content(doc_name)
-            if content:
-                docs_cache[doc_name] = content
-        
-        if content:
-            relevant_docs.append((doc_name, content, score))
-    
-    if not relevant_docs:
-        st.session_state.help_chat_history.append({
-            "role": "assistant",
-            "content": "⚠️ Error: Could not load document content. Please refresh the page.",
-            "sources": []
-        })
-        return
-    
-    # Step 3: Format docs for prompt
-    formatted_docs = format_docs_for_prompt(relevant_docs)
-    citations = get_document_citations(relevant_docs)
-    
-    # Step 4: Create prompt
-    help_prompt = create_help_prompt(user_question, formatted_docs)
-    
-    # Step 5: Get answer from Claude (use Haiku for faster/cheaper responses)
-    try:
-        # Use Haiku model for help queries (faster and cheaper)
-        haiku_model = "claude-3-5-haiku-20241022"
-        
-        response = st.session_state.analyzer.claude.messages.create(
-            model=haiku_model,
-            max_tokens=2048,
-            system="You are a helpful documentation assistant. Provide clear, concise answers based on the documentation provided.",
-            messages=[{"role": "user", "content": help_prompt}]
-        )
-        
-        answer = response.content[0].text
-        
-        # Add assistant response to chat history
-        st.session_state.help_chat_history.append({
-            "role": "assistant",
-            "content": answer,
-            "sources": citations
+            "role": "user",
+            "content": user_question
         })
         
-    except Exception as e:
-        error_msg = f"Sorry, I encountered an error: {str(e)}"
-        st.session_state.help_chat_history.append({
-            "role": "assistant",
-            "content": error_msg,
-            "sources": []
-        })
+        # Find relevant documentation
+        with st.spinner("🔍 Searching documentation..."):
+            relevant_docs = find_relevant_docs(user_question, st.session_state.help_docs)
+            
+            if not relevant_docs:
+                # No relevant docs found
+                st.session_state.help_chat_history.append({
+                    "role": "assistant",
+                    "content": "I couldn't find relevant information in the documentation for your question. Please try rephrasing or ask about a different topic.",
+                    "sources": []
+                })
+                st.rerun()
+            
+            # Format docs for prompt
+            formatted_docs = format_docs_for_prompt(relevant_docs)
+            citations = get_document_citations(relevant_docs)
+            
+            # Create prompt
+            help_prompt = create_help_prompt(user_question, formatted_docs)
+            
+            # Get answer from Claude (use Haiku for faster/cheaper responses)
+            with st.spinner("🤖 Getting answer from Claude..."):
+                try:
+                    # Use Haiku model for help queries (faster and cheaper)
+                    haiku_model = "claude-3-5-haiku-20241022"
+                    
+                    response = st.session_state.analyzer.claude.messages.create(
+                        model=haiku_model,
+                        max_tokens=2048,
+                        system="You are a helpful documentation assistant. Provide clear, concise answers based on the documentation provided.",
+                        messages=[{"role": "user", "content": help_prompt}]
+                    )
+                    
+                    answer = response.content[0].text
+                    
+                    # Add assistant response to chat history
+                    st.session_state.help_chat_history.append({
+                        "role": "assistant",
+                        "content": answer,
+                        "sources": citations
+                    })
+                    
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Error getting answer: {str(e)}")
+                    st.session_state.help_chat_history.append({
+                        "role": "assistant",
+                        "content": f"Sorry, I encountered an error: {str(e)}",
+                        "sources": []
+                    })
+                    st.rerun()
     
     # Clear chat button
     if st.session_state.help_chat_history:
