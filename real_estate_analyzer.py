@@ -811,11 +811,11 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                             name_escaped = escape(str(metric['name']))
                             value_escaped = escape(str(metric['value']))
                             
-                            cell_text = f"<font name='Helvetica' size='9' color='{COLOR_GRAY.hexval()}'>{name_escaped}</font><br/>"
+                            cell_text = f"<font name='Helvetica' size='9' color='{COLOR_GRAY.hexval()}'>{name_escaped}</font><br/><br/>"
                             cell_text += f"<font name='Helvetica-Bold' size='18' color='{metric['color'].hexval()}'>{value_escaped}</font>"
                             if metric['description']:
                                 desc_escaped = escape(str(metric['description']))
-                                cell_text += f"<br/><font name='Helvetica' size='8' color='{COLOR_GRAY.hexval()}'>{desc_escaped}</font>"
+                                cell_text += f"<br/><br/><font name='Helvetica' size='8' color='{COLOR_GRAY.hexval()}'>{desc_escaped}</font>"
                             
                             cell_content = Paragraph(cell_text, body_style)
                             table_data.append([cell_content])
