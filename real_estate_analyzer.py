@@ -1017,8 +1017,30 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                 story.append(Paragraph(f"• {step}", bullet_style))
                 story.append(Spacer(1, 6))  # Add space between bullets
         
-        # Footer
-        story.append(Spacer(1, 0.2*inch))
+        # Footer with logo above
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Add logo centered above footer (same logo as page 1)
+        logo_paths = [
+            'logo.png',
+            'PPC_LAUNCH_logo.png',
+            'ppc_launch_logo.png',
+            'sidebar_logo.png',
+            os.path.join(os.path.dirname(output_path), 'logo.png'),
+            os.path.join(os.path.dirname(output_path), 'PPC_LAUNCH_logo.png'),
+            os.path.join(os.path.dirname(output_path), 'ppc_launch_logo.png'),
+            os.path.join(os.path.dirname(output_path), 'sidebar_logo.png'),
+        ]
+        logo_found = False
+        for logo_path in logo_paths:
+            if os.path.exists(logo_path):
+                # Add logo centered above footer
+                logo_img = Image(logo_path, width=2*inch, height=0.5*inch, kind='proportional')
+                story.append(logo_img)
+                story.append(Spacer(1, 0.15*inch))
+                logo_found = True
+                break
+        
         footer_style = ParagraphStyle(
             'Footer', parent=styles['Normal'],
             fontSize=9, textColor=COLOR_GRAY,
