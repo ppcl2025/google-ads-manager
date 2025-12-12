@@ -513,8 +513,8 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         import os
         
         doc = SimpleDocTemplate(output_path, pagesize=letter,
-                              rightMargin=0.75*inch, leftMargin=0.75*inch,
-                              topMargin=0.75*inch, bottomMargin=0.75*inch)
+                              rightMargin=0.5*inch, leftMargin=0.5*inch,
+                              topMargin=0.5*inch, bottomMargin=0.5*inch)
         
         story = []
         styles = getSampleStyleSheet()
