@@ -4561,6 +4561,13 @@ class RealEstateAnalyzer:
             prompt_template = REAL_ESTATE_PROMPT_TEMPLATE
             print("📊 Running Comprehensive Campaign Analysis...\n")
         
+        # Check if running in Streamlit context
+        try:
+            import streamlit as st
+            in_streamlit = True
+        except ImportError:
+            in_streamlit = False
+        
         # Build the prompt using string replacement instead of .format() to avoid issues with curly braces in ad copy (DKI syntax)
         # This way, curly braces in campaign data like {KeyWord:...} won't be interpreted as format placeholders
         prompt = prompt_template.replace('{CAMPAIGN_DATA}', campaign_data_str)
