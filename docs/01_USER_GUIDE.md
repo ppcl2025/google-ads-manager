@@ -70,6 +70,12 @@
    - Uploads PDF reports to organized folders
    - Supports multiple report types (analysis, biweekly, Q&A)
 
+5. **Help System** - Documentation assistant
+   - Index-based documentation loading for token optimization (~35% savings)
+   - On-demand content loading (only loads 2 most relevant docs per query)
+   - Smart caching in session state
+   - Uses Claude Haiku for fast, cost-effective responses
+
 ### Data Flow
 
 ```
