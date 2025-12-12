@@ -42,6 +42,7 @@ def parse_markdown_headers(content: str) -> List[Tuple[int, str, str]]:
 def markdown_to_html(text: str) -> str:
     """
     Convert markdown formatting to HTML for ReportLab Paragraph.
+    Handles: bold, italic, code, links, preserving original formatting.
     
     Args:
         text: Markdown text
@@ -51,25 +52,78 @@ def markdown_to_html(text: str) -> str:
     """
     from xml.sax.saxutils import escape
     
-    # Escape HTML special characters first
+    if not text or not text.strip():
+        return ""
+    
+    # Use a unique marker that won't appear in text
+    MARKER = "___MARKER___"
+    markers = {}
+    marker_count = 0
+    
+    def get_marker():
+        nonlocal marker_count
+        marker = f"{MARKER}{marker_count}{MARKER}"
+        marker_count += 1
+        return marker
+    
+    # Step 1: Protect code blocks (backticks) - they should not be formatted
+    def protect_code(match):
+        code_text = match.group(1)
+        marker = get_marker()
+        markers[marker] = f'<font name="Courier" size="9">{escape(code_text)}</font>'
+        return marker
+    
+    text = re.sub(r'`([^`]+?)`', protect_code, text)
+    
+    # Step 2: Protect markdown links - convert to HTML links
+    def protect_link(match):
+        link_text = match.group(1)
+        link_url = match.group(2)
+        marker = get_marker()
+        # Handle internal links (starting with #) vs external links
+        if link_url.startswith('#'):
+            # Internal link - use destination attribute
+            markers[marker] = f'<link destination="{link_url[1:]}" color="blue"><u>{escape(link_text)}</u></link>'
+        else:
+            # External link
+            markers[marker] = f'<link href="{escape(link_url)}" color="blue"><u>{escape(link_text)}</u></link>'
+        return marker
+    
+    text = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', protect_link, text)
+    
+    # Step 3: Escape HTML special characters (but not our markers)
+    # Replace markers temporarily, escape, then restore
+    temp_markers = {}
+    for marker, content in markers.items():
+        temp_key = f"TEMP{marker_count}"
+        temp_markers[temp_key] = marker
+        text = text.replace(marker, temp_key)
+        marker_count += 1
+    
     text = escape(text)
     
-    # Bold: **text** or __text__
-    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
-    text = re.sub(r'__(.+?)__', r'<b>\1</b>', text)
+    # Restore markers
+    for temp_key, marker in temp_markers.items():
+        text = text.replace(temp_key, marker)
     
-    # Italic: *text* or _text_ (but not if part of bold)
-    text = re.sub(r'(?<!\*)\*([^*]+?)\*(?!\*)', r'<i>\1</i>', text)
-    text = re.sub(r'(?<!_)_([^_]+?)_(?!_)', r'<i>\1</i>', text)
+    # Step 4: Process bold (**text** or __text__)
+    # Process **text** first
+    text = re.sub(r'\*\*([^*]+?)\*\*', r'<b>\1</b>', text)
+    # Process __text__ but avoid matching markers
+    text = re.sub(r'__(?![^_]*MARKER)([^_]+?)__', r'<b>\1</b>', text)
     
-    # Code: `text`
-    text = re.sub(r'`([^`]+?)`', r'<font name="Courier" size="9">\1</font>', text)
+    # Step 5: Process italic (*text* or _text_)
+    # Process *text* (single asterisk, not part of **)
+    text = re.sub(r'(?<!\*)\*([^*\n]+?)\*(?!\*)', r'<i>\1</i>', text)
+    # Process _text_ (single underscore, not part of __ and not in code/markers)
+    text = re.sub(r'(?<!_)_(?![^_]*MARKER)([^_\s\n]+?)_(?!\d)', r'<i>\1</i>', text)
     
-    # Links: [text](url)
-    text = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<link href="\2" color="blue"><u>\1</u></link>', text)
+    # Step 6: Restore protected content (code and links)
+    for marker, html_content in markers.items():
+        text = text.replace(marker, html_content)
     
-    # Line breaks
-    text = text.replace('\n', '<br/>')
+    # Step 7: Line breaks (but preserve single newlines within paragraphs)
+    # Don't convert \n to <br/> here - let ReportLab handle paragraph breaks
     
     return text
 
@@ -259,7 +313,7 @@ def generate_docs_pdf(output_path: str = None):
         parent=styles['BodyText'],
         fontSize=10,
         leading=14,
-        alignment=TA_JUSTIFY,
+        alignment=TA_LEFT,  # Changed from TA_JUSTIFY for better readability
         spaceAfter=10
     )
     
@@ -286,31 +340,34 @@ def generate_docs_pdf(output_path: str = None):
     story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y')}", subtitle_style))
     story.append(PageBreak())
     
-    # Build table of contents
+    # Build table of contents with destinations map
     print("📑 Building Table of Contents...")
     story.append(Paragraph("Table of Contents", doc_title_style))
     story.append(Spacer(1, 0.3*inch))
     
     toc_entries = []
-    page_num = 2  # Start after title page and TOC
+    destinations = {}  # Track all destinations for TOC links
     
     for doc_name, content, headers in all_docs:
         # Document title in TOC
         doc_display_name = doc_name.replace('_', ' ').title()
-        toc_entries.append((1, doc_display_name, f"doc_{doc_name}"))
+        doc_anchor = f"doc_{doc_name}"
+        toc_entries.append((1, doc_display_name, doc_anchor))
+        destinations[doc_anchor] = True
         
         # Headers in TOC
         for level, header_text, anchor_id in headers:
             if level <= 3:  # Only include H1, H2, H3 in TOC
-                toc_entries.append((level + 1, header_text, f"{doc_name}_{anchor_id}"))
+                full_anchor = f"{doc_name}_{anchor_id}"
+                toc_entries.append((level + 1, header_text, full_anchor))
+                destinations[full_anchor] = True
     
-    # Add TOC entries with links
+    # Add TOC entries with clickable links
     for level, text, anchor_id in toc_entries:
-        indent = (level - 1) * 20
         style = toc_h1_style if level == 1 else (toc_h2_style if level == 2 else toc_h3_style)
         
-        # Create clickable link
-        link_text = f'<link href="#{anchor_id}" color="blue"><u>{text}</u></link>'
+        # Create clickable link using destination (ReportLab internal links)
+        link_text = f'<link destination="{anchor_id}" color="blue"><u>{escape(text)}</u></link>'
         story.append(Paragraph(link_text, style))
     
     story.append(PageBreak())
@@ -321,22 +378,25 @@ def generate_docs_pdf(output_path: str = None):
         doc_display_name = doc_name.replace('_', ' ').title()
         print(f"   Processing {doc_display_name}...")
         
-        # Document title with bookmark
+        # Document title with bookmark/destination
         doc_anchor = f"doc_{doc_name}"
-        doc_title = Paragraph(f'<a name="{doc_anchor}"/>{doc_display_name}', doc_title_style)
+        doc_title = Paragraph(f'<a name="{doc_anchor}"/>{escape(doc_display_name)}', doc_title_style)
         story.append(doc_title)
         story.append(Spacer(1, 0.2*inch))
         
         # Process content line by line
         lines = content.split('\n')
         i = 0
+        last_was_paragraph = False
         
         while i < len(lines):
             line = lines[i].rstrip()
             
-            # Skip empty lines (but add spacing)
+            # Skip empty lines (but add minimal spacing)
             if not line:
-                story.append(Spacer(1, 0.1*inch))
+                if last_was_paragraph:
+                    story.append(Spacer(1, 0.05*inch))
+                last_was_paragraph = False
                 i += 1
                 continue
             
@@ -358,9 +418,10 @@ def generate_docs_pdf(output_path: str = None):
                 else:
                     style = h3_style
                 
-                # Create header with bookmark
+                # Create header with bookmark/destination
                 header_html = f'<a name="{full_anchor}"/>{escape(header_text)}'
                 story.append(Paragraph(header_html, style))
+                last_was_paragraph = False
                 i += 1
                 continue
             
@@ -375,10 +436,11 @@ def generate_docs_pdf(output_path: str = None):
                     i += 1  # Skip closing ```
                 
                 if code_lines:
-                    code_text = '\n'.join(code_lines)
+                    code_text = '\n'.join(code_lines).strip()
                     code_html = f'<font name="Courier" size="9">{escape(code_text)}</font>'
                     story.append(Paragraph(code_html, code_style))
                     story.append(Spacer(1, 0.1*inch))
+                last_was_paragraph = False
                 continue
             
             # Lists (bullets and numbered)
@@ -390,9 +452,11 @@ def generate_docs_pdf(output_path: str = None):
                                           (lines[i].strip() and not lines[i].strip().startswith('#') and 
                                            re.match(r'^[\s]{4,}', lines[i]))):
                     list_line = lines[i]
-                    # Remove list marker
-                    list_line = re.sub(r'^[\s]*[-*+]\s+', '• ', list_line)
-                    list_line = re.sub(r'^[\s]*\d+\.\s+', '', list_line)
+                    # Remove list marker but preserve indentation for nested items
+                    if re.match(r'^[\s]*[-*+]\s+', list_line):
+                        list_line = re.sub(r'^[\s]*[-*+]\s+', '', list_line)
+                    elif re.match(r'^[\s]*\d+\.\s+', list_line):
+                        list_line = re.sub(r'^[\s]*\d+\.\s+', '', list_line)
                     list_items.append(list_line.strip())
                     i += 1
                 
@@ -402,6 +466,7 @@ def generate_docs_pdf(output_path: str = None):
                         item_html = markdown_to_html(item)
                         story.append(Paragraph(f'• {item_html}', body_style))
                 story.append(Spacer(1, 0.05*inch))
+                last_was_paragraph = True
                 continue
             
             # Horizontal rules (---)
@@ -409,6 +474,7 @@ def generate_docs_pdf(output_path: str = None):
                 story.append(Spacer(1, 0.2*inch))
                 story.append(Paragraph('_' * 80, body_style))
                 story.append(Spacer(1, 0.2*inch))
+                last_was_paragraph = False
                 i += 1
                 continue
             
@@ -416,6 +482,7 @@ def generate_docs_pdf(output_path: str = None):
             if line.strip():
                 para_html = markdown_to_html(line)
                 story.append(Paragraph(para_html, body_style))
+                last_was_paragraph = True
             
             i += 1
         
@@ -429,6 +496,7 @@ def generate_docs_pdf(output_path: str = None):
         doc.build(story)
         print(f"\n✅ Success! PDF generated: {output_path}")
         print(f"   File size: {output_path.stat().st_size / 1024:.1f} KB")
+        print(f"   📖 TOC links are clickable - click any entry to jump to that section!")
         return True
     except Exception as e:
         print(f"\n❌ Error building PDF: {e}")
@@ -446,8 +514,7 @@ if __name__ == "__main__":
     success = generate_docs_pdf(output_path)
     
     if success:
-        print("\n💡 Tip: Open the PDF and use the bookmarks panel for easy navigation!")
+        print("\n💡 Tip: All TOC entries are clickable links that jump to their sections!")
         sys.exit(0)
     else:
         sys.exit(1)
-
