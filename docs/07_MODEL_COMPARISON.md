@@ -4,35 +4,11 @@
 
 ## Quick Recommendation
 
-**Use Claude Sonnet 4** - Best balance of performance, cost, and speed for Google Ads analysis. This is the default model in the web app.
+**Use Claude 3.5 Sonnet** - Best balance of performance, cost, and speed for Google Ads analysis.
 
 ## Model Comparison
 
-### Claude Sonnet 4 (Default & Recommended) ✅
-
-**Best for:** All Google Ads analysis - newest model with improved capabilities
-
-**Pros:**
-- Latest model with improved coding, reasoning, and agentic capabilities
-- Better alignment and safety features
-- Fast response times (~5-15 seconds)
-- Cost-effective: Similar pricing to 3.5 Sonnet
-- Same 200K token context window
-- Best balance of performance and cost
-
-**Cons:**
-- Newer model (less battle-tested than 3.5, but still excellent)
-
-**Cost per analysis:** ~$0.03-0.05 (typical analysis uses 5,000-10,000 tokens)
-
-**Use when:**
-- All regular analysis (this is the default)
-- You want the latest capabilities
-- Standard optimization recommendations
-
----
-
-### Claude 3.5 Sonnet (Alternative) ✅
+### Claude 3.5 Sonnet (Recommended) ✅
 
 **Best for:** Regular Google Ads analysis, structured data analysis, cost-effective insights
 
@@ -42,18 +18,18 @@
 - Cost-effective: ~$3/$15 per million tokens (input/output)
 - Great balance of performance and cost
 - Handles complex analysis well
-- Well-tested and proven
 
 **Cons:**
-- Older than Sonnet 4 (slightly less capable)
 - Slightly less deep reasoning than Opus
+- May miss some nuanced strategic insights
 
 **Cost per analysis:** ~$0.03-0.05 (typical analysis uses 5,000-10,000 tokens)
 
 **Use when:**
-- You prefer a well-tested model
-- Sonnet 4 is not available in your region/API tier
+- Regular monthly/quarterly analysis
 - Budget-conscious operations
+- Need quick turnaround
+- Standard optimization recommendations
 
 ---
 
@@ -109,7 +85,6 @@
 
 | Model | Input Tokens | Output Tokens | Cost per Analysis |
 |-------|-------------|---------------|-------------------|
-| Sonnet 4 | ~5,000 | ~3,000 | **$0.03-0.05** |
 | 3.5 Sonnet | ~5,000 | ~3,000 | **$0.03-0.05** |
 | 3.7 Sonnet | ~5,000 | ~3,000 | **$0.03-0.05** |
 | 3 Opus | ~5,000 | ~3,000 | **$0.15-0.25** |
@@ -118,23 +93,22 @@
 
 ## Performance Comparison
 
-| Aspect | Sonnet 4 | 3.5 Sonnet | 3.7 Sonnet | 3 Opus |
-|--------|----------|-----------|-----------|--------|
-| Speed | ⚡⚡⚡ Fast | ⚡⚡⚡ Fast | ⚡⚡⚡ Fast | ⚡⚡ Moderate |
-| Analysis Quality | ⭐⭐⭐⭐⭐ Excellent+ | ⭐⭐⭐⭐ Excellent | ⭐⭐⭐⭐⭐ Excellent+ | ⭐⭐⭐⭐⭐ Excellent++ |
-| Cost Efficiency | 💰💰💰 Best | 💰💰💰 Best | 💰💰💰 Best | 💰 Moderate |
-| Strategic Depth | 📊📊📊📊 Very Good | 📊📊📊 Good | 📊📊📊📊 Very Good | 📊📊📊📊📊 Excellent |
+| Aspect | 3.5 Sonnet | 3.7 Sonnet | 3 Opus |
+|--------|-----------|-----------|--------|
+| Speed | ⚡⚡⚡ Fast | ⚡⚡⚡ Fast | ⚡⚡ Moderate |
+| Analysis Quality | ⭐⭐⭐⭐ Excellent | ⭐⭐⭐⭐⭐ Excellent+ | ⭐⭐⭐⭐⭐ Excellent++ |
+| Cost Efficiency | 💰💰💰 Best | 💰💰💰 Best | 💰 Moderate |
+| Strategic Depth | 📊📊📊 Good | 📊📊📊📊 Very Good | 📊📊📊📊📊 Excellent |
 
 ## Recommendation by Use Case
 
 ### Monthly Campaign Analysis
-**Use: Claude Sonnet 4 (Default)**
+**Use: Claude 3.5 Sonnet**
 - Regular analysis needs speed and cost efficiency
-- Sonnet 4 provides excellent insights for routine optimization
-- This is the web app default
+- Sonnet provides excellent insights for routine optimization
 
 ### Quarterly Strategic Review
-**Use: Claude Sonnet 4 or 3.7 Sonnet**
+**Use: Claude 3.5 Sonnet or 3.7 Sonnet**
 - Still cost-effective for regular use
 - Provides comprehensive strategic insights
 
@@ -145,10 +119,9 @@
 - Complex reasoning across multiple dimensions
 
 ### Testing New Strategies
-**Use: Claude Sonnet 4**
+**Use: Claude 3.5 Sonnet**
 - Fast iteration
 - Cost-effective for experimentation
-- Latest capabilities for testing
 
 ## How to Change Models
 
@@ -161,8 +134,6 @@ python real_estate_analyzer.py
 ### Option 2: Environment Variable
 Set in your `.env` file:
 ```
-CLAUDE_MODEL=claude-sonnet-4-20250514  # Default (recommended)
-# or
 CLAUDE_MODEL=claude-3-5-sonnet-20241022
 # or
 CLAUDE_MODEL=claude-3-7-sonnet-20250219
@@ -177,11 +148,11 @@ Edit `real_estate_analyzer.py` and change the default in the `main()` function.
 
 **Scenario:** Analyzing a $10,000/month Google Ads account with 5 campaigns
 
-**Claude Sonnet 4 (Default):**
+**Claude 3.5 Sonnet:**
 - Analysis time: ~10 seconds
 - Cost: $0.04
-- Quality: Excellent+, actionable recommendations
-- ✅ **Recommended (Default)**
+- Quality: Excellent, actionable recommendations
+- ✅ **Recommended**
 
 **Claude 3 Opus:**
 - Analysis time: ~25 seconds
@@ -191,17 +162,11 @@ Edit `real_estate_analyzer.py` and change the default in the `main()` function.
 
 ## Final Recommendation
 
-**Use Claude Sonnet 4 (Default)** for all regular analysis. It provides:
-- Latest model with improved capabilities
+**Start with Claude 3.5 Sonnet** for all regular analysis. It provides:
 - Excellent analysis quality
 - Fast responses
 - Cost-effective for regular use
 - More than sufficient for Google Ads optimization
-- This is the web app default - no configuration needed
-
-**Alternative: Claude 3.5 Sonnet** if:
-- Sonnet 4 is not available in your API tier
-- You prefer a well-tested, proven model
 
 **Upgrade to Opus only if:**
 - You need deeper strategic insights
@@ -209,5 +174,5 @@ Edit `real_estate_analyzer.py` and change the default in the `main()` function.
 - You're doing quarterly/annual deep dives
 - You have complex multi-dimensional analysis needs
 
-For 99% of Google Ads analysis use cases, **Claude Sonnet 4 (the default) is the optimal choice**.
+For 99% of Google Ads analysis use cases, **Claude 3.5 Sonnet is the optimal choice**.
 

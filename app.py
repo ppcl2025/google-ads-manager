@@ -145,134 +145,6 @@ if 'selected_campaign' not in st.session_state:
     st.session_state.selected_campaign = None
 if 'selected_model' not in st.session_state:
     st.session_state.selected_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
-# Initialize cache structures
-if 'accounts_cache' not in st.session_state:
-    st.session_state.accounts_cache = {}  # {mcc_id: {'data': [...], 'timestamp': ...}}
-if 'campaigns_cache' not in st.session_state:
-    st.session_state.campaigns_cache = {}  # {account_id: {'data': [...], 'timestamp': ...}}
-if 'campaign_data_cache' not in st.session_state:
-    st.session_state.campaign_data_cache = {}  # {cache_key: {'data': {...}, 'timestamp': ...}}
-
-# Cache TTL in seconds (5 minutes)
-CACHE_TTL = 300
-
-def get_cached_accounts(mcc_id, force_refresh=False):
-    """
-    Get cached account list or fetch if cache is expired/missing.
-    
-    Args:
-        mcc_id: MCC account ID
-        force_refresh: If True, bypass cache and fetch fresh data
-        
-    Returns:
-        List of account dictionaries
-    """
-    from datetime import datetime, timedelta
-    
-    cache_key = mcc_id
-    now = datetime.now()
-    
-    # Check cache
-    if not force_refresh and cache_key in st.session_state.accounts_cache:
-        cache_entry = st.session_state.accounts_cache[cache_key]
-        cache_age = (now - cache_entry['timestamp']).total_seconds()
-        
-        if cache_age < CACHE_TTL:
-            return cache_entry['data']
-    
-    # Fetch fresh data
-    accounts = list_customer_accounts(st.session_state.client, mcc_id)
-    
-    # Update cache
-    st.session_state.accounts_cache[cache_key] = {
-        'data': accounts,
-        'timestamp': now
-    }
-    
-    return accounts
-
-def get_cached_campaigns(account_id, force_refresh=False):
-    """
-    Get cached campaign list or fetch if cache is expired/missing.
-    
-    Args:
-        account_id: Customer account ID
-        force_refresh: If True, bypass cache and fetch fresh data
-        
-    Returns:
-        List of campaign dictionaries
-    """
-    from datetime import datetime
-    from account_manager import list_campaigns
-    
-    cache_key = account_id
-    now = datetime.now()
-    
-    # Check cache
-    if not force_refresh and cache_key in st.session_state.campaigns_cache:
-        cache_entry = st.session_state.campaigns_cache[cache_key]
-        cache_age = (now - cache_entry['timestamp']).total_seconds()
-        
-        if cache_age < CACHE_TTL:
-            return cache_entry['data']
-    
-    # Fetch fresh data
-    campaigns = list_campaigns(st.session_state.client, account_id)
-    
-    # Update cache
-    st.session_state.campaigns_cache[cache_key] = {
-        'data': campaigns,
-        'timestamp': now
-    }
-    
-    return campaigns
-
-def get_cached_campaign_data(client, account_id, campaign_id=None, date_range_days=30, force_refresh=False):
-    """
-    Get cached campaign data or fetch if cache is expired/missing.
-    
-    Args:
-        client: Google Ads API client
-        account_id: Customer account ID
-        campaign_id: Optional campaign ID
-        date_range_days: Number of days to analyze
-        force_refresh: If True, bypass cache and fetch fresh data
-        
-    Returns:
-        Dictionary with campaign data
-    """
-    from datetime import datetime
-    from comprehensive_data_fetcher import fetch_comprehensive_campaign_data
-    
-    # Create cache key
-    cache_key = f"{account_id}_{campaign_id or 'all'}_{date_range_days}"
-    now = datetime.now()
-    
-    # Check cache
-    if not force_refresh and cache_key in st.session_state.campaign_data_cache:
-        cache_entry = st.session_state.campaign_data_cache[cache_key]
-        cache_age = (now - cache_entry['timestamp']).total_seconds()
-        
-        if cache_age < CACHE_TTL:
-            return cache_entry['data']
-    
-    # Fetch fresh data
-    api_call_counter = {'count': 0}
-    data = fetch_comprehensive_campaign_data(
-        client,
-        account_id,
-        campaign_id=campaign_id,
-        date_range_days=date_range_days,
-        api_call_counter=api_call_counter
-    )
-    
-    # Update cache
-    st.session_state.campaign_data_cache[cache_key] = {
-        'data': data,
-        'timestamp': now
-    }
-    
-    return data
 
 def initialize_client():
     """Initialize Google Ads client."""
@@ -415,18 +287,10 @@ def show_comprehensive_analysis():
         mcc_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
         if mcc_id:
             try:
-                # Check for refresh button
-                col_refresh1, col_refresh2 = st.columns([3, 1])
-                with col_refresh1:
-                    accounts = get_cached_accounts(mcc_id)
-                    account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
-                    selected_account_display = st.selectbox("Select Account", list(account_options.keys()))
-                    selected_account_id = account_options[selected_account_display]
-                with col_refresh2:
-                    if st.button("🔄", help="Refresh account list", key="refresh_accounts_analysis"):
-                        accounts = get_cached_accounts(mcc_id, force_refresh=True)
-                        account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
-                        st.rerun()
+                accounts = list_customer_accounts(st.session_state.client, mcc_id)
+                account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
+                selected_account_display = st.selectbox("Select Account", list(account_options.keys()))
+                selected_account_id = account_options[selected_account_display]
             except Exception as e:
                 st.error(f"Error loading accounts: {e}")
                 st.stop()
@@ -437,19 +301,12 @@ def show_comprehensive_analysis():
         # Get campaigns
         if selected_account_id:
             try:
-                col_refresh1, col_refresh2 = st.columns([3, 1])
-                with col_refresh1:
-                    campaigns = get_cached_campaigns(selected_account_id)
-                    campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
-                    campaign_options["All Campaigns"] = None
-                    selected_campaign_display = st.selectbox("Select Campaign", list(campaign_options.keys()))
-                    selected_campaign_id = campaign_options[selected_campaign_display]
-                with col_refresh2:
-                    if st.button("🔄", help="Refresh campaign list", key="refresh_campaigns_analysis"):
-                        campaigns = get_cached_campaigns(selected_account_id, force_refresh=True)
-                        campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
-                        campaign_options["All Campaigns"] = None
-                        st.rerun()
+                from account_manager import list_campaigns
+                campaigns = list_campaigns(st.session_state.client, selected_account_id)
+                campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
+                campaign_options["All Campaigns"] = None
+                selected_campaign_display = st.selectbox("Select Campaign", list(campaign_options.keys()))
+                selected_campaign_id = campaign_options[selected_campaign_display]
             except Exception as e:
                 st.warning(f"Could not load campaigns: {e}")
                 selected_campaign_id = None
@@ -583,14 +440,15 @@ def show_comprehensive_analysis():
                 # Step 1: Fetch data (this might take time)
                 status_text.info("🔄 Step 1/3: Fetching campaign data from Google Ads API...")
                 
-                # We need to fetch data first to show progress (use cache if available)
-                from comprehensive_data_fetcher import format_campaign_data_for_prompt
-                data = get_cached_campaign_data(
+                # We need to fetch data first to show progress
+                from comprehensive_data_fetcher import fetch_comprehensive_campaign_data, format_campaign_data_for_prompt
+                api_call_counter = {'count': 0}
+                data = fetch_comprehensive_campaign_data(
                     st.session_state.client,
                     selected_account_id,
                     campaign_id=selected_campaign_id,
                     date_range_days=date_range,
-                    force_refresh=False  # Use cache if available
+                    api_call_counter=api_call_counter
                 )
                 
                 if not data['campaigns']:
@@ -673,15 +531,16 @@ def _detect_and_save_changes(results):
         st.warning("⚠️ No snapshot found. Please save a snapshot first after running an analysis.")
         return
     
-    # Fetch current campaign state (use cache if available)
+    # Fetch current campaign state
     with st.spinner("🔄 Fetching current campaign state..."):
         try:
-            current_data = get_cached_campaign_data(
+            api_call_counter = {'count': 0}
+            current_data = fetch_comprehensive_campaign_data(
                 st.session_state.client,
                 results['account_id'],
                 campaign_id=results['campaign_id'],
                 date_range_days=7,  # Just need current state, not historical
-                force_refresh=False  # Use cache if available
+                api_call_counter=api_call_counter
             )
         except Exception as e:
             st.error(f"❌ Error fetching current campaign data: {str(e)}")
@@ -851,17 +710,10 @@ def show_ad_copy_optimization():
         mcc_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
         if mcc_id:
             try:
-                col_refresh1, col_refresh2 = st.columns([3, 1])
-                with col_refresh1:
-                    accounts = get_cached_accounts(mcc_id)
-                    account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
-                    selected_account_display = st.selectbox("Select Account", list(account_options.keys()))
-                    selected_account_id = account_options[selected_account_display]
-                with col_refresh2:
-                    if st.button("🔄", help="Refresh account list", key="refresh_accounts_adcopy"):
-                        accounts = get_cached_accounts(mcc_id, force_refresh=True)
-                        account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
-                        st.rerun()
+                accounts = list_customer_accounts(st.session_state.client, mcc_id)
+                account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
+                selected_account_display = st.selectbox("Select Account", list(account_options.keys()))
+                selected_account_id = account_options[selected_account_display]
             except Exception as e:
                 st.error(f"Error loading accounts: {e}")
                 st.stop()
@@ -871,19 +723,12 @@ def show_ad_copy_optimization():
     with col2:
         if selected_account_id:
             try:
-                col_refresh1, col_refresh2 = st.columns([3, 1])
-                with col_refresh1:
-                    campaigns = get_cached_campaigns(selected_account_id)
-                    campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
-                    campaign_options["All Campaigns"] = None
-                    selected_campaign_display = st.selectbox("Select Campaign", list(campaign_options.keys()))
-                    selected_campaign_id = campaign_options[selected_campaign_display]
-                with col_refresh2:
-                    if st.button("🔄", help="Refresh campaign list", key="refresh_campaigns_adcopy"):
-                        campaigns = get_cached_campaigns(selected_account_id, force_refresh=True)
-                        campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
-                        campaign_options["All Campaigns"] = None
-                        st.rerun()
+                from account_manager import list_campaigns
+                campaigns = list_campaigns(st.session_state.client, selected_account_id)
+                campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
+                campaign_options["All Campaigns"] = None
+                selected_campaign_display = st.selectbox("Select Campaign", list(campaign_options.keys()))
+                selected_campaign_id = campaign_options[selected_campaign_display]
             except Exception as e:
                 st.warning(f"Could not load campaigns: {e}")
                 selected_campaign_id = None
@@ -1060,17 +905,10 @@ def show_biweekly_reports():
         mcc_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
         if mcc_id:
             try:
-                col_refresh1, col_refresh2 = st.columns([3, 1])
-                with col_refresh1:
-                    accounts = get_cached_accounts(mcc_id)
-                    account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
-                    selected_account_display = st.selectbox("Select Account", list(account_options.keys()), key="biweekly_account")
-                    selected_account_id = account_options[selected_account_display]
-                with col_refresh2:
-                    if st.button("🔄", help="Refresh account list", key="refresh_accounts_biweekly"):
-                        accounts = get_cached_accounts(mcc_id, force_refresh=True)
-                        account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
-                        st.rerun()
+                accounts = list_customer_accounts(st.session_state.client, mcc_id)
+                account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
+                selected_account_display = st.selectbox("Select Account", list(account_options.keys()), key="biweekly_account")
+                selected_account_id = account_options[selected_account_display]
             except Exception as e:
                 st.error(f"Error loading accounts: {e}")
                 st.stop()
@@ -1080,19 +918,12 @@ def show_biweekly_reports():
     with col2:
         if selected_account_id:
             try:
-                col_refresh1, col_refresh2 = st.columns([3, 1])
-                with col_refresh1:
-                    campaigns = get_cached_campaigns(selected_account_id)
-                    campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
-                    campaign_options["All Campaigns"] = None
-                    selected_campaign_display = st.selectbox("Select Campaign", list(campaign_options.keys()), key="biweekly_campaign")
-                    selected_campaign_id = campaign_options[selected_campaign_display]
-                with col_refresh2:
-                    if st.button("🔄", help="Refresh campaign list", key="refresh_campaigns_biweekly"):
-                        campaigns = get_cached_campaigns(selected_account_id, force_refresh=True)
-                        campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
-                        campaign_options["All Campaigns"] = None
-                        st.rerun()
+                from account_manager import list_campaigns
+                campaigns = list_campaigns(st.session_state.client, selected_account_id)
+                campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
+                campaign_options["All Campaigns"] = None
+                selected_campaign_display = st.selectbox("Select Campaign", list(campaign_options.keys()), key="biweekly_campaign")
+                selected_campaign_id = campaign_options[selected_campaign_display]
             except Exception as e:
                 st.warning(f"Could not load campaigns: {e}")
                 selected_campaign_id = None
@@ -1544,17 +1375,10 @@ def show_keyword_research():
         mcc_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
         if mcc_id:
             try:
-                col_refresh1, col_refresh2 = st.columns([3, 1])
-                with col_refresh1:
-                    accounts = get_cached_accounts(mcc_id)
-                    account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
-                    selected_account_display = st.selectbox("Select Account", list(account_options.keys()))
-                    selected_account_id = account_options[selected_account_display]
-                with col_refresh2:
-                    if st.button("🔄", help="Refresh account list", key="refresh_accounts_keyword"):
-                        accounts = get_cached_accounts(mcc_id, force_refresh=True)
-                        account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
-                        st.rerun()
+                accounts = list_customer_accounts(st.session_state.client, mcc_id)
+                account_options = {f"{acc['descriptive_name']} ({acc['customer_id']})": acc['customer_id'] for acc in accounts}
+                selected_account_display = st.selectbox("Select Account", list(account_options.keys()))
+                selected_account_id = account_options[selected_account_display]
             except Exception as e:
                 st.error(f"Error loading accounts: {e}")
                 st.stop()
@@ -1565,19 +1389,12 @@ def show_keyword_research():
         # Optional: Select campaign to get existing keywords
         if selected_account_id:
             try:
-                col_refresh1, col_refresh2 = st.columns([3, 1])
-                with col_refresh1:
-                    campaigns = get_cached_campaigns(selected_account_id)
-                    campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
-                    campaign_options["None - Enter keywords manually"] = None
-                    selected_campaign_display = st.selectbox("Select Campaign (Optional)", list(campaign_options.keys()))
-                    selected_campaign_id = campaign_options[selected_campaign_display]
-                with col_refresh2:
-                    if st.button("🔄", help="Refresh campaign list", key="refresh_campaigns_keyword"):
-                        campaigns = get_cached_campaigns(selected_account_id, force_refresh=True)
-                        campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
-                        campaign_options["None - Enter keywords manually"] = None
-                        st.rerun()
+                from account_manager import list_campaigns
+                campaigns = list_campaigns(st.session_state.client, selected_account_id)
+                campaign_options = {f"{camp['campaign_name']} (ID: {camp['campaign_id']})": camp['campaign_id'] for camp in campaigns}
+                campaign_options["None - Enter keywords manually"] = None
+                selected_campaign_display = st.selectbox("Select Campaign (Optional)", list(campaign_options.keys()))
+                selected_campaign_id = campaign_options[selected_campaign_display]
             except Exception as e:
                 st.warning(f"Could not load campaigns: {e}")
                 selected_campaign_id = None
@@ -1612,13 +1429,12 @@ def show_keyword_research():
             if st.button("📥 Load Keywords from Campaign"):
                 with st.spinner("Loading keywords from campaign..."):
                     try:
-                        # Fetch campaign data to get keywords (use cache if available)
-                        data = get_cached_campaign_data(
+                        # Fetch campaign data to get keywords
+                        data = fetch_comprehensive_campaign_data(
                             st.session_state.client,
                             selected_account_id,
                             campaign_id=selected_campaign_id,
-                            date_range_days=30,
-                            force_refresh=False
+                            date_range_days=30
                         )
                         
                         # Extract unique keywords
@@ -1778,13 +1594,11 @@ def show_keyword_research():
                 if selected_campaign_id:
                     with st.spinner("📊 Fetching current campaign performance for comparison..."):
                         try:
-                            # Use cached data if available (same key as above)
-                            data = get_cached_campaign_data(
+                            data = fetch_comprehensive_campaign_data(
                                 st.session_state.client,
                                 selected_account_id,
                                 campaign_id=selected_campaign_id,
-                                date_range_days=30,
-                                force_refresh=False
+                                date_range_days=30
                             )
                             
                             # Build performance dict by keyword

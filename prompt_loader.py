@@ -3,15 +3,10 @@ Prompt Module Loader
 
 This module handles loading and combining prompt modules based on page/feature type.
 Uses file-based modules for easy maintenance and updates.
-Includes caching to avoid repeated file I/O.
 """
 
 import os
 from pathlib import Path
-from datetime import datetime
-
-# Global cache for prompt modules (module_name -> {'content': str, 'timestamp': datetime, 'file_mtime': float})
-_prompt_cache = {}
 
 
 # Module combinations per page/feature
@@ -27,65 +22,35 @@ PAGE_PROMPT_CONFIGS = {
 }
 
 
-def load_module(module_name, use_cache=True):
+def load_module(module_name):
     """
-    Load a prompt module from file, with optional caching.
+    Load a prompt module from file.
     
     Args:
         module_name: Name of the module (without .md extension)
-        use_cache: If True, use cached version if file hasn't changed
         
     Returns:
         str: Module content, or empty string if not found
     """
     # Special handling for 'core' module
-    original_name = module_name
     if module_name == 'core':
         module_name = 'core_prompt'
     
-    # Determine file path
+    # Try core directory first
     core_path = Path(__file__).parent / 'prompts' / 'core' / f'{module_name}.md'
-    module_path = Path(__file__).parent / 'prompts' / 'modules' / f'{module_name}.md'
-    
-    file_path = None
     if core_path.exists():
-        file_path = core_path
-    elif module_path.exists():
-        file_path = module_path
-    else:
-        print(f"⚠️  Warning: Module '{original_name}' not found")
-        return ""
+        with open(core_path, 'r', encoding='utf-8') as f:
+            return f.read()
     
-    # Check cache
-    cache_key = original_name
-    if use_cache and cache_key in _prompt_cache:
-        cache_entry = _prompt_cache[cache_key]
-        try:
-            # Check if file has been modified since cache
-            current_mtime = file_path.stat().st_mtime
-            if current_mtime == cache_entry.get('file_mtime', 0):
-                # File hasn't changed, return cached content
-                return cache_entry['content']
-        except (OSError, AttributeError):
-            # File might have been deleted or path issue, fall through to reload
-            pass
+    # Try modules directory
+    module_path = Path(__file__).parent / 'prompts' / 'modules' / f'{module_name}.md'
+    if module_path.exists():
+        with open(module_path, 'r', encoding='utf-8') as f:
+            return f.read()
     
-    # Load from file
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Update cache
-        _prompt_cache[cache_key] = {
-            'content': content,
-            'timestamp': datetime.now(),
-            'file_mtime': file_path.stat().st_mtime
-        }
-        
-        return content
-    except Exception as e:
-        print(f"⚠️  Warning: Error loading module '{original_name}': {e}")
-        return ""
+    # Module not found
+    print(f"⚠️  Warning: Module '{module_name}' not found")
+    return ""
 
 
 def build_prompt(page_type, include_keyword_planner=False, additional_modules=None):
