@@ -133,6 +133,46 @@ def get_client():
     if not creds:
         return None
     
+    # Ensure credentials are valid and refreshed BEFORE creating client
+    if not creds.valid:
+        if creds.expired and creds.refresh_token:
+            try:
+                if STREAMLIT_AVAILABLE:
+                    st.info("🔄 Refreshing access token...")
+                else:
+                    print("Refreshing access token...")
+                creds.refresh(Request())
+                if STREAMLIT_AVAILABLE:
+                    st.success("✅ Access token refreshed successfully")
+            except Exception as e:
+                error_str = str(e)
+                if STREAMLIT_AVAILABLE:
+                    st.error(f"❌ Failed to refresh access token")
+                    if "invalid_grant" in error_str.lower() or "token has been revoked" in error_str.lower():
+                        st.error("🔴 **Refresh Token Expired or Revoked**")
+                        st.markdown("""
+                        **This usually happens when:**
+                        1. OAuth consent screen is in "Testing" mode (tokens expire after 7 days)
+                        2. Refresh token hasn't been used for 6+ months
+                        3. Token was revoked
+                        
+                        **How to fix:**
+                        1. Run `python3 authenticate.py` locally
+                        2. Complete OAuth flow to get new token
+                        3. Copy new `token.json` contents
+                        4. Update `TOKEN_JSON` secret in Streamlit Cloud
+                        """)
+                    else:
+                        st.error(f"Error: {error_str}")
+                        st.info("💡 Your TOKEN_JSON may need to be regenerated.")
+                else:
+                    print(f"ERROR: Failed to refresh access token: {e}")
+                return None
+        else:
+            if STREAMLIT_AVAILABLE:
+                st.error("❌ No valid credentials. Please regenerate TOKEN_JSON secret.")
+            return None
+    
     # Get credentials from environment or Streamlit secrets
     developer_token = None
     client_id = None
@@ -218,6 +258,11 @@ def get_client():
         config["login_customer_id"] = login_customer_id_numeric
     
     try:
+        # Ensure credentials are still valid right before creating client
+        if not creds.valid:
+            if creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+        
         client = GoogleAdsClient.load_from_dict(config)
         return client
     except Exception as e:
@@ -226,27 +271,44 @@ def get_client():
             st.error(f"❌ Error creating Google Ads client")
             
             # Provide helpful debugging info
-            if "DEVELOPER_TOKEN" in error_msg.upper() or "developer token" in error_msg.lower() or "DEVELOPER_TOKEN_INVALID" in error_msg:
-                st.error("🔴 **Developer Token Invalid**")
+            if "DEVELOPER_TOKEN" in error_msg.upper() or "developer token" in error_msg.lower() or "DEVELOPER_TOKEN_INVALID" in error_msg or "UNAUTHENTICATED" in error_msg:
+                st.error("🔴 **Authentication Failed**")
                 st.markdown("""
                 **Possible causes:**
-                1. Token is incorrect in Streamlit secrets
-                2. Token is not approved in Google Ads API Center
-                3. Token has extra spaces or formatting issues
+                1. **Developer Token Access Level**: Token must be approved for "Standard" access (not "Basic")
+                2. **OAuth Consent Screen**: If in "Testing" mode, refresh tokens expire after 7 days
+                3. **Project Association**: Developer token is permanently linked to first Google Cloud project
+                4. **Token Format**: Extra spaces or incorrect value in secrets
                 
                 **How to fix:**
+                
+                **Step 1: Check Developer Token**
                 1. Go to [Google Ads API Center](https://ads.google.com/aw/apicenter)
-                2. Verify your developer token matches: `goGGiR9m2FWr-3g82AonQ`
-                3. Ensure token status is **"Approved"** (not "Pending")
-                4. Copy the token exactly (no extra spaces)
-                5. Update `GOOGLE_ADS_DEVELOPER_TOKEN` in Streamlit Cloud → Settings → Secrets
-                6. Save and wait for redeploy
+                2. Verify token: `goGGiR9m2FWr-3g82AonQ`
+                3. Check status is **"Approved"** for **"Standard"** access (not "Basic")
+                4. If only "Basic", you need to apply for "Standard" access
+                
+                **Step 2: Check OAuth Consent Screen**
+                1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials/consent)
+                2. Ensure OAuth consent screen is in **"Production"** mode (not "Testing")
+                3. If in Testing mode, tokens expire after 7 days
+                
+                **Step 3: Regenerate Token (if needed)**
+                1. Run `python3 authenticate.py` locally
+                2. Complete OAuth flow
+                3. Copy new `token.json` contents
+                4. Update `TOKEN_JSON` secret in Streamlit Cloud
+                
+                **Step 4: Verify Secrets**
+                - Check all 6 secrets are present in Streamlit Cloud
+                - Verify no extra spaces in values
+                - Ensure TOKEN_JSON has triple quotes `"""`
                 """)
                 
                 # Show what we're trying to use (first few chars for debugging)
                 if developer_token:
                     preview = developer_token[:15] + "..." if len(developer_token) > 15 else developer_token
-                    st.code(f"Current token (preview): {preview}")
+                    st.code(f"Developer token (preview): {preview}")
                     expected_preview = "goGGiR9m2FWr-3g82AonQ"[:15]
                     st.code(f"Expected (preview): {expected_preview}")
                     
