@@ -506,7 +506,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import inch
         from reportlab.lib.colors import HexColor, black, white
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, KeepTogether
         from reportlab.lib.enums import TA_LEFT, TA_CENTER
         from datetime import datetime, timedelta
         import re
