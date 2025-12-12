@@ -772,18 +772,30 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
         if metrics_data:
             story.append(Paragraph("Key Metrics:", section_style))
             
-            # Create metric cards in a 2-column layout
-            metric_cards = []
-            for i in range(0, len(metrics_data), 2):
+            # Create metric cards in a 2-column layout with 3 metrics per column
+            # Split metrics into two columns: first 3 in left column, next 3 in right column
+            left_column_metrics = metrics_data[:3]
+            right_column_metrics = metrics_data[3:6] if len(metrics_data) > 3 else []
+            
+            # Pad right column with None if needed to make it 3 items
+            while len(right_column_metrics) < 3 and len(right_column_metrics) < len(left_column_metrics):
+                right_column_metrics.append(None)
+            
+            # Create rows: each row has one metric from left column and one from right column
+            for i in range(3):
                 row_metrics = []
-                row_metrics.append(metrics_data[i])
-                if i+1 < len(metrics_data):
-                    row_metrics.append(metrics_data[i+1])
+                if i < len(left_column_metrics):
+                    row_metrics.append(left_column_metrics[i])
                 else:
                     row_metrics.append(None)
-                metric_cards.append(row_metrics)
-            
-            for row_metrics in metric_cards:
+                
+                if i < len(right_column_metrics):
+                    row_metrics.append(right_column_metrics[i])
+                else:
+                    row_metrics.append(None)
+                
+                # Only create row if at least one metric exists
+                if row_metrics[0] or row_metrics[1]:
                     table_data = []
                     for metric in row_metrics:
                         if metric:
