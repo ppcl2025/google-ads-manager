@@ -835,20 +835,29 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
                         else:
                             table_data.append([Paragraph("", styles['Normal'])])
                     
-                    metric_table = Table(table_data, colWidths=[3*inch, 3*inch])
+                    # Calculate column widths to use more of the page (7.5 inches available with 0.5 inch margins)
+                    # Leave 0.2 inch gap between columns
+                    available_width = 7.5*inch
+                    gap = 0.2*inch
+                    col_width = (available_width - gap) / 2
+                    
+                    metric_table = Table(table_data, colWidths=[col_width, col_width])
+                    # Set row height to make boxes more square-like
+                    row_height = 1.2*inch
                     metric_table.setStyle(TableStyle([
                         ('BACKGROUND', (0, 0), (-1, -1), COLOR_BG_LIGHT),
-                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-                        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-                        ('TOPPADDING', (0, 0), (-1, -1), 10),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                        ('TOPPADDING', (0, 0), (-1, -1), 12),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
                         ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
+                        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [COLOR_BG_LIGHT, COLOR_BG_LIGHT]),
                     ]))
                     story.append(metric_table)
                     # Minimal spacing between rows to fit all 3 rows on first page
                     if i < 2:  # Don't add spacer after last row
-                        story.append(Spacer(1, 0.05*inch))
+                        story.append(Spacer(1, 0.08*inch))
             
             story.append(Spacer(1, 0.15*inch))
         
