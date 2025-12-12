@@ -142,12 +142,19 @@ def get_client():
     # Try Streamlit secrets first (for Cloud deployment)
     if STREAMLIT_AVAILABLE and hasattr(st, 'secrets'):
         try:
-            developer_token = st.secrets.get('GOOGLE_ADS_DEVELOPER_TOKEN', os.getenv('GOOGLE_ADS_DEVELOPER_TOKEN'))
-            client_id = st.secrets.get('GOOGLE_ADS_CLIENT_ID', os.getenv('GOOGLE_ADS_CLIENT_ID'))
-            client_secret = st.secrets.get('GOOGLE_ADS_CLIENT_SECRET', os.getenv('GOOGLE_ADS_CLIENT_SECRET'))
-            login_customer_id = st.secrets.get('GOOGLE_ADS_CUSTOMER_ID', os.getenv('GOOGLE_ADS_CUSTOMER_ID'))
-        except Exception:
+            # Access secrets directly (Streamlit Cloud format)
+            if 'GOOGLE_ADS_DEVELOPER_TOKEN' in st.secrets:
+                developer_token = st.secrets['GOOGLE_ADS_DEVELOPER_TOKEN']
+            if 'GOOGLE_ADS_CLIENT_ID' in st.secrets:
+                client_id = st.secrets['GOOGLE_ADS_CLIENT_ID']
+            if 'GOOGLE_ADS_CLIENT_SECRET' in st.secrets:
+                client_secret = st.secrets['GOOGLE_ADS_CLIENT_SECRET']
+            if 'GOOGLE_ADS_CUSTOMER_ID' in st.secrets:
+                login_customer_id = st.secrets['GOOGLE_ADS_CUSTOMER_ID']
+        except Exception as e:
             # Fall back to environment variables
+            if STREAMLIT_AVAILABLE:
+                st.warning(f"⚠️ Error reading secrets: {str(e)}")
             pass
     
     # Fall back to environment variables if not in secrets
@@ -161,11 +168,32 @@ def get_client():
         login_customer_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
     
     # Validate required credentials
-    if not developer_token or not client_id or not client_secret:
+    if not developer_token:
         if STREAMLIT_AVAILABLE:
-            st.error("❌ Missing Google Ads API credentials in Streamlit secrets. Please add: GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_CLIENT_ID, GOOGLE_ADS_CLIENT_SECRET")
+            st.error("❌ Missing GOOGLE_ADS_DEVELOPER_TOKEN in Streamlit secrets. Please add it in Settings → Secrets.")
+            st.info("💡 Current value: " + str(developer_token))
         else:
-            print("ERROR: Missing Google Ads API credentials in environment variables")
+            print("ERROR: Missing GOOGLE_ADS_DEVELOPER_TOKEN in environment variables")
+        return None
+    
+    if not client_id:
+        if STREAMLIT_AVAILABLE:
+            st.error("❌ Missing GOOGLE_ADS_CLIENT_ID in Streamlit secrets.")
+        else:
+            print("ERROR: Missing GOOGLE_ADS_CLIENT_ID in environment variables")
+        return None
+    
+    if not client_secret:
+        if STREAMLIT_AVAILABLE:
+            st.error("❌ Missing GOOGLE_ADS_CLIENT_SECRET in Streamlit secrets.")
+        else:
+            print("ERROR: Missing GOOGLE_ADS_CLIENT_SECRET in environment variables")
+        return None
+    
+    # Validate developer token format (should not be empty or None)
+    if not developer_token or developer_token.strip() == "":
+        if STREAMLIT_AVAILABLE:
+            st.error("❌ GOOGLE_ADS_DEVELOPER_TOKEN is empty. Please check your Streamlit secrets.")
         return None
     
     # Create Google Ads client configuration
@@ -187,7 +215,15 @@ def get_client():
         client = GoogleAdsClient.load_from_dict(config)
         return client
     except Exception as e:
-        print(f"Error creating Google Ads client: {e}")
+        error_msg = str(e)
+        if STREAMLIT_AVAILABLE:
+            st.error(f"❌ Error creating Google Ads client: {error_msg}")
+            # Provide helpful debugging info
+            if "DEVELOPER_TOKEN" in error_msg.upper() or "developer token" in error_msg.lower():
+                st.info("💡 The developer token may be invalid or not properly set in Streamlit secrets.")
+                st.info("💡 Verify GOOGLE_ADS_DEVELOPER_TOKEN is correct in Settings → Secrets.")
+        else:
+            print(f"Error creating Google Ads client: {e}")
         return None
 
 if __name__ == "__main__":
