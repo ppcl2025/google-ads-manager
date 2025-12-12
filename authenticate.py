@@ -41,20 +41,37 @@ def authenticate():
             if 'TOKEN_JSON' in st.secrets:
                 # Create temporary token file from secrets
                 token_content = st.secrets['TOKEN_JSON']
+                
+                # Handle different formats - Streamlit might return dict or string
                 if isinstance(token_content, str):
-                    # If it's a string, parse it as JSON
-                    token_data = json.loads(token_content)
-                else:
-                    # If it's already a dict
+                    # If it's a string, try to parse as JSON
+                    # Remove triple quotes if present
+                    cleaned = token_content.strip()
+                    if cleaned.startswith('"""'):
+                        cleaned = cleaned[3:]
+                    if cleaned.endswith('"""'):
+                        cleaned = cleaned[:-3]
+                    cleaned = cleaned.strip()
+                    token_data = json.loads(cleaned)
+                elif isinstance(token_content, dict):
+                    # If it's already a dict, use it directly
                     token_data = token_content
+                else:
+                    raise ValueError(f"Unexpected TOKEN_JSON type: {type(token_content)}")
                 
                 # Create temporary file
                 temp_token = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json')
                 json.dump(token_data, temp_token)
                 temp_token.close()
                 token_file = temp_token.name
+                
+                if STREAMLIT_AVAILABLE:
+                    # Debug: verify token was loaded
+                    st.info(f"✅ Loaded TOKEN_JSON from Streamlit secrets (expiry: {token_data.get('expiry', 'unknown')})")
         except Exception as e:
             # Fall back to local file if secrets fail
+            if STREAMLIT_AVAILABLE:
+                st.warning(f"⚠️ Error loading TOKEN_JSON from secrets: {str(e)}. Falling back to local file.")
             pass
     
     # Load existing token if available
