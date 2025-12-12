@@ -104,24 +104,29 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    /* Sidebar navigation button styles */
-    div[data-testid*="nav_"] > button {
+    /* Sidebar navigation button styles - unselected */
+    div[data-testid*="nav_"] > button[kind="secondary"] {
         background-color: #2d3748 !important;
         border: 2px solid #1a202c !important;
         color: #e2e8f0 !important;
     }
-    div[data-testid*="nav_"] > button:hover {
+    div[data-testid*="nav_"] > button[kind="secondary"]:hover {
         background-color: #374151 !important;
         border-color: #4b5563 !important;
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     /* Selected button style - lighter shade with darker outline */
-    div[data-testid*="nav_"] > button[kind="primary"],
-    .sidebar-nav-selected > button {
+    div[data-testid*="nav_"] > button[kind="primary"] {
         background-color: #4a5568 !important;
         border: 2px solid #2d3748 !important;
         color: white !important;
+    }
+    div[data-testid*="nav_"] > button[kind="primary"]:hover {
+        background-color: #556270 !important;
+        border-color: #374151 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 </style>
 """, unsafe_allow_html=True)
