@@ -515,6 +515,18 @@ def show_create_account():
         currency_code = st.selectbox("Currency *", ["USD", "CAD", "GBP", "EUR", "AUD"], index=0)
         time_zone = st.selectbox("Time Zone *", list(US_TIMEZONES.keys()), format_func=lambda x: US_TIMEZONES[x])
         
+        st.markdown("### Account Settings")
+        st.info("""
+        **Default Settings:**
+        - Account Name: As specified above
+        - Currency: As selected above
+        - Time Zone: As selected above
+        - Manager Account: False (prevents automatic MCC payment profile linking)
+        - Test Account: False (production account)
+        - Tracking URL Template: Empty (can be set up later)
+        - Payment Method: Client must set up their own payment method in Google Ads
+        """)
+        
         submitted = st.form_submit_button("Create Sub-Account", type="primary", use_container_width=True)
         
         if submitted:
