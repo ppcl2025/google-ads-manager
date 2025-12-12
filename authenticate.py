@@ -302,7 +302,7 @@ def get_client():
                 **Step 4: Verify Secrets**
                 - Check all 6 secrets are present in Streamlit Cloud
                 - Verify no extra spaces in values
-                - Ensure TOKEN_JSON has triple quotes `"""`
+                - Ensure TOKEN_JSON has triple quotes around the JSON
                 """)
                 
                 # Show what we're trying to use (first few chars for debugging)
