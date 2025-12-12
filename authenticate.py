@@ -64,27 +64,46 @@ def authenticate():
     # If no valid credentials, get new ones
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            print("Refreshing expired token...")
-            creds.refresh(Request())
-        else:
-            print("Starting OAuth2 flow...")
-            client_secrets_file = 'client_secrets.json'
-            
-            if not os.path.exists(client_secrets_file):
-                print("ERROR: client_secrets.json not found!")
-                print("Please download OAuth2 credentials from Google Ads API Center")
-                print("and save as 'client_secrets.json' in the project root.")
+            try:
+                if STREAMLIT_AVAILABLE:
+                    st.info("🔄 Refreshing expired token...")
+                else:
+                    print("Refreshing expired token...")
+                creds.refresh(Request())
+            except Exception as e:
+                if STREAMLIT_AVAILABLE:
+                    st.error(f"❌ Failed to refresh token: {str(e)}")
+                    st.info("💡 You may need to regenerate your refresh token. See authentication docs.")
+                else:
+                    print(f"ERROR: Failed to refresh token: {e}")
                 return None
-            
-            flow = InstalledAppFlow.from_client_secrets_file(
-                client_secrets_file, SCOPES)
-            # Use fixed port 8080 for consistent redirect URI
-            creds = flow.run_local_server(port=8080)
+        else:
+            # In Streamlit Cloud, we can't run OAuth flow interactively
+            if STREAMLIT_AVAILABLE:
+                st.error("❌ No valid token found. Please add TOKEN_JSON secret in Streamlit Cloud settings.")
+                st.info("💡 Copy the contents of your local token.json file and add it as TOKEN_JSON secret.")
+                return None
+            else:
+                print("Starting OAuth2 flow...")
+                client_secrets_file = 'client_secrets.json'
+                
+                if not os.path.exists(client_secrets_file):
+                    print("ERROR: client_secrets.json not found!")
+                    print("Please download OAuth2 credentials from Google Ads API Center")
+                    print("and save as 'client_secrets.json' in the project root.")
+                    return None
+                
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    client_secrets_file, SCOPES)
+                # Use fixed port 8080 for consistent redirect URI
+                creds = flow.run_local_server(port=8080)
         
-        # Save credentials for future use
-        with open(token_file, 'w') as token:
-            token.write(creds.to_json())
-        print("Token saved successfully!")
+        # Save credentials for future use (only if not using temp file from secrets)
+        if not (STREAMLIT_AVAILABLE and hasattr(st, 'secrets') and 'TOKEN_JSON' in st.secrets):
+            with open(token_file, 'w') as token:
+                token.write(creds.to_json())
+            if not STREAMLIT_AVAILABLE:
+                print("Token saved successfully!")
     
     return creds
 
@@ -114,17 +133,51 @@ def get_client():
     if not creds:
         return None
     
+    # Get credentials from environment or Streamlit secrets
+    developer_token = None
+    client_id = None
+    client_secret = None
+    login_customer_id = None
+    
+    # Try Streamlit secrets first (for Cloud deployment)
+    if STREAMLIT_AVAILABLE and hasattr(st, 'secrets'):
+        try:
+            developer_token = st.secrets.get('GOOGLE_ADS_DEVELOPER_TOKEN', os.getenv('GOOGLE_ADS_DEVELOPER_TOKEN'))
+            client_id = st.secrets.get('GOOGLE_ADS_CLIENT_ID', os.getenv('GOOGLE_ADS_CLIENT_ID'))
+            client_secret = st.secrets.get('GOOGLE_ADS_CLIENT_SECRET', os.getenv('GOOGLE_ADS_CLIENT_SECRET'))
+            login_customer_id = st.secrets.get('GOOGLE_ADS_CUSTOMER_ID', os.getenv('GOOGLE_ADS_CUSTOMER_ID'))
+        except Exception:
+            # Fall back to environment variables
+            pass
+    
+    # Fall back to environment variables if not in secrets
+    if not developer_token:
+        developer_token = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN")
+    if not client_id:
+        client_id = os.getenv("GOOGLE_ADS_CLIENT_ID")
+    if not client_secret:
+        client_secret = os.getenv("GOOGLE_ADS_CLIENT_SECRET")
+    if not login_customer_id:
+        login_customer_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
+    
+    # Validate required credentials
+    if not developer_token or not client_id or not client_secret:
+        if STREAMLIT_AVAILABLE:
+            st.error("❌ Missing Google Ads API credentials in Streamlit secrets. Please add: GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_CLIENT_ID, GOOGLE_ADS_CLIENT_SECRET")
+        else:
+            print("ERROR: Missing Google Ads API credentials in environment variables")
+        return None
+    
     # Create Google Ads client configuration
     config = {
-        "developer_token": os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN"),
-        "client_id": os.getenv("GOOGLE_ADS_CLIENT_ID"),
-        "client_secret": os.getenv("GOOGLE_ADS_CLIENT_SECRET"),
+        "developer_token": developer_token,
+        "client_id": client_id,
+        "client_secret": client_secret,
         "refresh_token": creds.refresh_token,
         "use_proto_plus": True
     }
     
     # Add login_customer_id if it's an MCC account (for listing sub-accounts)
-    login_customer_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
     if login_customer_id:
         # Remove dashes for login_customer_id (needs format: 1234567890)
         login_customer_id_numeric = login_customer_id.replace("-", "")
