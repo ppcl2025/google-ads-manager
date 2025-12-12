@@ -4372,10 +4372,19 @@ Provide your report in this exact structure:
 **PAGE 1: PERFORMANCE OVERVIEW**
 
 **Key Metrics:**
-- Total Leads: [number] ([↑/↓X%] vs. last period or [stable])
-- Cost Per Lead: $[amount] ([↑/↓X%] vs. last period or [stable])
-- Ad Spend: $[amount] ([X%] of budget)
+- Total Leads: [number] 🟢 ([description or change])
+- Cost Per Lead: $[amount] 🟡 ([description or change])
+- Ad Spend: $[amount] 🟢 ([X%] of budget)
+- Conversion Rate: [X]% 🟢 ([description])
+- Return on Ad Spend: [X]x 🟡 ([description])
 - [Other relevant metrics if available]
+
+**IMPORTANT**: Each metric MUST include an emoji indicator:
+- 🟢 for good/improving performance
+- 🟡 for stable/neutral performance  
+- 🔴 for declining/poor performance
+
+Format: "Metric Name: value 🟢 (description)"
 
 **Two-Week Trend:**
 [Brief 2-3 sentence description of daily lead trends and patterns]
