@@ -197,31 +197,4 @@ GAds-Claude/
 
 ---
 
----
-
-## 📄 Combined Documentation PDF
-
-A script is available to generate a single PDF containing all documentation with a clickable table of contents.
-
-**Generate PDF:**
-```bash
-python generate_docs_pdf.py
-```
-
-**Custom output path:**
-```bash
-python generate_docs_pdf.py /path/to/output.pdf
-```
-
-**Features:**
-- Combines all documentation files into one PDF
-- Clickable table of contents with internal links
-- Bookmarks for all sections (H1, H2, H3)
-- Professional formatting matching app design
-- Preserves markdown formatting (headers, lists, code blocks, links)
-
-**Output:** `docs/Combined_Documentation.pdf` (or custom path)
-
----
-
 **Last Updated:** December 2024
