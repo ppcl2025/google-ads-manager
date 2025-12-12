@@ -251,6 +251,23 @@ def show_comprehensive_analysis():
         optimization_goals = st.text_area("Custom Optimization Goals", height=100,
             placeholder="Enter your optimization goals, one per line...")
     
+    # Display stored results if they exist (persists across button clicks)
+    if 'analysis_results' in st.session_state and st.session_state['analysis_results']:
+        results = st.session_state['analysis_results']
+        st.markdown("---")
+        st.markdown("### 📋 Optimization Recommendations")
+        st.markdown(results['recommendations'])
+        
+        # Save options (always visible when results exist)
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save to PDF", use_container_width=True, key="save_pdf_analysis_stored"):
+                _save_analysis_to_pdf()
+        with col2:
+            if st.button("📤 Upload to Google Drive", use_container_width=True, key="upload_drive_analysis_stored"):
+                _upload_analysis_to_drive()
+    
     # Run analysis button
     if st.button("🚀 Run Comprehensive Analysis", type="primary", use_container_width=True):
         if not selected_account_id:
@@ -299,32 +316,134 @@ def show_comprehensive_analysis():
                         pre_fetched_data=data  # Pass pre-fetched data
                     )
                     
+                    # Store results in session state so they persist across button clicks
+                    st.session_state['analysis_results'] = {
+                        'recommendations': recommendations,
+                        'account_id': selected_account_id,
+                        'account_display': selected_account_display,
+                        'campaign_id': selected_campaign_id,
+                        'campaign_display': selected_campaign_display,
+                        'date_range': date_range
+                    }
+                    
                     status_text.empty()
                     st.success("✅ Analysis Complete!")
-                    st.markdown("---")
-                    st.markdown("### 📋 Optimization Recommendations")
-                    st.markdown(recommendations)
+                    st.rerun()  # Rerun to show the results below
                 except Exception as e:
                     status_text.empty()
                     st.error(f"❌ Error during analysis: {str(e)}")
                     import traceback
                     st.code(traceback.format_exc())
                     return
-                
-                # Save options
-                st.markdown("---")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("💾 Save to PDF", use_container_width=True):
-                        # Save logic here
-                        st.info("PDF save functionality will be implemented")
-                with col2:
-                    if st.button("📤 Upload to Google Drive", use_container_width=True):
-                        # Upload logic here
-                        st.info("Google Drive upload will be implemented")
-                        
+            
             except Exception as e:
                 st.error(f"❌ Error running analysis: {str(e)}")
+
+def _save_analysis_to_pdf():
+    """Helper function to save analysis to PDF."""
+    if 'analysis_results' not in st.session_state:
+        st.error("No analysis results to save. Please run an analysis first.")
+        return
+    
+    results = st.session_state['analysis_results']
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else "Account"
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "All Campaigns"
+    
+    try:
+        from real_estate_analyzer import create_pdf_report
+        import tempfile
+        import os
+        from datetime import datetime
+        
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_filepath = temp_file.name
+        temp_file.close()
+        
+        if create_pdf_report(
+            results['recommendations'],
+            account_name,
+            campaign_name,
+            results['date_range'],
+            temp_filepath
+        ):
+            with open(temp_filepath, 'rb') as f:
+                st.download_button(
+                    label="📥 Download PDF",
+                    data=f.read(),
+                    file_name=f"{account_name}_{campaign_name}_Analysis_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"download_pdf_{datetime.now().timestamp()}"
+                )
+            os.unlink(temp_filepath)
+            st.success("✅ PDF created successfully! Click the download button above.")
+        else:
+            st.error("❌ Failed to create PDF")
+    except Exception as e:
+        st.error(f"❌ Error creating PDF: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
+
+def _upload_analysis_to_drive():
+    """Helper function to upload analysis to Google Drive."""
+    if 'analysis_results' not in st.session_state:
+        st.error("No analysis results to upload. Please run an analysis first.")
+        return
+    
+    results = st.session_state['analysis_results']
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else "Account"
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else "All Campaigns"
+    
+    try:
+        from real_estate_analyzer import create_pdf_report, find_or_create_drive_folder, upload_to_drive, get_drive_service
+        import tempfile
+        import os
+        from datetime import datetime
+        
+        # Create temporary PDF
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_filepath = temp_file.name
+        temp_file.close()
+        
+        # Generate PDF
+        if not create_pdf_report(
+            results['recommendations'],
+            account_name,
+            campaign_name,
+            results['date_range'],
+            temp_filepath
+        ):
+            st.error("❌ Failed to create PDF for upload")
+            return
+        
+        # Get Drive service
+        drive_service = get_drive_service()
+        if not drive_service:
+            st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            os.unlink(temp_filepath)
+            return
+        
+        # Find or create folder
+        folder_id = find_or_create_drive_folder(drive_service, "Optimization Reports", "PPC Launch")
+        if not folder_id:
+            st.warning("⚠️ Could not create/find Drive folder. Uploading to Drive root.")
+        
+        # Upload file
+        filename = f"{account_name}_{campaign_name}_Analysis_{datetime.now().strftime('%Y%m%d')}.pdf"
+        file_id, file_link = upload_to_drive(drive_service, temp_filepath, filename, folder_id)
+        
+        # Clean up temp file
+        os.unlink(temp_filepath)
+        
+        if file_id and file_link:
+            st.success(f"✅ Successfully uploaded to Google Drive!")
+            st.markdown(f"📁 [View file in Google Drive]({file_link})")
+        else:
+            st.error("❌ Failed to upload to Google Drive")
+    except Exception as e:
+        st.error(f"❌ Error uploading to Google Drive: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
 
 def show_ad_copy_optimization():
     """Ad copy optimization page."""
