@@ -242,7 +242,18 @@ def get_client():
         # Only show in debug mode or if there's an error
         # st.info(f"🔍 Debug: Developer token starts with: {token_preview}")
     
+    # Ensure credentials are valid and refreshed BEFORE creating client
+    if not creds.valid:
+        if creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                if STREAMLIT_AVAILABLE:
+                    st.error(f"❌ Failed to refresh credentials before creating client: {str(e)}")
+                return None
+    
     # Create Google Ads client configuration
+    # IMPORTANT: All credentials must be from the SAME Google Cloud project
     config = {
         "developer_token": developer_token.strip(),  # Remove any whitespace
         "client_id": client_id.strip() if client_id else None,
@@ -258,10 +269,11 @@ def get_client():
         config["login_customer_id"] = login_customer_id_numeric
     
     try:
-        # Ensure credentials are still valid right before creating client
-        if not creds.valid:
-            if creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+        # Verify we have all required fields
+        if not config.get("developer_token") or not config.get("refresh_token"):
+            if STREAMLIT_AVAILABLE:
+                st.error("❌ Missing required credentials for Google Ads client")
+            return None
         
         client = GoogleAdsClient.load_from_dict(config)
         return client
