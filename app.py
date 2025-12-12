@@ -204,14 +204,14 @@ def main():
         ]
         
         for nav_text, nav_value in nav_items:
-            is_selected = (st.session_state.current_page == nav_value)
+            is_selected = (st.session_state.get('current_page', '📊 Campaign Analysis') == nav_value)
             button_type = "primary" if is_selected else "secondary"
             
             if st.button(nav_text, key=f"nav_{nav_value}", use_container_width=True, type=button_type):
                 st.session_state.current_page = nav_value
                 st.rerun()
         
-        page = st.session_state.current_page
+        page = st.session_state.get('current_page', '📊 Campaign Analysis')
         
         st.markdown("---")
         st.markdown("### Settings")
