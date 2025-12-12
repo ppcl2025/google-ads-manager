@@ -101,7 +101,7 @@ if 'selected_model' not in st.session_state:
 
 def initialize_client():
     """Initialize Google Ads client."""
-    if st.session_state.client is None:
+    if 'client' not in st.session_state or st.session_state.client is None:
         try:
             st.session_state.client = get_client()
             if st.session_state.client:
