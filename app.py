@@ -442,6 +442,83 @@ def show_comprehensive_analysis():
             except Exception as e:
                 st.error(f"❌ Error running analysis: {str(e)}")
 
+def _detect_and_save_changes(results):
+    """Detect changes by comparing current state with snapshot, then save to changelog."""
+    from snapshot_manager import load_snapshot, compare_snapshots, format_changes_for_changelog
+    from comprehensive_data_fetcher import fetch_comprehensive_campaign_data
+    from changelog_manager import write_changelog_entry
+    import streamlit as st
+    
+    account_name = results['account_display'].split(" (")[0] if results['account_display'] else None
+    campaign_name = results['campaign_display'].split(" (")[0] if results['campaign_display'] and results['campaign_display'] != "All Campaigns" else None
+    
+    # Load snapshot
+    old_snapshot = load_snapshot(
+        account_id=results['account_id'],
+        campaign_id=results['campaign_id'],
+        account_name=account_name,
+        campaign_name=campaign_name
+    )
+    
+    if not old_snapshot:
+        st.warning("⚠️ No snapshot found. Please save a snapshot first after running an analysis.")
+        return
+    
+    # Fetch current campaign state
+    with st.spinner("🔄 Fetching current campaign state..."):
+        try:
+            api_call_counter = {'count': 0}
+            current_data = fetch_comprehensive_campaign_data(
+                st.session_state.client,
+                results['account_id'],
+                campaign_id=results['campaign_id'],
+                date_range_days=7,  # Just need current state, not historical
+                api_call_counter=api_call_counter
+            )
+        except Exception as e:
+            st.error(f"❌ Error fetching current campaign data: {str(e)}")
+            return
+    
+    # Compare snapshots
+    with st.spinner("🔍 Comparing snapshots..."):
+        changes = compare_snapshots(old_snapshot, current_data)
+    
+    # Format changes for display
+    changes_text = format_changes_for_changelog(changes)
+    
+    if changes_text == "No structural changes detected.":
+        st.info("ℹ️ No changes detected. Campaign state matches the saved snapshot.")
+        return
+    
+    # Display detected changes
+    st.markdown("### 🔍 Detected Changes")
+    st.text_area("Changes Detected", changes_text, height=300, disabled=True, key="detected_changes_display")
+    
+    # Option to save to changelog
+    if st.button("✅ Save to Changelog", use_container_width=True, type="primary", key="save_detected_changes"):
+        success = write_changelog_entry(
+            account_id=results['account_id'],
+            campaign_id=results['campaign_id'],
+            account_name=account_name,
+            campaign_name=campaign_name,
+            changes_text=changes_text
+        )
+        
+        if success:
+            st.success("✅ Changes automatically saved to changelog! They will be included in future analyses.")
+            # Update snapshot to current state
+            from snapshot_manager import save_snapshot
+            save_snapshot(
+                account_id=results['account_id'],
+                campaign_id=results['campaign_id'],
+                account_name=account_name,
+                campaign_name=campaign_name,
+                campaign_data=current_data
+            )
+            st.rerun()
+        else:
+            st.error("❌ Failed to save changes to changelog.")
+
 def _save_analysis_to_pdf():
     """Helper function to save analysis to PDF."""
     if 'analysis_results' not in st.session_state:
