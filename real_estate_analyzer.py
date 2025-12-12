@@ -4459,7 +4459,8 @@ class RealEstateAnalyzer:
                 "ANTHROPIC_API_KEY not found in .env file. "
                 "Get your API key from https://console.anthropic.com/"
             )
-        self.claude = Anthropic(api_key=api_key)
+        # Initialize with timeout to prevent hanging (60 seconds default, 120 for long requests)
+        self.claude = Anthropic(api_key=api_key, timeout=120.0)
         self.model = model
         
         # Initialize Google Ads client
