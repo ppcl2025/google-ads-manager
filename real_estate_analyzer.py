@@ -962,8 +962,10 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             body_style_wrap = ParagraphStyle(
                 'TableBody', parent=styles['Normal'],
                 fontSize=9, alignment=TA_LEFT,
-                leading=11, wordWrap='LTR'
+                leading=11
             )
+            # Enable word wrapping by setting width constraint
+            body_style_wrap.wordWrap = 'LTR'
             body_style_center = ParagraphStyle(
                 'TableBodyCenter', parent=styles['Normal'],
                 fontSize=9, alignment=TA_CENTER,
@@ -973,11 +975,20 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             for row in whats_working[:5]:
                 if len(row) >= 4:
                     # Wrap text in Paragraph objects for proper text wrapping
+                    # Escape HTML and ensure proper wrapping
+                    from xml.sax.saxutils import escape
+                    keyword_text = escape(str(row[0]))
+                    leads_text = escape(str(row[1]))
+                    cost_text = escape(str(row[2]))
+                    why_text = escape(str(row[3]))
+                    
+                    # Create Paragraph with explicit width for wrapping
+                    # The column width will constrain the text
                     table_data.append([
-                        Paragraph(str(row[0]), body_style_wrap),
-                        Paragraph(str(row[1]), body_style_center),
-                        Paragraph(str(row[2]), body_style_center),
-                        Paragraph(str(row[3]), body_style_wrap)  # This will wrap properly
+                        Paragraph(keyword_text, body_style_wrap),
+                        Paragraph(leads_text, body_style_center),
+                        Paragraph(cost_text, body_style_center),
+                        Paragraph(why_text, body_style_wrap)  # Will wrap to column width
                     ])
             
             # Adjust column widths - give more space to "Why It's Working" column

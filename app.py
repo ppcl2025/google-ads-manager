@@ -135,7 +135,17 @@ def main():
     
     # Sidebar navigation
     with st.sidebar:
-        st.image("https://via.placeholder.com/200x60/1a5490/ffffff?text=Google+Ads", use_container_width=True)
+        # Add logo at top of sidebar
+        logo_paths = ['PPC_LAUNCH_logo.png', 'logo.png', 'ppc_launch_logo.png']
+        logo_found = False
+        for logo_path in logo_paths:
+            if os.path.exists(logo_path):
+                st.image(logo_path, use_container_width=True)
+                logo_found = True
+                break
+        if not logo_found:
+            # Fallback to placeholder if logo not found
+            st.image("https://via.placeholder.com/200x60/1a5490/ffffff?text=Google+Ads", use_container_width=True)
         st.markdown("---")
         
         page = st.radio(
