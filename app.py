@@ -1467,6 +1467,151 @@ def show_keyword_research():
     
     st.markdown("---")
     
+    # Seed Word Keyword Discovery (Independent Feature)
+    st.markdown("### 🔍 Seed Word Keyword Discovery")
+    st.markdown("Use seed words to discover new keyword ideas. This is independent of the main keyword research workflow.")
+    
+    with st.expander("🔍 Discover Keywords from Seed Words", expanded=False):
+        seed_word_input = st.text_area(
+            "Enter Seed Words",
+            placeholder="Enter 1-3 seed words or phrases (one per line)\nExample:\nsell house\ncash buyer\nforeclosure",
+            height=80,
+            key="kw_seed_words"
+        )
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            seed_max_results = st.number_input("Max Keyword Suggestions", min_value=10, max_value=100, value=50, key="kw_seed_max")
+        with col2:
+            seed_search_button = st.button("🔍 Discover Keywords", type="primary", use_container_width=True)
+        
+        # Initialize session state for seed word results
+        if 'seed_word_keywords' not in st.session_state:
+            st.session_state.seed_word_keywords = None
+        
+        if seed_search_button:
+            if not seed_word_input.strip():
+                st.error("Please enter at least one seed word.")
+            else:
+                # Parse seed words
+                seed_words = [line.strip() for line in seed_word_input.split('\n') if line.strip()]
+                
+                if len(seed_words) > 3:
+                    st.warning("⚠️ Using more than 3 seed words may reduce result quality. Using first 3 seed words.")
+                    seed_words = seed_words[:3]
+                
+                if seed_words:
+                    # Determine customer ID for API call
+                    api_customer_id = selected_account_id if selected_account_id else os.getenv("GOOGLE_ADS_CUSTOMER_ID")
+                    if not api_customer_id:
+                        st.error("Please select an account or set GOOGLE_ADS_CUSTOMER_ID in environment variables.")
+                    else:
+                        with st.spinner(f"🔍 Discovering keywords from {len(seed_words)} seed word(s)..."):
+                            try:
+                                # Use geo targets if specified (manual or campaign)
+                                search_geo_targets = manual_geo_targets if manual_geo_targets else geo_targets
+                                
+                                # Fetch keyword suggestions from seed words
+                                seed_results = fetch_keyword_planner_data(
+                                    st.session_state.client,
+                                    api_customer_id,
+                                    seed_words,
+                                    geo_targets=search_geo_targets,
+                                    language_code="en"
+                                )
+                                
+                                # Store all discovered keywords (seed + related)
+                                all_discovered = []
+                                if seed_results.get('keywords'):
+                                    all_discovered.extend(seed_results['keywords'])
+                                if seed_results.get('related_keywords'):
+                                    all_discovered.extend(seed_results['related_keywords'][:seed_max_results])
+                                
+                                st.session_state.seed_word_keywords = {
+                                    'keywords': all_discovered[:seed_max_results],
+                                    'seed_words': seed_words
+                                }
+                                
+                                st.success(f"✅ Discovered {len(all_discovered[:seed_max_results])} keyword suggestions!")
+                                st.rerun()
+                                
+                            except Exception as e:
+                                st.error(f"❌ Error discovering keywords: {str(e)}")
+                                import traceback
+                                st.code(traceback.format_exc())
+        
+        # Display seed word discovery results
+        if st.session_state.seed_word_keywords:
+            st.markdown("#### Discovered Keywords")
+            discovered_keywords = st.session_state.seed_word_keywords['keywords']
+            
+            # Create a selectable list of keywords
+            st.markdown(f"**Found {len(discovered_keywords)} keyword suggestions from seed words:**")
+            
+            # Display keywords in a table with checkboxes for selection
+            selected_keywords_for_research = []
+            
+            # Create columns for keyword display
+            keyword_cols = st.columns(3)
+            for idx, kw_info in enumerate(discovered_keywords):
+                col_idx = idx % 3
+                with keyword_cols[col_idx]:
+                    keyword_text = kw_info.get('keyword_text', '')
+                    monthly_searches = kw_info.get('avg_monthly_searches', 0) or 0
+                    competition = kw_info.get('competition', 'UNKNOWN')
+                    
+                    # Competition badge
+                    if competition == 'LOW':
+                        comp_badge = "🟢 LOW"
+                    elif competition == 'MEDIUM':
+                        comp_badge = "🟡 MEDIUM"
+                    elif competition == 'HIGH':
+                        comp_badge = "🔴 HIGH"
+                    else:
+                        comp_badge = "⚪ UNKNOWN"
+                    
+                    # Checkbox for selection
+                    if st.checkbox(
+                        f"{keyword_text}",
+                        key=f"seed_kw_{idx}",
+                        help=f"Searches: {monthly_searches:,}/month | Competition: {competition}"
+                    ):
+                        selected_keywords_for_research.append(keyword_text)
+                    
+                    st.caption(f"{monthly_searches:,}/mo | {comp_badge}")
+            
+            # Button to add selected keywords to research
+            if selected_keywords_for_research:
+                if st.button(f"➕ Add {len(selected_keywords_for_research)} Selected Keywords to Research", type="primary"):
+                    # Add to main keyword input
+                    current_keywords = st.session_state.get('kw_research_input', '').split('\n')
+                    current_keywords = [kw.strip() for kw in current_keywords if kw.strip()]
+                    # Add new keywords (avoid duplicates)
+                    for new_kw in selected_keywords_for_research:
+                        if new_kw not in current_keywords:
+                            current_keywords.append(new_kw)
+                    st.session_state.kw_research_input = '\n'.join(current_keywords)
+                    st.success(f"✅ Added {len(selected_keywords_for_research)} keywords to research list!")
+                    st.rerun()
+            
+            # Option to export discovered keywords
+            if st.button("📥 Export All Discovered Keywords", key="kw_export_seed"):
+                try:
+                    import pandas as pd
+                    df_seed = pd.DataFrame(discovered_keywords)
+                    csv_seed = df_seed.to_csv(index=False)
+                    st.download_button(
+                        label="⬇️ Download CSV",
+                        data=csv_seed,
+                        file_name=f"seed_word_keywords_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv",
+                        key="kw_download_seed"
+                    )
+                except Exception as e:
+                    st.error(f"❌ Error creating CSV: {str(e)}")
+    
+    st.markdown("---")
+    
     # Keyword input - with option to load from campaign
     st.markdown("### Step 3: Keywords to Research")
     
@@ -1476,27 +1621,31 @@ def show_keyword_research():
         help="Check this to automatically load all keywords from the selected campaign"
     )
     
-    campaign_keywords_loaded = False
+    # Initialize keyword input value
+    keyword_input_value = st.session_state.get('kw_research_input', '')
+    
+    # Load keywords from campaign if checkbox is checked
     if load_from_campaign and campaign_id and selected_account_id:
-        try:
-            with st.spinner("Loading keywords from campaign..."):
-                campaign_keywords = fetch_campaign_keywords(st.session_state.client, selected_account_id, campaign_id)
-                if campaign_keywords:
-                    keyword_input = "\n".join(campaign_keywords)
-                    st.session_state.kw_research_input = keyword_input
-                    campaign_keywords_loaded = True
-                    st.success(f"✅ Loaded {len(campaign_keywords)} keywords from campaign")
-                else:
-                    st.warning("No keywords found in the selected campaign.")
-        except Exception as e:
-            st.error(f"❌ Error loading campaign keywords: {str(e)}")
+        if st.button("🔄 Load Keywords from Campaign", key="kw_load_button"):
+            try:
+                with st.spinner("Loading keywords from campaign..."):
+                    campaign_keywords = fetch_campaign_keywords(st.session_state.client, selected_account_id, campaign_id)
+                    if campaign_keywords:
+                        keyword_input_value = "\n".join(campaign_keywords)
+                        st.session_state.kw_research_input = keyword_input_value
+                        st.success(f"✅ Loaded {len(campaign_keywords)} keywords from campaign")
+                        st.rerun()
+                    else:
+                        st.warning("No keywords found in the selected campaign.")
+            except Exception as e:
+                st.error(f"❌ Error loading campaign keywords: {str(e)}")
     
     keyword_input = st.text_area(
         "Keywords to Research",
-        placeholder="sell house fast\ncash for houses\nwe buy houses\n\nOr check 'Load Keywords from Selected Campaign' to load from a campaign",
+        placeholder="sell house fast\ncash for houses\nwe buy houses\n\nOr check 'Load Keywords from Selected Campaign' and click the button to load from a campaign",
         height=150,
         key="kw_research_input",
-        value=st.session_state.get('kw_research_input', '')
+        value=keyword_input_value
     )
     
     # Research options
