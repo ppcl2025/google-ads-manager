@@ -13,6 +13,7 @@ A specialized tool for analyzing Google Ads campaigns targeting motivated and di
 - 💾 **Export Results** - Save recommendations to files and Google Drive
 - 🌐 **Web Interface** - Modern Streamlit web app for easy access
 - 📝 **Ad Copy Optimization** - Specialized A/B testing recommendations
+- 🔍 **Keyword Research** - Analyze competition and discover opportunities with Keyword Planner
 - 📄 **Biweekly Reports** - Professional client reports
 - 💬 **AI Q&A** - Ask Claude questions about Google Ads management
 - ➕ **Account Management** - Create sub-accounts and campaigns
@@ -89,6 +90,12 @@ All documentation is in the `docs/` folder. **Start with the [User Guide](docs/U
 - A/B testing recommendations
 - Character limit compliance
 - High-converting keyword integration
+
+### Keyword Research
+- Competition analysis
+- Search volume estimates
+- Expansion recommendations
+- Quality Score problem detection
 
 ### Biweekly Reports
 - Professional 2-page PDF reports
