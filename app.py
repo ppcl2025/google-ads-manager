@@ -196,7 +196,7 @@ def main():
             st.image("https://via.placeholder.com/200x60/1a5490/ffffff?text=Google+Ads", use_container_width=True)
         st.markdown("---")
         
-        # Navigation buttons with custom styling
+        # Navigation buttons (replaced radio buttons with individual buttons)
         nav_pages = [
             "📊 Campaign Analysis",
             "📝 Ad Copy Optimization",
@@ -207,11 +207,12 @@ def main():
             "🎯 Create Campaign"
         ]
         
-        # Create navigation buttons
+        # Create individual navigation buttons (not radio buttons)
         for nav_page in nav_pages:
             is_selected = st.session_state.current_page == nav_page
             button_type = "primary" if is_selected else "secondary"
             
+            # Use st.button() instead of st.radio() for individual button styling
             if st.button(nav_page, key=f"nav_{nav_page}", use_container_width=True, type=button_type):
                 st.session_state.current_page = nav_page
                 st.rerun()
