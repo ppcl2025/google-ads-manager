@@ -6,6 +6,7 @@ Modern web interface for Google Ads campaign analysis and management
 import streamlit as st
 import os
 import sys
+import pandas as pd
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
@@ -17,6 +18,7 @@ from account_manager import select_account_interactive, select_campaign_interact
 from account_campaign_manager import get_sub_accounts, create_sub_account, create_campaign, US_TIMEZONES
 from real_estate_analyzer import RealEstateAnalyzer
 from comprehensive_data_fetcher import fetch_comprehensive_campaign_data, format_campaign_data_for_prompt
+from keyword_planner_fetcher import fetch_keyword_planner_data, format_keyword_planner_for_prompt, get_geo_target_for_campaign
 
 # Load environment variables (works with .env file locally or Streamlit Cloud secrets)
 load_dotenv()
@@ -1358,18 +1360,374 @@ def _upload_qa_to_drive():
 def show_keyword_research():
     """Keyword Research page."""
     st.header("🔍 Keyword Research")
-    st.markdown("Research keywords, competition, and search volume using Google Keyword Planner.")
-    st.info("🚧 Keyword Research feature coming soon! This will integrate with Google Keyword Planner API to provide keyword suggestions, competition data, and search volume insights.")
+    st.markdown("Research keywords, competition, and search volume using Google Keyword Planner API.")
     
-    # Placeholder for future implementation
-    st.markdown("""
-    ### Planned Features:
-    - Keyword suggestions based on seed keywords
-    - Competition level analysis
-    - Search volume trends
-    - Bid estimates
-    - Integration with Claude AI for keyword recommendations
-    """)
+    # Initialize session state for keyword research
+    if 'keyword_research_results' not in st.session_state:
+        st.session_state.keyword_research_results = None
+    if 'keyword_research_claude_recommendations' not in st.session_state:
+        st.session_state.keyword_research_claude_recommendations = None
+    
+    # Account selection (optional - for geo targeting)
+    st.markdown("### Step 1: Select Account (Optional)")
+    st.markdown("Select an account to use its campaign's geo targeting, or leave blank for general research.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        try:
+            accounts = list_customer_accounts(st.session_state.client)
+            if accounts:
+                account_options = {acc['descriptive_name']: acc['customer_id'] for acc in accounts}
+                selected_account_name = st.selectbox(
+                    "Select Account",
+                    ["None (General Research)"] + list(account_options.keys()),
+                    key="kw_research_account"
+                )
+                selected_account_id = account_options.get(selected_account_name) if selected_account_name != "None (General Research)" else None
+            else:
+                st.warning("No accounts found.")
+                selected_account_id = None
+        except Exception as e:
+            st.error(f"Error loading accounts: {str(e)}")
+            selected_account_id = None
+    
+    # Campaign selection (optional - for geo targeting)
+    campaign_id = None
+    geo_targets = None
+    with col2:
+        if selected_account_id:
+            try:
+                campaigns = []
+                ga_service = st.session_state.client.get_service("GoogleAdsService")
+                customer_id_numeric = selected_account_id.replace("-", "")
+                query = """
+                    SELECT
+                        campaign.id,
+                        campaign.name,
+                        campaign.status
+                    FROM campaign
+                    WHERE campaign.status != 'REMOVED'
+                    ORDER BY campaign.name
+                """
+                response = ga_service.search(customer_id=customer_id_numeric, query=query)
+                for row in response:
+                    campaigns.append({
+                        'id': row.campaign.id,
+                        'name': row.campaign.name
+                    })
+                
+                if campaigns:
+                    campaign_options = {f"{c['name']} (ID: {c['id']})": c['id'] for c in campaigns}
+                    selected_campaign_display = st.selectbox(
+                        "Select Campaign (for geo targeting)",
+                        ["None"] + list(campaign_options.keys()),
+                        key="kw_research_campaign"
+                    )
+                    if selected_campaign_display != "None":
+                        campaign_id = campaign_options[selected_campaign_display]
+                        # Get geo targets from campaign
+                        geo_targets = get_geo_target_for_campaign(st.session_state.client, selected_account_id, campaign_id)
+            except Exception as e:
+                st.warning(f"Could not load campaigns: {str(e)}")
+    
+    st.markdown("---")
+    
+    # Keyword input
+    st.markdown("### Step 2: Enter Seed Keywords")
+    st.markdown("Enter keywords to research (one per line or comma-separated):")
+    
+    keyword_input = st.text_area(
+        "Seed Keywords",
+        placeholder="sell house fast\ncash for houses\nwe buy houses",
+        height=100,
+        key="kw_research_input"
+    )
+    
+    # Research options
+    col1, col2 = st.columns(2)
+    with col1:
+        include_claude_analysis = st.checkbox("Get Claude AI Recommendations", value=True, key="kw_include_claude")
+    with col2:
+        max_related_keywords = st.number_input("Max Related Keywords", min_value=5, max_value=50, value=20, key="kw_max_related")
+    
+    # Research button
+    if st.button("🔍 Research Keywords", type="primary", use_container_width=True):
+        if not keyword_input.strip():
+            st.error("Please enter at least one keyword to research.")
+        else:
+            # Parse keywords
+            keywords_list = []
+            for line in keyword_input.split('\n'):
+                line = line.strip()
+                if ',' in line:
+                    keywords_list.extend([kw.strip() for kw in line.split(',') if kw.strip()])
+                elif line:
+                    keywords_list.append(line)
+            
+            if not keywords_list:
+                st.error("No valid keywords found. Please enter keywords.")
+            else:
+                # Determine customer ID for API call
+                api_customer_id = selected_account_id if selected_account_id else os.getenv("GOOGLE_ADS_CUSTOMER_ID")
+                if not api_customer_id:
+                    st.error("Please select an account or set GOOGLE_ADS_CUSTOMER_ID in environment variables.")
+                else:
+                    with st.spinner(f"🔍 Researching {len(keywords_list)} keyword(s)..."):
+                        try:
+                            # Fetch keyword planner data
+                            planner_data = fetch_keyword_planner_data(
+                                st.session_state.client,
+                                api_customer_id,
+                                keywords_list,
+                                geo_targets=geo_targets,
+                                language_code="en"
+                            )
+                            
+                            st.session_state.keyword_research_results = {
+                                'planner_data': planner_data,
+                                'seed_keywords': keywords_list,
+                                'account_id': api_customer_id,
+                                'campaign_id': campaign_id
+                            }
+                            
+                            st.success(f"✅ Found data for {len(planner_data.get('keywords', []))} keywords and {len(planner_data.get('related_keywords', []))} related keywords!")
+                            
+                            # Get Claude recommendations if requested
+                            if include_claude_analysis:
+                                with st.spinner("🤖 Getting Claude AI recommendations..."):
+                                    try:
+                                        # Format data for Claude
+                                        planner_text = format_keyword_planner_for_prompt(planner_data)
+                                        
+                                        # Create prompt for Claude
+                                        keyword_prompt = f"""You are a Google Ads keyword research expert specializing in real estate investor campaigns targeting motivated and distressed home sellers.
+
+Analyze the following Keyword Planner data and provide strategic recommendations:
+
+{planner_text}
+
+**Your Task:**
+1. **Competition Analysis**: Identify which keywords have favorable competition levels for our campaigns
+2. **Search Volume Assessment**: Recommend which keywords have optimal search volume (not too low, not too broad)
+3. **Bid Strategy**: Suggest bid ranges based on the suggested bids and competition
+4. **Keyword Expansion**: Recommend the top 10 related keywords we should add to campaigns, prioritizing:
+   - Medium search volume (1K-10K/month)
+   - Low to medium competition
+   - Suggested bids within $1-5 range
+   - High relevance to motivated seller intent
+5. **Quality Score Indicators**: Flag any keywords where suggested bids seem unusually high/low
+6. **Action Items**: Provide 3-5 specific, actionable recommendations
+
+Format your response clearly with sections for each analysis area."""
+                                        
+                                        # Get Claude analysis
+                                        if 'analyzer' in st.session_state and st.session_state.analyzer:
+                                            try:
+                                                claude_response = st.session_state.analyzer.claude.messages.create(
+                                                    model=st.session_state.analyzer.model,
+                                                    max_tokens=2000,
+                                                    messages=[
+                                                        {"role": "user", "content": keyword_prompt}
+                                                    ]
+                                                )
+                                                recommendations = claude_response.content[0].text
+                                                st.session_state.keyword_research_claude_recommendations = recommendations
+                                            except Exception as claude_error:
+                                                st.warning(f"Could not get Claude recommendations: {str(claude_error)}")
+                                                st.session_state.keyword_research_claude_recommendations = None
+                                        else:
+                                            st.warning("Claude analyzer not initialized. Skipping AI recommendations.")
+                                    except Exception as e:
+                                        st.warning(f"Could not get Claude recommendations: {str(e)}")
+                                        st.session_state.keyword_research_claude_recommendations = None
+                            
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error researching keywords: {str(e)}")
+                            import traceback
+                            st.code(traceback.format_exc())
+    
+    # Display results
+    if st.session_state.keyword_research_results:
+        st.markdown("---")
+        st.markdown("### 📊 Research Results")
+        
+        planner_data = st.session_state.keyword_research_results['planner_data']
+        
+        # Display seed keywords data
+        if planner_data.get('keywords'):
+            st.markdown("#### Seed Keywords Analysis")
+            
+            # Prepare data for table
+            keywords_table_data = []
+            for kw in planner_data['keywords']:
+                competition_badge = ""
+                if kw.get('competition') == 'LOW':
+                    competition_badge = "🟢 LOW"
+                elif kw.get('competition') == 'MEDIUM':
+                    competition_badge = "🟡 MEDIUM"
+                elif kw.get('competition') == 'HIGH':
+                    competition_badge = "🔴 HIGH"
+                else:
+                    competition_badge = "⚪ UNKNOWN"
+                
+                bid_range = ""
+                if kw.get('low_top_of_page_bid') and kw.get('high_top_of_page_bid'):
+                    bid_range = f"${kw['low_top_of_page_bid']:.2f} - ${kw['high_top_of_page_bid']:.2f}"
+                elif kw.get('low_top_of_page_bid'):
+                    bid_range = f"${kw['low_top_of_page_bid']:.2f}+"
+                else:
+                    bid_range = "N/A"
+                
+                keywords_table_data.append({
+                    "Keyword": kw['keyword_text'],
+                    "Monthly Searches": f"{kw.get('avg_monthly_searches', 0):,}" if kw.get('avg_monthly_searches') else "N/A",
+                    "Competition": competition_badge,
+                    "Suggested Bid Range": bid_range
+                })
+            
+            df_keywords = pd.DataFrame(keywords_table_data)
+            st.dataframe(df_keywords, use_container_width=True, hide_index=True)
+        
+        # Display related keywords
+        if planner_data.get('related_keywords'):
+            st.markdown("#### Related Keyword Opportunities")
+            st.markdown(f"Found {len(planner_data['related_keywords'])} related keywords. Showing top {min(max_related_keywords, len(planner_data['related_keywords']))}:")
+            
+            related_table_data = []
+            for kw in planner_data['related_keywords'][:max_related_keywords]:
+                competition_badge = ""
+                if kw.get('competition') == 'LOW':
+                    competition_badge = "🟢 LOW"
+                elif kw.get('competition') == 'MEDIUM':
+                    competition_badge = "🟡 MEDIUM"
+                elif kw.get('competition') == 'HIGH':
+                    competition_badge = "🔴 HIGH"
+                else:
+                    competition_badge = "⚪ UNKNOWN"
+                
+                bid_range = ""
+                if kw.get('low_top_of_page_bid') and kw.get('high_top_of_page_bid'):
+                    bid_range = f"${kw['low_top_of_page_bid']:.2f} - ${kw['high_top_of_page_bid']:.2f}"
+                elif kw.get('low_top_of_page_bid'):
+                    bid_range = f"${kw['low_top_of_page_bid']:.2f}+"
+                else:
+                    bid_range = "N/A"
+                
+                related_table_data.append({
+                    "Keyword": kw['keyword_text'],
+                    "Monthly Searches": f"{kw.get('avg_monthly_searches', 0):,}" if kw.get('avg_monthly_searches') else "N/A",
+                    "Competition": competition_badge,
+                    "Suggested Bid Range": bid_range
+                })
+            
+            df_related = pd.DataFrame(related_table_data)
+            st.dataframe(df_related, use_container_width=True, hide_index=True)
+        
+        # Display Claude recommendations
+        if st.session_state.keyword_research_claude_recommendations:
+            st.markdown("---")
+            st.markdown("### 🤖 Claude AI Recommendations")
+            st.markdown(st.session_state.keyword_research_claude_recommendations)
+        
+        # Export options
+        st.markdown("---")
+        st.markdown("### 💾 Export Results")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📥 Download as CSV", use_container_width=True):
+                try:
+                    import pandas as pd
+                    import io
+                    
+                    # Combine all keywords
+                    all_keywords = []
+                    if planner_data.get('keywords'):
+                        for kw in planner_data['keywords']:
+                            all_keywords.append({
+                                "Type": "Seed Keyword",
+                                "Keyword": kw['keyword_text'],
+                                "Monthly Searches": kw.get('avg_monthly_searches', 0) or 0,
+                                "Competition": kw.get('competition', 'UNKNOWN'),
+                                "Low Bid": kw.get('low_top_of_page_bid', 0) or 0,
+                                "High Bid": kw.get('high_top_of_page_bid', 0) or 0
+                            })
+                    if planner_data.get('related_keywords'):
+                        for kw in planner_data['related_keywords']:
+                            all_keywords.append({
+                                "Type": "Related Keyword",
+                                "Keyword": kw['keyword_text'],
+                                "Monthly Searches": kw.get('avg_monthly_searches', 0) or 0,
+                                "Competition": kw.get('competition', 'UNKNOWN'),
+                                "Low Bid": kw.get('low_top_of_page_bid', 0) or 0,
+                                "High Bid": kw.get('high_top_of_page_bid', 0) or 0
+                            })
+                    
+                    df_export = pd.DataFrame(all_keywords)
+                    csv = df_export.to_csv(index=False)
+                    st.download_button(
+                        label="⬇️ Download CSV",
+                        data=csv,
+                        file_name=f"keyword_research_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv"
+                    )
+                except Exception as e:
+                    st.error(f"❌ Error creating CSV: {str(e)}")
+        
+        with col2:
+            if st.button("📤 Upload to Google Drive", use_container_width=True):
+                try:
+                    from real_estate_analyzer import upload_to_drive, get_drive_service
+                    import tempfile
+                    import pandas as pd
+                    
+                    # Create CSV file
+                    all_keywords = []
+                    if planner_data.get('keywords'):
+                        for kw in planner_data['keywords']:
+                            all_keywords.append({
+                                "Type": "Seed Keyword",
+                                "Keyword": kw['keyword_text'],
+                                "Monthly Searches": kw.get('avg_monthly_searches', 0) or 0,
+                                "Competition": kw.get('competition', 'UNKNOWN'),
+                                "Low Bid": kw.get('low_top_of_page_bid', 0) or 0,
+                                "High Bid": kw.get('high_top_of_page_bid', 0) or 0
+                            })
+                    if planner_data.get('related_keywords'):
+                        for kw in planner_data['related_keywords']:
+                            all_keywords.append({
+                                "Type": "Related Keyword",
+                                "Keyword": kw['keyword_text'],
+                                "Monthly Searches": kw.get('avg_monthly_searches', 0) or 0,
+                                "Competition": kw.get('competition', 'UNKNOWN'),
+                                "Low Bid": kw.get('low_top_of_page_bid', 0) or 0,
+                                "High Bid": kw.get('high_top_of_page_bid', 0) or 0
+                            })
+                    
+                    df_export = pd.DataFrame(all_keywords)
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv', mode='w')
+                    df_export.to_csv(temp_file.name, index=False)
+                    temp_file.close()
+                    
+                    # Upload to Google Drive
+                    folder_id = "1kMShfz38NWRkBK99GzwjDJTzyWi3TXFW"  # Using Q&A folder for now, can create dedicated folder
+                    drive_service = get_drive_service()
+                    file_name = f"keyword_research_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                    
+                    uploaded_file_id = upload_to_drive(drive_service, temp_file.name, file_name, folder_id)
+                    os.unlink(temp_file.name)
+                    
+                    if uploaded_file_id:
+                        st.success(f"✅ Uploaded to Google Drive!")
+                        st.markdown(f"**File:** {file_name}")
+                    else:
+                        st.error("❌ Failed to upload to Google Drive")
+                except Exception as e:
+                    st.error(f"❌ Error uploading to Google Drive: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
 
 def show_create_account():
     """Create new sub-account page."""
