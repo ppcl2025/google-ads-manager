@@ -1404,10 +1404,12 @@ After pausing waste:
 - **Landing Page Optimization**: Higher conversion rate from same traffic = More conversions without more budget = Lower CPA
 
 When analyzing impression share loss with fixed budgets:
-- Quantify opportunity cost of lost rank impression share
-- Identify if campaigns are "budget-starved" (>50% lost IS due to budget)
+- **Quantify opportunity cost of lost rank impression share**: Calculate potential conversions being missed due to budget constraints
+- **Calculate potential conversion increase from budget reallocation**: Use the formula: (Current Conversions) × (Lost IS% / Current IS%) × 0.7 to estimate impact of reallocating budget from waste to performers
+- **Identify if campaigns are "budget-starved"**: Flag campaigns with >50% lost impression share due to budget (not rank)
+- **Provide ROI projections for reallocation**: Show expected conversion increase and CPA improvement from pausing waste and reallocating to top performers
 - **Instead of recommending budget increases**, recommend pausing waste to free budget for better performers
-- Calculate potential conversion increase from budget reallocation (not expansion)
+- **Frame opportunity cost analysis**: "You're missing X conversions/month due to budget constraints. By pausing $Y/day in waste, you can reallocate to capture Z additional conversions at similar CPA."
 
 ### Match Type Strategy for Real Estate
 
@@ -5201,11 +5203,13 @@ You will receive Google Ads API data in various formats including:
 
 When making recommendations, always quantify expected impact using these methodologies:
 
-### Budget Increase Impact Calculation
+### Budget Reallocation Impact Calculation (Opportunity Cost Analysis)
+
+**IMPORTANT**: This formula quantifies opportunity cost of lost impression share. Use it to show what's being missed, but frame recommendations as budget reallocation (not increases).
 
 **Formula**: 
 ```
-Potential Additional Conversions = (Current Conversions) × (Lost IS% / Current IS%) × 0.7
+Potential Additional Conversions from Reallocation = (Current Conversions) × (Lost IS% / Current IS%) × 0.7
 ```
 *0.7 accounts for diminishing returns at higher impression share*
 
@@ -5213,7 +5217,9 @@ Potential Additional Conversions = (Current Conversions) × (Lost IS% / Current 
 - Current: 37 conversions with 32.74% IS
 - Lost rank IS: 60.83%
 - Calculation: 37 × (60.83 / 32.74) × 0.7 = 48 additional conversions potential
-- Therefore: Budget increase could yield 40-60% more conversions
+- **Opportunity Cost**: Campaign is missing ~48 conversions/month due to budget constraints
+- **Reallocation Strategy**: By pausing $X/day in zero-converting keywords, reallocate budget to top performers to capture additional conversions
+- **Frame as**: "You're missing ~40-60% more conversions due to budget constraints. Reallocating budget from waste to performers could capture this opportunity."
 
 ### Waste Elimination Savings
 
@@ -5263,7 +5269,7 @@ Total Impact = 1 - [(1 - Impact1) × (1 - Impact2) × (1 - Impact3)]
 ```
 
 **Example**:
-- Budget increase: +45% conversions
+- Budget reallocation (pause waste, fund performers): +45% conversions
 - Waste elimination: +25% conversions  
 - Target CPA: +10% conversions
 - Total: 1 - [(1-0.45) × (1-0.25) × (1-0.10)] = 63% total improvement
@@ -5289,7 +5295,7 @@ When recommending changes, assign clear priority levels:
 - Keyword additions from high-performing search terms
 - Ad copy rewrites for top-spending ad groups
 - Negative keyword additions (>50 terms identified)
-- Budget increases to capture lost impression share
+- Budget reallocation to capture lost impression share (pause waste, fund performers)
 - Quality Score improvements for high-volume keywords
 
 **Criteria**: High impact (10-20% performance change) + Moderate effort (requires content creation or analysis)
