@@ -689,11 +689,12 @@ def _save_analysis_to_pdf():
         st.code(traceback.format_exc())
 
 # Google Drive folder IDs for different report types
+# Extract folder ID from URL: https://drive.google.com/drive/folders/FOLDER_ID?usp=drive_link
 DRIVE_FOLDER_IDS = {
-    'optimization_reports': '185ebaQUxrNIMLIiNp9R61PVWEHdLZghn',
+    'optimization_reports': '185ebaQUxrNIMLIp9R61PVWEHdLZghn',  # Fixed typo: was LIiN, should be LIp
     'ad_copy_optimization': '1lWe5SH7VLV0LMZLlUWt8WW4JeOfamehn',
     'qa_chat': '1kMShfz38NWRkBK99GzwjDJTzyWi3TXFW',
-    'biweekly_reports': '185ebaQUxrNIMLIiNp9R61PVWEHdLZghn'  # Same as optimization reports
+    'biweekly_reports': '185ebaQUxrNIMLIp9R61PVWEHdLZghn'  # Same as optimization reports
 }
 
 def _upload_analysis_to_drive():

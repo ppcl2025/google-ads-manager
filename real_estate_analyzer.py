@@ -207,10 +207,19 @@ def upload_to_drive(service, file_path, file_name, folder_id=None):
                 folder_link = folder_info.get('webViewLink')
                 print(f"   ✓ Folder confirmed: {folder_name}")
                 print(f"   📁 Folder link: {folder_link}")
+                
+                # Verify the requested folder_id matches the actual parent
+                if folder_id and parent_id != folder_id:
+                    print(f"   ⚠️  WARNING: File uploaded to different folder!")
+                    print(f"   ⚠️  Requested folder ID: {folder_id}")
+                    print(f"   ⚠️  Actual folder ID: {parent_id}")
             except Exception as e:
                 print(f"   ⚠️  Could not verify folder: {e}")
+                print(f"   ⚠️  This may indicate a permission issue or invalid folder ID")
         else:
             print(f"   ⚠️  Warning: File uploaded but no parent folder assigned - file is in Drive root")
+            if folder_id:
+                print(f"   ⚠️  This may indicate the folder ID '{folder_id}' is invalid or you don't have access")
         
         return file_id, web_link
         
