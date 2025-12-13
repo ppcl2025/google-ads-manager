@@ -86,9 +86,10 @@ st.markdown("""
         font-weight: 600;
     }
     
-    /* Sidebar Navigation Button Styles */
-    div[data-testid*="nav_"] button,
-    div[data-testid*="nav_"] .stButton > button {
+    /* Sidebar Navigation Button Styles - More aggressive targeting */
+    section[data-testid="stSidebar"] .stButton button,
+    section[data-testid="stSidebar"] button[data-testid*="nav_"],
+    section[data-testid="stSidebar"] div[data-testid*="nav_"] button {
         width: 100% !important;
         padding: 0.75rem 1rem !important;
         margin: 0.25rem 0 !important;
@@ -99,33 +100,36 @@ st.markdown("""
         text-align: left !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
+        display: block !important;
     }
     
     /* Unselected state (secondary buttons) */
-    div[data-testid*="nav_"] .stButton > button:not([class*="primary"]) {
+    section[data-testid="stSidebar"] .stButton button[kind="secondary"],
+    section[data-testid="stSidebar"] button[kind="secondary"] {
         background-color: #2d3748 !important;
         border-color: #1a202c !important;
         color: #e2e8f0 !important;
     }
     
     /* Selected state (primary buttons) */
-    div[data-testid*="nav_"] .stButton > button[class*="primary"],
-    div[data-testid*="nav_"] button[class*="primary"] {
+    section[data-testid="stSidebar"] .stButton button[kind="primary"],
+    section[data-testid="stSidebar"] button[kind="primary"] {
         background-color: #4a5568 !important;
         border-color: #2d3748 !important;
         color: white !important;
     }
     
     /* Hover effects for unselected */
-    div[data-testid*="nav_"] .stButton > button:not([class*="primary"]):hover {
+    section[data-testid="stSidebar"] .stButton button[kind="secondary"]:hover,
+    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
         transform: translateY(-2px) !important;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
         background-color: #374151 !important;
     }
     
     /* Hover effects for selected */
-    div[data-testid*="nav_"] .stButton > button[class*="primary"]:hover,
-    div[data-testid*="nav_"] button[class*="primary"]:hover {
+    section[data-testid="stSidebar"] .stButton button[kind="primary"]:hover,
+    section[data-testid="stSidebar"] button[kind="primary"]:hover {
         transform: translateY(-2px) !important;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
         background-color: #4a5568 !important;
@@ -208,14 +212,42 @@ def main():
         ]
         
         # Create individual navigation buttons (not radio buttons)
+        # Using columns to ensure proper button layout
         for nav_page in nav_pages:
             is_selected = st.session_state.current_page == nav_page
             button_type = "primary" if is_selected else "secondary"
             
-            # Use st.button() instead of st.radio() for individual button styling
+            # Use st.button() - this creates individual buttons, not radio buttons
+            # The key ensures each button is unique and not grouped as radio buttons
             if st.button(nav_page, key=f"nav_{nav_page}", use_container_width=True, type=button_type):
                 st.session_state.current_page = nav_page
                 st.rerun()
+        
+        # Add JavaScript to ensure buttons are styled correctly (runs after page load)
+        st.markdown("""
+        <script>
+        setTimeout(function() {
+            // Find all navigation buttons and ensure they're styled as buttons
+            const sidebar = document.querySelector('section[data-testid="stSidebar"]');
+            if (sidebar) {
+                const buttons = sidebar.querySelectorAll('button[data-testid*="nav_"]');
+                buttons.forEach(button => {
+                    // Ensure button styling
+                    button.style.width = '100%';
+                    button.style.padding = '0.75rem 1rem';
+                    button.style.margin = '0.25rem 0';
+                    button.style.borderRadius = '6px';
+                    button.style.border = '1px solid';
+                    button.style.fontSize = '0.95rem';
+                    button.style.fontWeight = '500';
+                    button.style.textAlign = 'left';
+                    button.style.cursor = 'pointer';
+                    button.style.transition = 'all 0.2s ease';
+                });
+            }
+        }, 100);
+        </script>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         st.markdown("### Settings")
