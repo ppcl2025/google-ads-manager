@@ -17,7 +17,7 @@ def fetch_keyword_planner_data(client, customer_id, keywords_list, geo_targets=N
     Args:
         client: Google Ads API client
         customer_id: Customer account ID (format: 123-456-7890)
-        keywords_list: List of keyword texts to analyze
+        keywords_list: List of keyword texts to analyze (max 20 per API call, will be batched if needed)
         geo_targets: Optional list of geo target constant resource names
         language_code: Language code (default: "en" for English)
     
@@ -26,8 +26,61 @@ def fetch_keyword_planner_data(client, customer_id, keywords_list, geo_targets=N
     """
     customer_id_numeric = customer_id.replace("-", "")
     
+    # API limit: keyword_seed.keywords only supports 20 items
+    MAX_KEYWORDS_PER_REQUEST = 20
+    
+    # If we have more than 20 keywords, we need to batch them
+    if len(keywords_list) > MAX_KEYWORDS_PER_REQUEST:
+        # Split into batches and make multiple API calls
+        all_keywords_data = []
+        all_related_keywords = []
+        
+        # Process in batches
+        for i in range(0, len(keywords_list), MAX_KEYWORDS_PER_REQUEST):
+            batch = keywords_list[i:i + MAX_KEYWORDS_PER_REQUEST]
+            batch_results = _fetch_keyword_planner_batch(
+                client, customer_id_numeric, batch, geo_targets, language_code
+            )
+            if batch_results:
+                all_keywords_data.extend(batch_results.get('keywords', []))
+                # Collect related keywords but limit total to avoid duplicates
+                related = batch_results.get('related_keywords', [])
+                # Add only if not already in our list
+                for rel_kw in related:
+                    if rel_kw not in all_related_keywords:
+                        all_related_keywords.append(rel_kw)
+        
+        return {
+            'keywords': all_keywords_data,
+            'related_keywords': all_related_keywords[:50]  # Limit total related keywords
+        }
+    else:
+        # Single batch - use existing logic
+        return _fetch_keyword_planner_batch(
+            client, customer_id_numeric, keywords_list, geo_targets, language_code
+        )
+
+
+def _fetch_keyword_planner_batch(client, customer_id_numeric, keywords_list, geo_targets=None, language_code="en"):
+    """
+    Internal function to fetch Keyword Planner data for a single batch (max 20 keywords).
+    
+    Args:
+        client: Google Ads API client
+        customer_id_numeric: Customer account ID in numeric format (no dashes)
+        keywords_list: List of keyword texts to analyze (max 20)
+        geo_targets: Optional list of geo target constant resource names
+        language_code: Language code (default: "en" for English)
+    
+    Returns:
+        Dictionary with keyword planner data
+    """
     try:
         keyword_plan_idea_service = client.get_service("KeywordPlanIdeaService")
+        
+        # Validate keyword count
+        if len(keywords_list) > 20:
+            raise ValueError(f"Keyword batch cannot exceed 20 keywords. Got {len(keywords_list)} keywords.")
         
         # Build keyword seed
         keyword_seed = client.get_type("KeywordSeed")
