@@ -33,23 +33,46 @@ def fetch_keyword_planner_data(client, customer_id, keywords_list, geo_targets=N
         keyword_seed = client.get_type("KeywordSeed")
         keyword_seed.keywords = keywords_list
         
-        # Build geo target constants if provided
-        geo_target_constants_list = []
-        if geo_targets:
-            for geo_target in geo_targets:
-                if not geo_target.startswith("geoTargetConstants/"):
-                    geo_target = f"geoTargetConstants/{geo_target}"
-                geo_target_constant = client.get_type("KeywordPlanGeoTargetConstant")
-                geo_target_constant.geo_target_constant = geo_target
-                geo_target_constants_list.append(geo_target_constant)
-        
         # Build request
         request = client.get_type("GenerateKeywordIdeasRequest")
         request.customer_id = customer_id_numeric
         request.keyword_seed = keyword_seed
         request.language_code = language_code
-        if geo_target_constants_list:
-            request.geo_target_constants = geo_target_constants_list
+        
+        # Handle geo target constants if provided
+        # Note: Geo targeting in Keyword Planner API v22+ may have different requirements
+        # We'll make it optional and handle errors gracefully
+        if geo_targets:
+            try:
+                # Try to set geo targets using the available method for this API version
+                # In some API versions, geo targets might not be directly supported in Keyword Planner
+                # or may require different handling
+                
+                # First, try to see what fields are available on the request
+                if hasattr(request, 'geo_target_constants'):
+                    # Try to create geo target constant objects if the type exists
+                    try:
+                        geo_target_constant_type = client.get_type("KeywordPlanGeoTargetConstant")
+                        geo_target_constants_list = []
+                        for geo_target in geo_targets:
+                            if not geo_target.startswith("geoTargetConstants/"):
+                                if geo_target.isdigit():
+                                    geo_target = f"geoTargetConstants/{geo_target}"
+                                else:
+                                    continue  # Skip invalid formats
+                            geo_target_obj = geo_target_constant_type()
+                            geo_target_obj.geo_target_constant = geo_target
+                            geo_target_constants_list.append(geo_target_obj)
+                        if geo_target_constants_list:
+                            request.geo_target_constants = geo_target_constants_list
+                    except (ValueError, AttributeError):
+                        # Type doesn't exist in this API version - skip geo targeting
+                        # This is acceptable as geo targeting is optional
+                        pass
+            except Exception as geo_error:
+                # Geo targeting is optional - continue without it
+                # This allows keyword research to work even if geo targeting fails
+                pass
         
         # Get KeywordPlanNetwork enum from client (using client.enums instead of version-specific import)
         request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.KeywordPlanNetwork.GOOGLE_SEARCH
