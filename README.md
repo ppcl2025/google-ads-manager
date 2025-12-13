@@ -21,7 +21,7 @@ A specialized tool for analyzing Google Ads campaigns targeting motivated and di
 
 ### Option 1: Web App (Recommended)
 
-Deploy to Streamlit Cloud for easy access. See [docs/STREAMLIT_DEPLOYMENT.md](docs/STREAMLIT_DEPLOYMENT.md) for setup.
+Deploy to Streamlit Cloud for easy access. See [docs/03_STREAMLIT_DEPLOYMENT.md](docs/03_STREAMLIT_DEPLOYMENT.md) for setup.
 
 ### Option 2: Local CLI
 
@@ -38,7 +38,7 @@ python3 authenticate.py
 python3 real_estate_analyzer.py
 ```
 
-See [docs/SETUP.md](docs/SETUP.md) for detailed setup instructions.
+See [docs/02_SETUP.md](docs/02_SETUP.md) for detailed setup instructions.
 
 ## Project Structure
 
@@ -53,21 +53,26 @@ GAds-Claude/
 ├── google_ads_manager.py         # Streamlit entry point wrapper
 ├── requirements.txt               # Python dependencies
 └── docs/                          # Documentation
-    ├── SETUP.md                   # Setup instructions
-    ├── USAGE.md                   # Usage guide
-    ├── STREAMLIT_DEPLOYMENT.md   # Streamlit Cloud deployment
-    └── AUTHENTICATION_TROUBLESHOOTING.md
+    ├── README.md                  # Documentation index
+    ├── 01_USER_GUIDE.md           # ⭐ Comprehensive user guide
+    ├── 02_SETUP.md                # Setup instructions
+    ├── 03_STREAMLIT_DEPLOYMENT.md # Streamlit Cloud deployment
+    ├── 04_USAGE.md                # CLI usage (legacy)
+    ├── 05_CLAUDE_PROMPT_SYSTEM.md # Complete prompt system
+    ├── 06_MODEL_COMPARISON.md     # Model comparison
+    ├── 07_PROMPT_RECOMMENDATIONS.md # Prompt optimization
+    └── 08_AUTHENTICATION_TROUBLESHOOTING.md # Auth troubleshooting
 ```
 
 ## Documentation
 
-All documentation is in the `docs/` folder. **Start with the [User Guide](docs/USER_GUIDE.md)** for a comprehensive overview.
+All documentation is in the `docs/` folder. **Start with the [User Guide](docs/01_USER_GUIDE.md)** for a comprehensive overview.
 
-- **[User Guide](docs/USER_GUIDE.md)** ⭐ **START HERE** - Complete guide to the web app, integrations, and all features
-- **[Setup Guide](docs/SETUP.md)** - Initial setup and installation
-- **[Streamlit Deployment](docs/STREAMLIT_DEPLOYMENT.md)** - Deploy to Streamlit Cloud
-- **[Authentication Troubleshooting](docs/AUTHENTICATION_TROUBLESHOOTING.md)** - Fix auth issues
-- **[Model Comparison](docs/MODEL_COMPARISON.md)** - Compare Claude models
+- **[User Guide](docs/01_USER_GUIDE.md)** ⭐ **START HERE** - Complete guide to the web app, integrations, and all features
+- **[Setup Guide](docs/02_SETUP.md)** - Initial setup and installation
+- **[Streamlit Deployment](docs/03_STREAMLIT_DEPLOYMENT.md)** - Deploy to Streamlit Cloud
+- **[Authentication Troubleshooting](docs/08_AUTHENTICATION_TROUBLESHOOTING.md)** - Fix auth issues
+- **[Model Comparison](docs/06_MODEL_COMPARISON.md)** - Compare Claude models
 - **[Documentation Index](docs/README.md)** - Full documentation index
 
 ## Requirements
