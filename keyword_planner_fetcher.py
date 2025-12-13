@@ -259,7 +259,24 @@ def fetch_campaign_keywords(client, customer_id, campaign_id):
     except GoogleAdsException as ex:
         error_message = ""
         for error in ex.failure.errors:
-            error_message += f"{error.error_code.error_code}: {error.message}\n"
+            # Handle error code access - structure varies by API version
+            error_code_str = "UNKNOWN_ERROR"
+            try:
+                if hasattr(error, 'error_code'):
+                    error_code_obj = error.error_code
+                    if hasattr(error_code_obj, 'request_error'):
+                        error_code_str = f"REQUEST_ERROR: {error_code_obj.request_error}"
+                    elif hasattr(error_code_obj, 'error_code'):
+                        error_code_str = str(error_code_obj.error_code)
+                    else:
+                        error_code_str = str(error_code_obj)
+                else:
+                    error_code_str = "UNKNOWN"
+            except Exception:
+                error_code_str = "ERROR_CODE_ACCESS_FAILED"
+            
+            error_msg = error.message if hasattr(error, 'message') else str(error)
+            error_message += f"{error_code_str}: {error_msg}\n"
         raise Exception(f"Google Ads API error fetching campaign keywords: {error_message}")
     except Exception as e:
         raise Exception(f"Error fetching campaign keywords: {str(e)}")
