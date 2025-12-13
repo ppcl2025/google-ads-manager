@@ -694,13 +694,13 @@ def _save_analysis_to_pdf():
 # 1. Open the folder in Google Drive
 # 2. Copy the URL from your browser
 # 3. Extract the folder ID (the long string between /folders/ and ?)
-# Example: https://drive.google.com/drive/folders/185ebaQUxrNIMLIp9R61PVWEHdLZghn?usp=drive_link
-#          Folder ID: 185ebaQUxrNIMLIp9R61PVWEHdLZghn
+# Example: https://drive.google.com/drive/folders/185ebaQUxrNIMLIiNp9R61PVWEHdLZghn?usp=drive_link
+#          Folder ID: 185ebaQUxrNIMLIiNp9R61PVWEHdLZghn
 DRIVE_FOLDER_IDS = {
-    'optimization_reports': '185ebaQUxrNIMLIp9R61PVWEHdLZghn',  # Fixed typo: was LIiN, should be LIp
-    'ad_copy_optimization': '1lWe5SH7VLV0LMZLlUWt8WW4JeOfamehn',
-    'qa_chat': '1kMShfz38NWRkBK99GzwjDJTzyWi3TXFW',
-    'biweekly_reports': '185ebaQUxrNIMLIp9R61PVWEHdLZghn'  # Same as optimization reports
+    'optimization_reports': '185ebaQUxrNIMLIiNp9R61PVWEHdLZghn',  # Optimization Reports folder
+    'ad_copy_optimization': '1lWe5SH7VLV0LMZLlUWt8WW4JeOfamehn',  # Ad Copy Optimization folder (same as biweekly for now)
+    'qa_chat': '1kMShfz38NWRkBK99GzwjDJTzyWi3TXFW',  # Claude Q&A Chats folder
+    'biweekly_reports': '1lWe5SH7VLV0LMZLlUWt8WW4JeOfamehn'  # Biweekly Reports folder
 }
 
 def _upload_analysis_to_drive():
