@@ -84,6 +84,54 @@ st.markdown("""
         padding: 0.5rem 1rem;
         font-weight: 600;
     }
+    
+    /* Sidebar Navigation Buttons */
+    .nav-button {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        margin: 0.25rem 0;
+        border: none;
+        border-radius: 8px;
+        background-color: transparent;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .nav-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        transform: translateX(4px);
+    }
+    
+    .nav-button.active {
+        background-color: #FF4444;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .nav-button.active:hover {
+        background-color: #FF6666;
+        transform: translateX(4px);
+    }
+    
+    .nav-icon {
+        font-size: 1.2rem;
+        width: 24px;
+        text-align: center;
+    }
+    
+    /* Hide Streamlit's default button styling for nav buttons */
+    div[data-testid="stSidebar"] .nav-button-container button {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,6 +146,8 @@ if 'selected_campaign' not in st.session_state:
     st.session_state.selected_campaign = None
 if 'selected_model' not in st.session_state:
     st.session_state.selected_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = "📊 Campaign Analysis"
 
 def initialize_client():
     """Initialize Google Ads client."""
@@ -148,18 +198,84 @@ def main():
             st.image("https://via.placeholder.com/200x60/1a5490/ffffff?text=Google+Ads", use_container_width=True)
         st.markdown("---")
         
-        page = st.radio(
-            "Navigation",
-            [
-                "📊 Campaign Analysis",
-                "📝 Ad Copy Optimization",
-                "📄 Biweekly Reports",
-                "💬 Ask Claude",
-                "➕ Create Account",
-                "🎯 Create Campaign"
-            ],
-            label_visibility="collapsed"
-        )
+        # Navigation buttons with icons
+        nav_items = [
+            ("📊 Campaign Analysis", "📊"),
+            ("📝 Ad Copy Optimization", "📝"),
+            ("🔍 Keyword Research", "🔍"),
+            ("📄 Biweekly Reports", "📄"),
+            ("💬 Ask Claude", "💬"),
+            ("➕ Create Account", "➕"),
+            ("🎯 Create Campaign", "🎯")
+        ]
+        
+        # Create navigation buttons
+        for page_name, icon in nav_items:
+            is_active = st.session_state.current_page == page_name
+            button_label = page_name
+            
+            # Use button with custom styling
+            if st.button(
+                button_label,
+                key=f"nav_{page_name}",
+                use_container_width=True,
+                type="primary" if is_active else "secondary"
+            ):
+                st.session_state.current_page = page_name
+                st.rerun()
+        
+        # Add CSS to style navigation buttons with hover effects
+        st.markdown("""
+        <style>
+        /* Style all sidebar buttons */
+        div[data-testid="stSidebar"] [data-testid="stButton"] > button {
+            width: 100% !important;
+            padding: 0.75rem 1rem !important;
+            margin: 0.25rem 0 !important;
+            border: none !important;
+            border-radius: 8px !important;
+            background-color: transparent !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 0.95rem !important;
+            font-weight: 500 !important;
+            text-align: left !important;
+            transition: all 0.3s ease !important;
+            box-shadow: none !important;
+            justify-content: flex-start !important;
+        }
+        
+        /* Hover effect for inactive buttons */
+        div[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="secondary"]:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            transform: translateX(4px) !important;
+            color: white !important;
+        }
+        
+        /* Active button styling (primary type) */
+        div[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"] {
+            background-color: #FF4444 !important;
+            color: white !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Hover effect for active button */
+        div[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"]:hover {
+            background-color: #FF6666 !important;
+            transform: translateX(4px) !important;
+        }
+        
+        /* Remove focus outline */
+        div[data-testid="stSidebar"] [data-testid="stButton"] > button:focus {
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        
+        /* Ensure buttons don't have default Streamlit styling */
+        div[data-testid="stSidebar"] [data-testid="stButton"] > button:not([kind="primary"]) {
+            background-color: transparent !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         st.markdown("### Settings")
@@ -194,10 +310,13 @@ def main():
         st.session_state.analyzer.model = st.session_state.selected_model
     
     # Route to appropriate page
+    page = st.session_state.current_page
     if page == "📊 Campaign Analysis":
         show_comprehensive_analysis()
     elif page == "📝 Ad Copy Optimization":
         show_ad_copy_optimization()
+    elif page == "🔍 Keyword Research":
+        show_keyword_research()
     elif page == "📄 Biweekly Reports":
         show_biweekly_reports()
     elif page == "💬 Ask Claude":
@@ -1235,6 +1354,22 @@ def _upload_qa_to_drive():
         st.error(f"❌ Error uploading to Google Drive: {str(e)}")
         import traceback
         st.code(traceback.format_exc())
+
+def show_keyword_research():
+    """Keyword Research page."""
+    st.header("🔍 Keyword Research")
+    st.markdown("Research keywords, competition, and search volume using Google Keyword Planner.")
+    st.info("🚧 Keyword Research feature coming soon! This will integrate with Google Keyword Planner API to provide keyword suggestions, competition data, and search volume insights.")
+    
+    # Placeholder for future implementation
+    st.markdown("""
+    ### Planned Features:
+    - Keyword suggestions based on seed keywords
+    - Competition level analysis
+    - Search volume trends
+    - Bid estimates
+    - Integration with Claude AI for keyword recommendations
+    """)
 
 def show_create_account():
     """Create new sub-account page."""
