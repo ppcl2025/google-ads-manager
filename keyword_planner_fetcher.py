@@ -45,10 +45,14 @@ def fetch_keyword_planner_data(client, customer_id, keywords_list, geo_targets=N
                 all_keywords_data.extend(batch_results.get('keywords', []))
                 # Collect related keywords but limit total to avoid duplicates
                 related = batch_results.get('related_keywords', [])
-                # Add only if not already in our list
+                # Track keyword texts we've already added to avoid duplicates
+                existing_keyword_texts = {kw.get('keyword_text', '').lower() for kw in all_related_keywords}
+                # Add only if not already in our list (check by keyword text)
                 for rel_kw in related:
-                    if rel_kw not in all_related_keywords:
+                    kw_text = rel_kw.get('keyword_text', '').lower()
+                    if kw_text and kw_text not in existing_keyword_texts:
                         all_related_keywords.append(rel_kw)
+                        existing_keyword_texts.add(kw_text)
         
         return {
             'keywords': all_keywords_data,
