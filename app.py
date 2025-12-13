@@ -690,6 +690,12 @@ def _save_analysis_to_pdf():
 
 # Google Drive folder IDs for different report types
 # Extract folder ID from URL: https://drive.google.com/drive/folders/FOLDER_ID?usp=drive_link
+# To get folder ID:
+# 1. Open the folder in Google Drive
+# 2. Copy the URL from your browser
+# 3. Extract the folder ID (the long string between /folders/ and ?)
+# Example: https://drive.google.com/drive/folders/185ebaQUxrNIMLIp9R61PVWEHdLZghn?usp=drive_link
+#          Folder ID: 185ebaQUxrNIMLIp9R61PVWEHdLZghn
 DRIVE_FOLDER_IDS = {
     'optimization_reports': '185ebaQUxrNIMLIp9R61PVWEHdLZghn',  # Fixed typo: was LIiN, should be LIp
     'ad_copy_optimization': '1lWe5SH7VLV0LMZLlUWt8WW4JeOfamehn',
@@ -740,6 +746,16 @@ def _upload_analysis_to_drive():
         
         # Use specific folder ID for optimization reports
         folder_id = DRIVE_FOLDER_IDS['optimization_reports']
+        
+        # Verify folder exists before upload
+        from real_estate_analyzer import verify_drive_folder
+        folder_valid, _ = verify_drive_folder(drive_service, folder_id)
+        if not folder_valid:
+            st.error(f"❌ Cannot upload: Folder ID '{folder_id}' is invalid or inaccessible.")
+            st.info("💡 Please check the folder ID in app.py DRIVE_FOLDER_IDS dictionary.")
+            st.info("💡 Extract folder ID from Google Drive URL: https://drive.google.com/drive/folders/FOLDER_ID")
+            os.unlink(temp_filepath)
+            return
         
         # Upload file
         filename = f"{account_name}_{campaign_name}_Analysis_{datetime.now().strftime('%Y%m%d')}.pdf"
@@ -939,6 +955,15 @@ def _upload_ad_copy_to_drive():
         
         # Use specific folder ID for ad copy optimization
         folder_id = DRIVE_FOLDER_IDS['ad_copy_optimization']
+        
+        # Verify folder exists before upload
+        from real_estate_analyzer import verify_drive_folder
+        folder_valid, _ = verify_drive_folder(drive_service, folder_id)
+        if not folder_valid:
+            st.error(f"❌ Cannot upload: Folder ID '{folder_id}' is invalid or inaccessible.")
+            st.info("💡 Please check the folder ID in app.py DRIVE_FOLDER_IDS dictionary.")
+            os.unlink(temp_filepath)
+            return
         
         # Upload file
         filename = f"{account_name}_{campaign_name}_AdCopy_{datetime.now().strftime('%Y%m%d')}.pdf"
@@ -1210,6 +1235,15 @@ def _upload_biweekly_to_drive():
         # Use specific folder ID for biweekly reports
         folder_id = DRIVE_FOLDER_IDS['biweekly_reports']
         
+        # Verify folder exists before upload
+        from real_estate_analyzer import verify_drive_folder
+        folder_valid, _ = verify_drive_folder(drive_service, folder_id)
+        if not folder_valid:
+            st.error(f"❌ Cannot upload: Folder ID '{folder_id}' is invalid or inaccessible.")
+            st.info("💡 Please check the folder ID in app.py DRIVE_FOLDER_IDS dictionary.")
+            os.unlink(temp_filepath)
+            return
+        
         # Upload file
         filename = f"{account_name}_BiweeklyReport_{datetime.now().strftime('%Y%m%d')}.pdf"
         file_id, file_link = upload_to_drive(drive_service, temp_filepath, filename, folder_id)
@@ -1357,6 +1391,15 @@ def _upload_qa_to_drive():
         
         # Use specific folder ID for Q&A chats
         folder_id = DRIVE_FOLDER_IDS['qa_chat']
+        
+        # Verify folder exists before upload
+        from real_estate_analyzer import verify_drive_folder
+        folder_valid, _ = verify_drive_folder(drive_service, folder_id)
+        if not folder_valid:
+            st.error(f"❌ Cannot upload: Folder ID '{folder_id}' is invalid or inaccessible.")
+            st.info("💡 Please check the folder ID in app.py DRIVE_FOLDER_IDS dictionary.")
+            os.unlink(temp_filepath)
+            return
         
         # Upload file
         filename = f"Claude_QA_Session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"

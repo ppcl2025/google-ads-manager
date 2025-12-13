@@ -221,11 +221,72 @@ def find_or_create_drive_folder(service, folder_name="Optimization Reports", par
         traceback.print_exc()
         return None
 
+def verify_drive_folder(service, folder_id):
+    """Verify that a Google Drive folder exists and is accessible."""
+    try:
+        from googleapiclient.errors import HttpError
+        
+        # Try to get folder info
+        folder_info = service.files().get(
+            fileId=folder_id,
+            fields='id, name, mimeType, webViewLink, permissions'
+        ).execute()
+        
+        # Verify it's actually a folder
+        if folder_info.get('mimeType') != 'application/vnd.google-apps.folder':
+            error_msg = f"❌ The ID '{folder_id}' is not a folder (it's a {folder_info.get('mimeType')})"
+            print(error_msg)
+            if STREAMLIT_AVAILABLE:
+                st.error(error_msg)
+            return False, None
+        
+        folder_name = folder_info.get('name', 'Unknown')
+        folder_link = folder_info.get('webViewLink', 'N/A')
+        
+        print(f"   ✓ Verified folder: '{folder_name}' (ID: {folder_id})")
+        print(f"   📁 Folder link: {folder_link}")
+        
+        return True, folder_info
+    except HttpError as error:
+        error_str = str(error)
+        if "not found" in error_str.lower() or "404" in error_str:
+            error_msg = f"❌ Folder not found. The folder ID '{folder_id}' may be incorrect or the folder was deleted."
+            print(error_msg)
+            if STREAMLIT_AVAILABLE:
+                st.error(error_msg)
+                st.info("💡 Please verify the folder ID in your Google Drive URL.")
+                st.info("💡 Extract folder ID from: https://drive.google.com/drive/folders/FOLDER_ID")
+        elif "forbidden" in error_str.lower() or "permission denied" in error_str.lower():
+            error_msg = f"❌ Permission denied. You don't have access to folder ID '{folder_id}'."
+            print(error_msg)
+            if STREAMLIT_AVAILABLE:
+                st.error(error_msg)
+                st.info("💡 Make sure you have access to the folder in Google Drive.")
+        else:
+            error_msg = f"❌ Error verifying folder: {error_str}"
+            print(error_msg)
+            if STREAMLIT_AVAILABLE:
+                st.error(error_msg)
+        return False, None
+    except Exception as e:
+        error_msg = f"❌ Error verifying folder: {str(e)}"
+        print(error_msg)
+        if STREAMLIT_AVAILABLE:
+            st.error(error_msg)
+        return False, None
+
 def upload_to_drive(service, file_path, file_name, folder_id=None):
     """Upload a file to Google Drive."""
     try:
         from googleapiclient.http import MediaFileUpload
         from googleapiclient.errors import HttpError
+        
+        # Verify folder exists before attempting upload
+        if folder_id:
+            print(f"   Verifying folder ID: {folder_id}...")
+            folder_valid, folder_info = verify_drive_folder(service, folder_id)
+            if not folder_valid:
+                return None, None
         
         # Determine MIME type based on file extension
         mime_type = 'application/pdf' if file_name.endswith('.pdf') else 'text/plain'
