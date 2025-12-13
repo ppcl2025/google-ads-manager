@@ -1489,6 +1489,964 @@ When reviewing keywords, always analyze:
 4. **Budget Efficiency**: Can you afford to run both or need to consolidate?
 5. **Volume Comparison**: Is exact getting impressions or is phrase the only source?
 
+## Google Ads Keyword Planner Integration for Competitive Analysis
+
+### The Question: Can Claude Access Keyword Planner Data?
+
+**NO** - Claude does NOT have direct API access to Google Ads Keyword Planner.
+
+**YES** - You CAN provide Keyword Planner data to Claude for analysis.
+
+**How**: Pull data via Google Ads API, paste it into your prompt along with campaign data.
+
+### The Opportunity: Enhanced Keyword Intelligence
+
+**Standard campaign data shows**:
+- Current keyword performance (impressions, clicks, conversions, cost)
+- Historical performance within your account
+- What IS happening
+
+**Keyword Planner data adds**:
+- Competition level (Low/Medium/High)
+- Suggested bid ranges
+- Search volume estimates  
+- Related keyword opportunities
+- What COULD happen with different keywords
+
+**Combined = Much smarter optimization decisions**
+
+### What Claude CAN Analyze with Keyword Planner Data
+
+When you provide Keyword Planner metrics alongside campaign data, Claude can:
+
+✅ **Identify Overly Competitive Keywords**
+```
+Keyword: "we buy houses"
+Your avg CPC: $48
+Keyword Planner suggested bid: $30-55 (you're in range)
+Your CPA: $385 (poor)
+Competition: HIGH
+Analysis: You're bidding competitively but keyword attracts investors/competitors 
+searching for business models, not motivated sellers. PAUSE despite "market rate" CPC.
+```
+
+✅ **Find High-Volume Opportunities You're Missing**
+```
+Keyword Planner shows:
+- "inherited house need to sell" - 2,900 searches/month, Low competition, $8-12 suggested bid
+- You're NOT currently targeting this keyword
+Recommendation: Add immediately - high volume for niche, low competition, perfect intent match
+```
+
+✅ **Identify Quality Score Problems vs. Competition Problems**
+```
+Scenario A - Competition Problem:
+Keyword: "sell my house fast"
+Your CPC: $45, Planner: $25-45 (in range ✅)
+Competition: HIGH
+Verdict: Market rate is expensive, consider if ROI justifies
+
+Scenario B - Quality Score Problem:
+Keyword: "sell probate house fast"  
+Your CPC: $38, Planner: $8-15 (3x over! ❌)
+Competition: LOW
+Verdict: Not a competition issue - this is ad relevance or landing page problem. 
+FIX ads/landing page rather than pause keyword.
+```
+
+✅ **Assess Search Volume Reality**
+```
+Your keyword: "probate property cash buyer [small city]"
+Your impressions: 45 in 2 weeks
+Keyword Planner: 10-100 searches/month
+Analysis: You've captured most available traffic. This is a micro-niche - can't 
+scale volume. Accept limits or try broader geo-targeting.
+```
+
+✅ **Prioritize Expansion Keywords**
+```
+Keyword Planner suggestions related to your top performer "inherited property":
+
+TIER 1 - Add Immediately:
+✅ "inherited house need to sell" - 2,900/mo, Low comp, $8-12
+✅ "sell inherited property fast" - 1,600/mo, Low comp, $9-14
+
+TIER 2 - Test with Small Budget:
+🧪 "estate sale property" - 1,300/mo, Medium comp, $12-18
+🧪 "probate real estate buyers" - 880/mo, Low comp, $7-11
+
+TIER 3 - Skip:
+❌ "inherited property lawyer" - 3,200/mo, High comp, wrong intent
+```
+
+✅ **Optimize Budget Allocation by Competition Tier**
+```
+CURRENT BUDGET: $275/day across all keywords
+
+PLANNER-BASED REALLOCATION:
+
+Low Competition Keywords (Opportunity Zone):
+- Inherited property group: $50/day → $80/day (+$30)
+- Probate property group: $30/day → $50/day (+$20)
+- New low-comp additions: $0 → $40/day (+$40)
+
+High Competition Keywords (Expensive Zone):
+- "We buy houses" variants: $85/day → $0 (PAUSE, save $85)
+- "Sell house fast cash": $60/day → $25/day (-$35)
+
+Net: Same $275/day, reallocated to higher-opportunity keywords
+Expected: +30% lead volume from better keyword mix
+```
+
+### How to Provide Keyword Planner Data
+
+#### Format 1: Full Keyword Analysis (Comprehensive)
+
+```
+"Analyze campaign for Client Name, Feb 15-28.
+
+=== CURRENT CAMPAIGN PERFORMANCE ===
+Keyword                    | Impr  | Clicks | Cost    | Conv | CPA   | Avg CPC
+-----------------------------------------------------------------------------------
+"sell my house fast"       | 1,250 | 45     | $2,026  | 8    | $253  | $45.01
+"we buy houses"            | 2,100 | 38     | $1,824  | 3    | $608  | $48.00
+"inherited property buyer" | 380   | 28     | $336    | 2    | $168  | $12.00
+"sell house as is"         | 890   | 42     | $714    | 5    | $143  | $17.00
+"facing foreclosure help"  | 620   | 18     | $810    | 2    | $405  | $45.00
+
+=== KEYWORD PLANNER DATA (Current Keywords) ===
+Keyword                    | Monthly Searches | Competition | Suggested Bid
+---------------------------------------------------------------------------------
+"sell my house fast"       | 18,100          | HIGH        | $25-45
+"we buy houses"            | 33,100          | HIGH        | $30-55
+"inherited property buyer" | 1,600           | LOW         | $8-14
+"sell house as is"         | 8,100           | MEDIUM      | $15-28
+"facing foreclosure help"  | 5,400           | HIGH        | $35-52
+
+=== KEYWORD PLANNER SUGGESTIONS (Not Currently Targeting) ===
+Keyword                        | Monthly Searches | Competition | Suggested Bid
+-------------------------------------------------------------------------------------
+"inherited house need to sell" | 2,900           | LOW         | $8-12
+"sell inherited property fast" | 1,600           | LOW         | $9-14
+"probate property buyers"      | 1,300           | LOW         | $9-15
+"urgent house sale"            | 1,000           | MEDIUM      | $12-22
+"cash home buyer [city]"       | 720             | LOW         | $10-16
+
+ANALYSIS QUESTIONS:
+1. Which current keywords are too competitive for budget/ROI?
+2. Which keywords show Quality Score issues (CPC >> suggested bid)?
+3. Which expansion keywords should we prioritize?
+4. How should we reallocate budget across competition tiers?"
+```
+
+#### Format 2: Problem-Focused Analysis
+
+```
+"These keywords are underperforming. Add Keyword Planner context:
+
+UNDERPERFORMERS:
+1. "foreclosure help" - $405 CPA, $45 CPC
+   Planner: 5,400 searches/mo, HIGH competition, $35-52 suggested
+
+2. "sell probate house fast" - $420 CPA, $38 CPC
+   Planner: 720 searches/mo, LOW competition, $8-15 suggested
+
+3. "we buy houses" - $608 CPA, $48 CPC
+   Planner: 33,100 searches/mo, HIGH competition, $30-55 suggested
+
+QUESTION: Pause, optimize, or adjust bid? Consider competition vs. intent vs. Quality Score."
+```
+
+#### Format 3: Expansion Planning
+
+```
+"Campaign performing well, ready to expand. Keyword Planner opportunities:
+
+CURRENT TOP PERFORMER:
+"inherited property buyer" - $168 CPA, 62% qual rate, LOW competition
+
+PLANNER EXPANSION OPTIONS:
+Related Keywords:
+- "inherited house need to sell" - 2,900/mo, Low comp, $8-12
+- "sell inherited property fast" - 1,600/mo, Low comp, $9-14  
+- "inherited home buyers" - 880/mo, Low comp, $7-11
+- "estate sale property" - 1,300/mo, Medium comp, $12-18
+
+Which should we add first? Budget: $40/day available for expansion."
+```
+
+### What Claude Will Analyze
+
+#### 1. Competition Level Assessment
+
+**Identifying Competition Problems**:
+```
+Analysis: "We buy houses" 
+- Planner: HIGH competition, $30-55 suggested
+- Your CPC: $48 (in market range ✅)
+- Your CPA: $608 (terrible ❌)
+- Monthly searches: 33,100 (huge volume)
+
+Verdict: Despite massive volume, this keyword attracts:
+- Investors researching business models
+- Competitors checking your ads
+- People looking for investor info, not selling
+
+RECOMMENDATION: PAUSE. High competition + wrong intent = poor ROI even at market rates.
+```
+
+**Finding Low-Competition Gems**:
+```
+Analysis: "Inherited property buyer"
+- Planner: LOW competition, $8-14 suggested
+- Your CPC: $12 (perfect ✅)
+- Your CPA: $168 (excellent ✅)
+- Monthly searches: 1,600 (moderate)
+
+Verdict: This is your sweet spot:
+- Low competition = lower costs
+- Specific intent = motivated sellers  
+- Converting well = proven winner
+
+RECOMMENDATION: SCALE. Increase budget allocation by 50% and add related variants.
+```
+
+#### 2. Quality Score Problem Detection
+
+**When CPC >> Suggested Bid = Quality Score Issue**:
+```
+Keyword: "Sell probate house fast"
+- Planner: LOW competition, $8-15 suggested bid
+- Your CPC: $38 (2.5x over market! ❌)
+- Your CPA: $420
+
+This is NOT a competition problem. You're paying 2.5x market rate despite 
+LOW competition = severe Quality Score issue.
+
+ROOT CAUSES:
+1. Ad copy doesn't mention "probate" specifically
+2. Landing page is generic "we buy houses" not probate-specific
+3. Low CTR from poor ad relevance
+
+RECOMMENDATION: Don't pause - FIX IT:
+1. Create probate-specific ad copy mentioning estate/probate/inheritance
+2. Create dedicated probate landing page
+3. Improve expected CTR through relevance
+Expected result: CPC drops to $12-15, CPA improves to $200-250
+```
+
+#### 3. Search Volume Reality Checks
+
+**Micro-Volume Keywords**:
+```
+Keyword: "Probate property cash buyer [small town]"
+- Your impressions: 45 in 2 weeks (~90-100 per month)
+- Planner: 10-100 searches/month
+- Your CPC: $14, CPA: $280 (good)
+
+Analysis: You've captured ~90% of available search volume. This isn't a scale 
+play - it's a niche supplement.
+
+RECOMMENDATION: 
+- Keep active (it converts well)
+- Don't expect volume growth
+- Cap budget at $15/day max (enough to capture available traffic)
+- Don't compare volume to broader keywords
+```
+
+**High-Volume Traps**:
+```
+Keyword: "Sell house fast for cash"
+- Planner: 12,100 searches/month (massive!)
+- Competition: HIGH
+- Suggested bid: $28-48
+
+Tempting because of volume, but:
+- "For cash" attracts investors/flippers searching for deals
+- High competition = high CPCs
+- Wrong intent = poor conversion
+
+RECOMMENDATION: Skip despite volume. Focus on motivated seller keywords 
+with lower competition.
+```
+
+#### 4. Expansion Prioritization
+
+**Smart Keyword Addition Strategy**:
+```
+EXPANSION RECOMMENDATIONS (Based on Planner Data):
+
+PRIORITY 1 - Add This Week:
+✅ "Inherited house need to sell" 
+   Why: 2,900 searches/mo, LOW comp, $8-12 bid, perfect intent
+   Budget: $40/day
+   Expected: 8-10 leads/month at $220-250 CPA
+
+✅ "Probate property buyers"
+   Why: 1,300 searches/mo, LOW comp, $9-15 bid, high-intent
+   Budget: $25/day
+   Expected: 4-6 leads/month at $210-240 CPA
+
+PRIORITY 2 - Test Next Month:
+🧪 "Urgent house sale"
+   Why: 1,000 searches/mo, MEDIUM comp, $12-22 bid
+   Budget: $20/day test
+   Expected: 3-4 leads/month at $260-300 CPA
+
+PRIORITY 3 - Skip:
+❌ "Sell my house for cash"
+   Why: Despite 12,100 searches/mo, HIGH comp + wrong intent
+   
+❌ "Foreclosure lawyer"  
+   Why: 8,100 searches/mo but attracts legal help seekers, not sellers
+
+Total new budget needed: $85/day
+Funding source: Pause "we buy houses" variants (currently $85/day, poor ROI)
+```
+
+#### 5. Budget Reallocation by Competition Tier
+
+```
+COMPETITION-BASED BUDGET OPTIMIZATION:
+
+Current Allocation:
+- HIGH competition keywords: $145/day (53% of budget)
+- MEDIUM competition keywords: $80/day (29% of budget)
+- LOW competition keywords: $50/day (18% of budget)
+
+Recommended Allocation:
+- HIGH competition: $40/day (15%) - Keep only proven converters
+- MEDIUM competition: $85/day (31%) - Selective, monitor closely
+- LOW competition: $150/day (54%) - This is your opportunity zone
+
+SPECIFIC CHANGES:
+PAUSE (High competition, poor ROI):
+- "We buy houses" variants: -$65/day
+- "Sell house for cash": -$40/day
+
+SCALE (Low competition, good ROI):
+- Inherited property group: +$30/day
+- Probate property group: +$20/day
+
+ADD (Low competition, new opportunities):
+- 3 new inherited variants: +$40/day  
+- 2 new probate variants: +$25/day
+
+Result: Same $275/day budget, 3x more allocation to low-competition keywords
+Expected: +35% lead volume, -15% average CPA
+```
+
+### Red Flags Claude Can Identify with Planner Data
+
+❌ **Quality Score Crisis**:
+```
+Your CPC is 2-5x Keyword Planner suggested bid
+= Severe ad relevance or landing page issues
+= FIX (create relevant ads/landing pages) don't just pause
+```
+
+❌ **Wrong Intent Keywords**:
+```
+High search volume + competitive bidding + poor conversions
+= Keyword attracts wrong searcher type  
+= PAUSE and find better intent variants
+Example: "We buy houses" attracts investors, not sellers
+```
+
+❌ **Over-Invested Micro Niches**:
+```
+Spending $40/day on keyword with 100 searches/month
+= You've captured all available traffic
+= REDUCE budget to match volume potential
+```
+
+❌ **Obvious Missed Opportunities**:
+```
+Related keyword: 2,900 searches/mo, LOW competition, perfect relevance
+You're not targeting it at all
+= ADD IMMEDIATELY, low-hanging fruit
+```
+
+❌ **Competitive Quicksand**:
+```
+HIGH competition keywords consuming 60%+ of budget
+Most show poor ROI
+= Reallocate to low-competition opportunities
+```
+
+### API Integration Workflow
+
+**Recommended process every 2-4 weeks**:
+
+1. **Pull campaign performance** (Google Ads Reporting API)
+   - Keyword-level performance: impressions, clicks, cost, conversions, CPA
+
+2. **Pull Keyword Planner data** (Google Ads Keyword Planner API)
+   - For current keywords: competition, volume, suggested bids
+   - For related keywords: expansion opportunities
+
+3. **Format and provide both to Claude** in one prompt
+
+4. **Receive strategic analysis**:
+   - Competition assessment
+   - Quality Score issues
+   - Expansion priorities
+   - Budget reallocation plan
+
+5. **Implement recommendations**
+
+6. **Repeat in 2-4 weeks** to assess impact
+
+### Example API Data Format
+
+```python
+# Simplified example - adjust for your API implementation
+
+from google.ads.googleads.client import GoogleAdsClient
+
+# 1. Get current keyword performance
+performance_data = {
+    "sell my house fast": {
+        "impressions": 1250,
+        "clicks": 45,
+        "cost": 2025.50,
+        "conversions": 8,
+        "cpa": 253.19,
+        "avg_cpc": 45.01
+    }
+}
+
+# 2. Get Keyword Planner data for current keywords
+planner_current = {
+    "sell my house fast": {
+        "avg_monthly_searches": 18100,
+        "competition": "HIGH",
+        "low_top_of_page_bid": 25.00,
+        "high_top_of_page_bid": 45.00
+    }
+}
+
+# 3. Get Keyword Planner expansion suggestions
+planner_suggestions = {
+    "inherited house need to sell": {
+        "avg_monthly_searches": 2900,
+        "competition": "LOW",
+        "low_top_of_page_bid": 8.00,
+        "high_top_of_page_bid": 12.00
+    }
+}
+
+# 4. Format for Claude
+prompt = f"""
+Analyze campaign with Keyword Planner context:
+
+Current Performance: {performance_data}
+Planner (Current): {planner_current}
+Planner (Suggestions): {planner_suggestions}
+
+Questions: Competition issues? Quality Score problems? Expansion priorities?
+"""
+```
+
+### Competitive Insights Claude Provides
+
+#### Market Positioning:
+```
+COMPETITIVE LANDSCAPE:
+
+Your Sweet Spot (Low Competition):
+✅ Inherited property keywords - Converting at $168-215 CPA
+✅ Probate keywords - Low competition, underutilized
+✅ Situation-specific terms - Better intent than generic
+
+Competitive Battlegrounds (Avoid):
+❌ "We buy houses" - Saturated, poor intent
+❌ "Cash for houses" - Investors vs. sellers
+❌ Generic "sell house" - Expensive, mixed intent
+
+Strategy: Focus 70% budget on low-competition situation-specific keywords,
+30% on proven medium-competition terms. Avoid high-competition generic terms.
+```
+
+#### Volume vs. Competition Trade-offs:
+```
+VOLUME-COMPETITION MATRIX:
+
+High Volume + Low Competition (Rare Gems):
+✅ None currently - this is rare in real estate
+
+Medium Volume + Low Competition (Sweet Spot):
+✅ "Inherited house need to sell" - 2,900/mo, Low comp ← ADD
+✅ "Probate property buyers" - 1,300/mo, Low comp ← ADD
+✅ Current "inherited property" - 1,600/mo, Low comp ← SCALE
+
+Low Volume + Low Competition (Niche Players):
+⚠️ Hyper-local variants - 100-500/mo - Good for fill, can't scale
+
+High Volume + High Competition (Avoid):
+❌ "We buy houses" - 33,100/mo, High comp - Wrong intent anyway
+❌ "Sell house fast" - 18,100/mo, High comp - Too expensive
+```
+
+### Summary: Keyword Planner Integration
+
+**What You Must Do**:
+1. Pull Keyword Planner data via Google Ads API
+2. Provide it to Claude alongside campaign performance data
+3. Include both current keywords and suggested expansions
+
+**What Claude Will Provide**:
+1. Competition level analysis (which keywords too competitive)
+2. Quality Score problem detection (CPC vs. suggested bid)
+3. Search volume reality checks (cap expectations for micro-niches)
+4. Expansion priority ranking (which new keywords to add first)
+5. Budget reallocation recommendations (shift from high to low competition)
+
+**Frequency**: Every 2-4 weeks
+
+**Expected Impact**: 25-40% improvement in keyword efficiency by focusing budget on low-competition, high-intent opportunities
+
+**Key Principle**: Low competition + high intent > High volume + high competition
+
+---
+
+**IMPORTANT**: Claude does NOT have direct API access. You must pull the data and provide it in your prompt. Claude will analyze the combination of your performance data + Keyword Planner market intelligence.
+
+### Critical Clarifications: Campaign-Specific & Geo-Targeted Analysis
+
+#### YES - Analysis is Account/Campaign-Specific
+
+**When you provide Keyword Planner data to Claude**:
+
+✅ **It's for YOUR specific campaign(s)** - You pull data for the exact keywords in the campaign you're analyzing
+✅ **Included in analysis/reports** - Keyword Planner insights integrate into campaign optimization recommendations
+✅ **Campaign-level recommendations** - Claude provides specific actions for that client's campaign
+
+**Example workflow**:
+```
+Client: Titan Home Solutions (Cleveland market)
+Campaign: PPCL - Central NC v3
+
+You pull:
+1. Performance data for THIS campaign's keywords
+2. Keyword Planner data for THESE specific keywords
+3. Keyword Planner suggestions relevant to THIS campaign's focus
+
+Claude analyzes:
+- Competition levels for keywords in THIS campaign
+- Opportunities specific to THIS client's market
+- Recommendations for THIS campaign specifically
+```
+
+**Each client gets their own analysis** - not generic recommendations.
+
+#### YES - Geo-Targeting MUST Be Considered
+
+**CRITICAL**: Keyword Planner data changes significantly based on location targeting.
+
+**Search volume and competition vary by geography**:
+```
+Keyword: "We buy houses"
+
+National (US-wide):
+- Search volume: 33,100/month
+- Competition: HIGH
+- Suggested bid: $30-55
+
+Cleveland, OH only:
+- Search volume: 480/month
+- Competition: MEDIUM
+- Suggested bid: $18-35
+
+Rural North Carolina:
+- Search volume: 90/month
+- Competition: LOW
+- Suggested bid: $8-18
+```
+
+**Same keyword, completely different opportunity depending on location!**
+
+### How to Pull Geo-Specific Keyword Planner Data
+
+#### When Using Google Ads Keyword Planner API:
+
+**Specify location targeting to match your campaign**:
+
+```python
+from google.ads.googleads.client import GoogleAdsClient
+
+# Example: Pull Keyword Planner data for Cleveland market
+keyword_plan_request = {
+    'keywords': ['we buy houses', 'sell my house fast', 'inherited property'],
+    'geo_target_constants': ['1014221'],  # Cleveland, OH geo ID
+    'language': 'en',
+    'network': 'GOOGLE_SEARCH'
+}
+
+# This returns search volume, competition, bids for Cleveland specifically
+planner_data = get_keyword_ideas(client, keyword_plan_request)
+```
+
+**Match the geo-targeting exactly**:
+- If campaign targets Cleveland + Akron + Canton → Pull data for those 3 cities
+- If campaign targets entire North Carolina → Pull data for North Carolina
+- If campaign targets 10 specific zip codes → Pull data for those zip codes
+
+#### Data Structure with Geo-Targeting:
+
+```
+"Analyze campaign for Titan Home Solutions - Cleveland Market
+
+=== CAMPAIGN SETTINGS ===
+Location Targeting: Cleveland, Akron, Canton, OH (50-mile radius)
+
+=== KEYWORD PLANNER DATA (Cleveland Market Only) ===
+Keyword                    | Monthly Searches | Competition | Suggested Bid
+                          | (Cleveland area) |             | (Cleveland)
+---------------------------------------------------------------------------
+"we buy houses"            | 480             | MEDIUM      | $18-35
+"sell my house fast"       | 720             | MEDIUM      | $22-38
+"inherited property buyer" | 45              | LOW         | $8-14
+"foreclosure help"         | 210             | HIGH        | $35-52
+
+Compare to NATIONAL data (for context):
+"we buy houses"            | 33,100          | HIGH        | $30-55
+"sell my house fast"       | 18,100          | HIGH        | $25-45
+"inherited property buyer" | 1,600           | LOW         | $8-14
+
+ANALYSIS QUESTIONS:
+1. Are we competitive in Cleveland market specifically?
+2. Is search volume realistic for Cleveland market?
+3. Which keywords work better in Cleveland vs. national?"
+```
+
+### Why Geo-Targeting Matters for Analysis
+
+#### Search Volume Reality Check:
+
+**Without geo-targeting** (wrong):
+```
+Keyword: "Sell house fast Cleveland"
+National search volume: 720/month
+Your impressions: 450/month (2 weeks = ~900/month)
+
+Analysis: "You're getting more impressions than searches exist - data error?"
+WRONG - You looked at national when you should look at Cleveland only
+```
+
+**With geo-targeting** (correct):
+```
+Keyword: "Sell house fast Cleveland"  
+Cleveland area search volume: 480/month
+Your impressions: 450/month
+
+Analysis: "You're capturing 94% of available Cleveland searches. Volume maxed out - 
+can't scale further in this geo. Either accept limit or expand to Columbus."
+CORRECT
+```
+
+#### Competition Level Accuracy:
+
+**Without geo-targeting**:
+```
+Keyword: "We buy houses"
+National competition: HIGH
+National suggested bid: $30-55
+
+Your Cleveland CPC: $22
+
+Analysis: "You're under-bidding! Increase bids to $30-40"
+WRONG recommendation
+```
+
+**With geo-targeting**:
+```
+Keyword: "We buy houses"
+Cleveland competition: MEDIUM
+Cleveland suggested bid: $18-35
+
+Your Cleveland CPC: $22
+
+Analysis: "You're bidding competitively for Cleveland market. CPC appropriate."
+CORRECT analysis
+```
+
+#### Expansion Opportunity Accuracy:
+
+**Without geo-targeting**:
+```
+Keyword suggestion: "Inherited house need to sell"
+National volume: 2,900/month
+Recommendation: "High volume opportunity, add immediately"
+
+Reality in Cleveland: Only 85 searches/month
+Result: You add it expecting big volume, get disappointed
+```
+
+**With geo-targeting**:
+```
+Keyword suggestion: "Inherited house need to sell"
+Cleveland volume: 85/month
+Recommendation: "Low volume in Cleveland (85/mo) but low competition. Add with 
+realistic expectations - expect 15-20 clicks/month, 2-3 leads/month max."
+
+Reality: Matches expectations perfectly
+```
+
+### Providing Geo-Specific Data to Claude
+
+#### Best Practice Format:
+
+```
+"Generate campaign optimization report for Titan Home Solutions
+
+=== CAMPAIGN INFO ===
+Client: Titan Home Solutions
+Market: Cleveland, Akron, Canton, OH (50-mile radius)
+Budget: $275/day
+Target: Motivated home sellers (foreclosure, inherited, probate)
+
+=== CAMPAIGN PERFORMANCE (Feb 15-28) ===
+[Paste campaign data as usual]
+
+=== KEYWORD PLANNER DATA (Cleveland Market Specific) ===
+
+Current Keywords in Campaign:
+Keyword                    | Cleveland      | Cleveland    | Cleveland
+                          | Monthly Search | Competition  | Suggested Bid
+--------------------------------------------------------------------------------
+"we buy houses Cleveland"  | 480           | MEDIUM       | $18-35
+"sell house fast Akron"    | 320           | MEDIUM       | $15-28
+"inherited property Canton"| 45            | LOW          | $8-14
+
+Expansion Opportunities (Cleveland Market):
+Keyword                        | Cleveland      | Cleveland    | Cleveland
+                              | Monthly Search | Competition  | Suggested Bid
+-----------------------------------------------------------------------------------
+"inherited house Cleveland"    | 85            | LOW          | $8-12
+"probate property buyer Akron" | 35            | LOW          | $7-11
+"foreclosure help Cleveland"   | 210           | HIGH         | $35-52
+
+=== COMPETITIVE CONTEXT (Optional) ===
+For comparison, NATIONAL data:
+"we buy houses" - 33,100/mo nationally vs 480/mo in Cleveland
+Shows Cleveland is ~1.5% of national market
+
+QUESTIONS:
+1. Are we competitive in Cleveland market?
+2. Realistic volume expectations for this geography?
+3. Should we expand to Columbus or keep Cleveland focus?
+4. Which Cleveland-specific keywords to add?"
+```
+
+### What Claude Will Analyze with Geo-Context
+
+#### Market Size Assessment:
+
+```
+CLEVELAND MARKET ANALYSIS:
+
+Market Size Reality:
+- "We buy houses" - 480 searches/month in Cleveland area
+- National is 33,100/month (Cleveland = 1.5% of national market)
+- Cleveland metro population: ~2M (0.6% of US)
+- Searches/capita aligned with national average ✅
+
+Volume Expectations:
+Your current 28 leads/month in Cleveland market:
+- Implies ~140 clicks/month (20% conversion rate)
+- From ~2,000 impressions/month
+- Cleveland total search volume: ~2,500/month across all your keywords
+- You're capturing 80% of available Cleveland market ✅
+
+VERDICT: You've near-saturated Cleveland market. To scale beyond 35-40 leads/month,
+you MUST expand geography (Akron, Canton, Columbus, etc.)
+```
+
+#### Geo-Specific Competition Analysis:
+
+```
+COMPETITION LEVEL BY GEO:
+
+Cleveland Market:
+✅ "Inherited property" - LOW competition, $8-14 bid (great!)
+⚠️ "We buy houses" - MEDIUM competition, $18-35 bid (manageable)
+❌ "Foreclosure help" - HIGH competition, $35-52 bid (expensive)
+
+Why Cleveland competition is lower than national:
+- Fewer large "We Buy Houses" franchises operating
+- More local/regional players vs. national advertisers
+- Less VC-backed iBuyer competition
+
+OPPORTUNITY: Cleveland market less competitive than national average.
+You can win here at lower CPCs than bigger markets (Phoenix, Atlanta, etc.)
+```
+
+#### Geographic Expansion Recommendations:
+
+```
+EXPANSION GEOGRAPHY ANALYSIS:
+
+Current: Cleveland only (480 searches/mo on "we buy houses")
+
+Nearby Markets (Keyword Planner Data):
+1. Akron, OH
+   - "We buy houses" - 320 searches/mo
+   - Competition: MEDIUM  
+   - Suggested bid: $15-28 (cheaper than Cleveland!)
+   - Distance: 40 miles (within service area ✅)
+   
+2. Canton, OH
+   - "We buy houses" - 180 searches/mo
+   - Competition: LOW (!)
+   - Suggested bid: $12-22
+   - Distance: 60 miles (within service area ✅)
+
+3. Columbus, OH
+   - "We buy houses" - 890 searches/mo (biggest!)
+   - Competition: HIGH
+   - Suggested bid: $28-45 (expensive)
+   - Distance: 140 miles (outside service area? ❌)
+
+RECOMMENDATION:
+Phase 1: Add Akron (cheaper, medium volume, close)
+- Budget: +$80/day
+- Expected: +12-15 leads/month at $250-280 CPA
+
+Phase 2: Add Canton (cheap, low competition, close)
+- Budget: +$50/day
+- Expected: +6-8 leads/month at $220-250 CPA
+
+Phase 3: Consider Columbus only if:
+- Service area expands to 150-mile radius
+- Willing to pay higher CPCs ($28-45)
+- Can handle additional volume (20+ leads/month)
+```
+
+### Multi-Location Campaign Strategy
+
+#### For Multi-Market Campaigns:
+
+If running campaigns in multiple markets (e.g., Cleveland, Phoenix, Charlotte):
+
+```
+"Analyze portfolio across all markets with geo-specific Keyword Planner data:
+
+CLIENT: ABC Home Buyers (3 markets)
+
+=== CLEVELAND MARKET ===
+Campaign Performance: 28 leads, $244 CPA
+Keyword Planner (Cleveland):
+- "We buy houses" - 480/mo, MEDIUM, $18-35
+
+=== PHOENIX MARKET ===
+Campaign Performance: 18 leads, $385 CPA
+Keyword Planner (Phoenix):
+- "We buy houses" - 1,200/mo, HIGH, $35-62
+
+=== CHARLOTTE MARKET ===
+Campaign Performance: 22 leads, $298 CPA
+Keyword Planner (Charlotte):
+- "We buy houses" - 680/mo, MEDIUM, $22-40
+
+QUESTION: Which market has best opportunity vs. competition?"
+```
+
+**Claude will compare**:
+- Cleveland: Lower competition, lower CPCs, saturating volume
+- Phoenix: High competition, expensive, more volume available
+- Charlotte: Middle ground, good opportunity
+
+**Recommendation might be**: "Scale Charlotte, maintain Cleveland, reduce Phoenix budget"
+
+### Campaign-Specific Reporting Integration
+
+#### Biweekly Report with Geo-Specific Planner Data:
+
+```
+CLIENT REPORT: Titan Home Solutions - Cleveland Market
+Period: Feb 15-28, 2025
+
+=== PERFORMANCE ===
+28 leads, $228 CPA (improved from $244)
+
+=== MARKET CONTEXT (Keyword Planner - Cleveland) ===
+Market Size: ~2,500 total monthly searches for relevant keywords
+Your Capture: ~2,000 impressions/month (80% market share)
+Competition: MEDIUM (lower than national average)
+
+=== COMPETITIVE POSITION ===
+You're capturing 80% of available Cleveland market
+To scale beyond 35 leads/month, must expand geography
+
+=== KEYWORD OPPORTUNITIES (Cleveland Market) ===
+✅ Add: "Inherited house Cleveland" - 85/mo, LOW comp, $8-12
+   Expected: 2-3 leads/month at $210-240 CPA
+
+✅ Add: "Probate property Akron" - 35/mo, LOW comp, $7-11
+   Expected: 1-2 leads/month at $200-230 CPA
+
+=== GEOGRAPHIC EXPANSION ===
+Recommend adding Akron market:
+- 320 searches/month (vs Cleveland's 480)
+- Lower competition (MEDIUM vs Cleveland's MEDIUM-HIGH)
+- 40 miles from Cleveland (within service area)
+- Budget: +$80/day
+- Expected: +12-15 leads/month
+```
+
+### Important Notes on Geo-Targeting
+
+#### Match Campaign Targeting Exactly:
+
+**Campaign settings**: Cleveland, Akron, Canton (50-mile radius)
+
+**Keyword Planner request**: Pull data for Cleveland, Akron, Canton specifically
+
+**DON'T pull**: National data (unless for comparison context)
+
+#### Multiple Targeting Methods:
+
+**If campaign uses**:
+- Specific cities → Pull data for those cities
+- Radius targeting → Pull data for that radius area  
+- ZIP codes → Pull data for those ZIPs (if API supports)
+- DMA (Designated Market Area) → Pull data for that DMA
+
+#### Update Regularly:
+
+Search volume and competition change over time and by season:
+- Q1 (Jan-Mar): Lower volume (cold weather, post-holiday)
+- Q2 (Apr-Jun): Higher volume (spring selling season)
+- Q3 (Jul-Sep): Peak volume (summer moves)
+- Q4 (Oct-Dec): Declining volume (holidays)
+
+**Pull fresh Keyword Planner data every 2-4 weeks** for accurate analysis
+
+### Summary: Geo-Targeting Confirmation
+
+**Q1**: "Will Keyword Planner integration be account and campaign-specific?"
+
+**A**: ✅ YES - You pull data for specific campaigns and Claude analyzes that specific campaign with that specific data. Each client gets their own campaign-specific analysis.
+
+**Q2**: "Will it take into account target locations for understanding search volume and competition where ads are being served?"
+
+**A**: ✅ YES - But YOU must pull geo-specific Keyword Planner data matching your campaign's location targeting. Claude will then analyze volume and competition for those specific locations.
+
+**Critical**: Always specify geo-targeting when pulling Keyword Planner data to match campaign location settings. National data is misleading for local campaigns.
+
+**Best Practice**:
+```
+For each campaign analysis:
+1. Note campaign location targeting (Cleveland, Akron, Canton)
+2. Pull Keyword Planner data for THOSE locations only
+3. Provide both to Claude
+4. Get geo-specific competitive analysis
+5. Receive recommendations accurate for that market
+```
+
+**Result**: Campaign-specific, geo-accurate competitive intelligence integrated into every analysis and report.
+
 ## Analysis Framework
 
 When analyzing campaign data, systematically evaluate:
