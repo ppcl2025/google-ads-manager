@@ -85,55 +85,6 @@ st.markdown("""
         padding: 0.5rem 1rem;
         font-weight: 600;
     }
-    
-    /* Sidebar Navigation Button Styles - More aggressive targeting */
-    section[data-testid="stSidebar"] .stButton button,
-    section[data-testid="stSidebar"] button[data-testid*="nav_"],
-    section[data-testid="stSidebar"] div[data-testid*="nav_"] button {
-        width: 100% !important;
-        padding: 0.75rem 1rem !important;
-        margin: 0.25rem 0 !important;
-        border-radius: 6px !important;
-        border: 1px solid !important;
-        font-size: 0.95rem !important;
-        font-weight: 500 !important;
-        text-align: left !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-        display: block !important;
-    }
-    
-    /* Unselected state (secondary buttons) */
-    section[data-testid="stSidebar"] .stButton button[kind="secondary"],
-    section[data-testid="stSidebar"] button[kind="secondary"] {
-        background-color: #2d3748 !important;
-        border-color: #1a202c !important;
-        color: #e2e8f0 !important;
-    }
-    
-    /* Selected state (primary buttons) */
-    section[data-testid="stSidebar"] .stButton button[kind="primary"],
-    section[data-testid="stSidebar"] button[kind="primary"] {
-        background-color: #4a5568 !important;
-        border-color: #2d3748 !important;
-        color: white !important;
-    }
-    
-    /* Hover effects for unselected */
-    section[data-testid="stSidebar"] .stButton button[kind="secondary"]:hover,
-    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
-        background-color: #374151 !important;
-    }
-    
-    /* Hover effects for selected */
-    section[data-testid="stSidebar"] .stButton button[kind="primary"]:hover,
-    section[data-testid="stSidebar"] button[kind="primary"]:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
-        background-color: #4a5568 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -148,8 +99,6 @@ if 'selected_campaign' not in st.session_state:
     st.session_state.selected_campaign = None
 if 'selected_model' not in st.session_state:
     st.session_state.selected_model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = "📊 Campaign Analysis"
 
 def initialize_client():
     """Initialize Google Ads client."""
@@ -200,28 +149,19 @@ def main():
             st.image("https://via.placeholder.com/200x60/1a5490/ffffff?text=Google+Ads", use_container_width=True)
         st.markdown("---")
         
-        # Navigation buttons (replaced radio buttons with individual buttons)
-        nav_pages = [
-            "📊 Campaign Analysis",
-            "📝 Ad Copy Optimization",
-            "🔍 Keyword Research",
-            "📄 Biweekly Reports",
-            "💬 Ask Claude",
-            "➕ Create Account",
-            "🎯 Create Campaign"
-        ]
-        
-        # Create individual navigation buttons using containers to prevent radio button grouping
-        for nav_page in nav_pages:
-            is_selected = st.session_state.current_page == nav_page
-            button_type = "primary" if is_selected else "secondary"
-            
-            # Wrap each button in a container to prevent Streamlit from grouping them
-            with st.container():
-                # Use st.button() with unique key - this creates individual buttons, not radio buttons
-                if st.button(nav_page, key=f"nav_btn_{nav_page}", use_container_width=True, type=button_type):
-                    st.session_state.current_page = nav_page
-                    st.rerun()
+        page = st.radio(
+            "Navigation",
+            [
+                "📊 Campaign Analysis",
+                "📝 Ad Copy Optimization",
+                "🔍 Keyword Research",
+                "📄 Biweekly Reports",
+                "💬 Ask Claude",
+                "➕ Create Account",
+                "🎯 Create Campaign"
+            ],
+            label_visibility="collapsed"
+        )
         
         st.markdown("---")
         st.markdown("### Settings")
@@ -256,7 +196,6 @@ def main():
         st.session_state.analyzer.model = st.session_state.selected_model
     
     # Route to appropriate page
-    page = st.session_state.current_page
     if page == "📊 Campaign Analysis":
         show_comprehensive_analysis()
     elif page == "📝 Ad Copy Optimization":
