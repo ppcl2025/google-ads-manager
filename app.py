@@ -1597,7 +1597,6 @@ def show_keyword_research():
             # Option to export discovered keywords
             if st.button("📥 Export All Discovered Keywords", key="kw_export_seed"):
                 try:
-                    import pandas as pd
                     df_seed = pd.DataFrame(discovered_keywords)
                     csv_seed = df_seed.to_csv(index=False)
                     st.download_button(
@@ -1873,7 +1872,6 @@ Format your response clearly with sections for each analysis area. Be specific a
         with col1:
             if st.button("📥 Download as CSV", use_container_width=True):
                 try:
-                    import pandas as pd
                     import io
                     
                     # Combine all keywords
@@ -1915,7 +1913,6 @@ Format your response clearly with sections for each analysis area. Be specific a
                 try:
                     from real_estate_analyzer import upload_to_drive, get_drive_service
                     import tempfile
-                    import pandas as pd
                     
                     # Create CSV file
                     all_keywords = []
