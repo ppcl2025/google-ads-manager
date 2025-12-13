@@ -1958,16 +1958,12 @@ planner_suggestions = {
     }
 }
 
-# 4. Format for Claude
-prompt = f"""
-Analyze campaign with Keyword Planner context:
-
-Current Performance: {performance_data}
-Planner (Current): {planner_current}
-Planner (Suggestions): {planner_suggestions}
-
-Questions: Competition issues? Quality Score problems? Expansion priorities?
-"""
+# 4. Format for Claude (use string formatting)
+prompt = "Analyze campaign with Keyword Planner context:\\n\\n" + \\
+         "Current Performance: " + str(performance_data) + "\\n" + \\
+         "Planner (Current): " + str(planner_current) + "\\n" + \\
+         "Planner (Suggestions): " + str(planner_suggestions) + "\\n\\n" + \\
+         "Questions: Competition issues? Quality Score problems? Expansion priorities?"
 ```
 
 ### Competitive Insights Claude Provides
