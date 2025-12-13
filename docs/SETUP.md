@@ -1,6 +1,5 @@
-# 2. Setup Guide
+# Setup Guide
 
-**Documentation Order:** #2 (Getting Started)  
 Complete setup instructions for the Real Estate Google Ads Analyzer.
 
 ## Prerequisites

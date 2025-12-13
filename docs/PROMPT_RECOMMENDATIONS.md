@@ -1,6 +1,4 @@
-# 8. Prompt Review & Recommendations
-
-**Documentation Order:** #8 (Technical & Advanced Topics)
+# Prompt Review & Recommendations
 
 ## What to Keep from Your New Prompt (Excellent Additions)
 
