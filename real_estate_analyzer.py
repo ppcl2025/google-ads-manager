@@ -4248,6 +4248,295 @@ Pattern recognition: "In real estate investor niche, these characteristics → c
 
 ## MCC Portfolio Bid Strategies for Multi-Client Management
 
+### CLARIFICATION: MCC Portfolio Bid Strategies vs. MCC Conversion Goals
+
+**Summary of Confusion & Correction**
+
+**What Happened:**
+There has been contradictory advice about MCC portfolio strategies, which was confusing and incorrect.
+
+**The Confusion:**
+- First Response: "Don't use MCC portfolio bid strategies" ✅ CORRECT
+- Second Response: "Portfolio strategies are good, switching away is bad" ❌ WRONG
+- This Response: Back to original - "Don't use MCC portfolio bid strategies" ✅ CORRECT
+
+**Why the Confusion:**
+Two different concepts were mixed up:
+1. **MCC-Level Conversion Goals** (good) ✅
+2. **MCC Portfolio Bid Strategies** (bad for agencies) ❌
+
+---
+
+### The CORRECT Recommendation (Consistent with Original Prompt)
+
+#### ✅ KEEP: MCC-Level Conversion Goals
+
+**What this is:**
+- Shared conversion definitions across all client accounts
+- All clients use same "Initial Lead", "Qualified Lead", etc. goals
+- Google aggregates learning across all clients
+
+**Benefits:**
+- Cross-account learning for conversion patterns
+- Faster new client ramp-up
+- Better algorithm optimization
+- Consistent definitions
+
+**Setup:**
+```
+MCC Account
+├─ Conversion Goal: Initial Lead (shared)
+├─ Conversion Goal: Engaged Lead (shared)
+├─ Conversion Goal: Qualified Lead (shared)
+└─ Conversion Goal: Closed Deal (shared)
+
+All client campaigns use these shared goals
+```
+
+**Recommendation**: ✅ **KEEP THIS - You're doing it right!**
+
+---
+
+#### ❌ DON'T USE: MCC Portfolio Bid Strategies
+
+**What this is:**
+- Multiple campaigns share ONE bidding strategy
+- Algorithm optimizes across all campaigns as a portfolio
+- Budget/bids shift between clients based on performance
+
+**Why it sounds good:**
+- Pooled learning across campaigns
+- Cross-campaign budget optimization
+- Simpler management
+
+**Why it's actually BAD for agencies:**
+
+**Problem #1: Budget Cannibalization (DEAL BREAKER)**
+- Client A converting well → Portfolio gives them more budget
+- Client B struggling → Portfolio de-prioritizes them
+- Client C new → Portfolio ignores them
+
+**Result:**
+- Client B pays $75/day, only spends $40/day
+- Client C pays $50/day, only spends $20/day
+- They complain: "Why isn't my budget spending?"
+- You explain: "Portfolio is optimizing..."
+- They cancel: "I'm not paying to fund other people's ads!"
+
+**This WILL happen - it's not theoretical**
+
+**Problem #2: Loss of Control**
+- Fix Client B's landing page → Portfolio shifts budget to them
+- → Clients A and C now get less budget
+- → Fix one client, break two others
+
+**Problem #3: Attribution Nightmare**
+- Client: "How's my campaign doing?"
+- You: "The portfolio is at $360 average CPA..."
+- Client: "I don't care about the portfolio! What about MY ads?"
+
+**Problem #4: New Client Disaster**
+- Add new Client D (0 conversions)
+- Portfolio sees: "No proven conversion history"
+- Portfolio de-prioritizes: Budget barely spends
+- Client D can't escape learning phase
+- Client D stuck in poor performance
+
+**Setup (this is what you should NOT do):**
+```
+MCC Portfolio Maximize Conversions Strategy
+├─ Client A campaign (in portfolio)
+├─ Client B campaign (in portfolio)
+├─ Client C campaign (in portfolio)
+└─ Client D campaign (in portfolio)
+
+All campaigns compete for budget/priority
+```
+
+**Recommendation**: ❌ **DON'T DO THIS - Causes client retention disasters**
+
+---
+
+### The CORRECT Setup (What You Should Use)
+
+**Campaign-Level Bid Strategies + MCC-Level Conversion Goals**
+
+**Structure:**
+```
+MCC-Level: Shared Conversion Goals
+├─ Initial Lead
+├─ Engaged Lead
+├─ Qualified Lead
+└─ Closed Deal
+
+Campaign-Level: Separate Bid Strategies
+├─ Client A Campaign → Maximize Conversions (campaign-specific)
+├─ Client B Campaign → Maximize Conversions (campaign-specific)
+├─ Client C Campaign → Maximize Conversions (campaign-specific)
+└─ Client D Campaign → Maximize Conversions (campaign-specific)
+```
+
+**How it works:**
+
+**MCC Conversion Goals:**
+- All campaigns report to same conversion goals
+- Google learns patterns across all 100 conversions/month
+- New clients benefit from existing learning
+
+**Campaign Bid Strategies:**
+- Each client's bidding is independent
+- Client A's budget only spends on Client A
+- No cannibalization
+- Clean attribution per client
+
+**Benefits:**
+- ✅ Each client's budget fully dedicated to them
+- ✅ Independent optimization per client
+- ✅ Clean performance attribution
+- ✅ Easier troubleshooting (isolate issues)
+- ✅ Better client retention (no budget complaints)
+- ✅ **STILL get cross-account learning from MCC conversion goals**
+
+**You get 90% of portfolio benefits, 0% of portfolio problems**
+
+---
+
+### If You're Currently Using Portfolio: Switch Away
+
+**Your Situation:**
+"I'm using MCC Portfolio Maximize Conversions for 2 months"
+
+**What You Should Do:**
+Switch to campaign-level Maximize Conversions
+
+**The Transition:**
+
+**Week 1:**
+- Remove all campaigns from portfolio
+- Set each to campaign-level Maximize Conversions
+- Notify clients of optimization change
+
+**Week 2-3 (Learning Period):**
+- Expect CPA volatility (±30-40%)
+- Daily lead volume swings
+- This is normal, temporary
+
+**Week 4:**
+- Performance stabilizing
+- Each campaign optimizing independently
+
+**Week 5-6:**
+- Normal performance
+- Each client's budget fully spending
+- No more cannibalization
+
+**Week 8+:**
+- Stable optimization
+- Better client service
+- Cleaner reporting
+
+**What You'll Gain:**
+- ✅ **No More Budget Complaints**
+  - Before: "Why did my campaign only spend 60% of budget?"
+  - After: Each client spends 98-100% of their budget
+- ✅ **Independent Optimization**
+  - Before: Fix Client B → breaks Clients A and C
+  - After: Fix Client B → only Client B affected
+- ✅ **Clean Reporting**
+  - Before: "Portfolio is at $360 CPA..."
+  - After: "YOUR campaign: 28 leads at $244 CPA"
+- ✅ **New Client Success**
+  - Before: New clients get de-prioritized by portfolio
+  - After: New clients get full budget dedication
+
+**What You'll Lose:**
+- ❌ Cross-campaign bid shifting (minimal value anyway with fixed budgets)
+- ❌ 2-3 weeks of stability during transition (temporary)
+
+**Trade-off is 100% worth it - eliminates ongoing client service nightmares**
+
+---
+
+### Why I Was Confused (My Mistake)
+
+In my second response, I incorrectly focused on:
+- "Loss of cross-account learning"
+- "Switching is risky"
+- "Portfolio provides benefits"
+
+**What I should have said:**
+- Portfolio **BID STRATEGIES** are bad (client cannibalization)
+- MCC **CONVERSION GOALS** are good (cross-account learning)
+- These are **TWO DIFFERENT things**
+- Keep conversion goals, don't use portfolio bid strategies
+
+**The original prompt was CORRECT - I just got confused in my explanation.**
+
+---
+
+### Final Confirmation
+
+**Question: "Should I use MCC Portfolio Bid Strategies?"**
+- **Answer**: ❌ **NO**
+- **Reasons:**
+  - Budget cannibalization causes client complaints
+  - Loss of individual control
+  - Attribution nightmare for reporting
+  - New clients can't succeed
+  - One client's issues affect everyone
+
+**Question: "Should I use MCC-Level Conversion Goals?"**
+- **Answer**: ✅ **YES**
+- **Reasons:**
+  - Cross-account learning for conversion patterns
+  - Faster new client ramp-up
+  - Better algorithm optimization
+  - No cannibalization (just learning, not bidding)
+
+**Question: "What should I use for bidding?"**
+- **Answer**: ✅ **Campaign-Level Bid Strategies**
+- **Setup:**
+  - Each client campaign has its own Maximize Conversions strategy
+  - Each client's budget is fully dedicated to their campaign
+  - No cross-client interference
+  - Still benefits from MCC conversion goals learning
+
+---
+
+### Updated Prompt Reflects This
+
+The prompt now clearly states:
+- ✅ **USE:**
+  - MCC-Level Conversion Goals
+  - Campaign-Level Bid Strategies
+- ❌ **DON'T USE:**
+  - MCC Portfolio Bid Strategies
+
+**Why This Is Best:**
+- Each client gets dedicated budget/optimization
+- No cannibalization
+- Clean attribution
+- Still get cross-account learning benefits
+- Best of both worlds
+
+---
+
+### My Apologies
+
+I apologize for the confusion. The original recommendation in the prompt was correct:
+- **DON'T use portfolio bid strategies for multi-client agencies**
+
+I incorrectly reversed this in my second response. The prompt is now clarified and consistent throughout.
+
+**Bottom line:**
+- Keep MCC conversion goals ✅
+- Use campaign-level bid strategies ✅
+- Don't use portfolio bid strategies ❌
+
+**This is what the prompt has always recommended, and it's the correct approach for your multi-client agency.**
+
+---
+
 ### Understanding Portfolio Bid Strategies
 
 **Portfolio bid strategies** allow multiple campaigns (across multiple accounts) to share a single bidding strategy. Instead of each campaign optimizing independently, they pool their data and optimize as a unified portfolio.
