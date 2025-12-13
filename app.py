@@ -211,43 +211,17 @@ def main():
             "🎯 Create Campaign"
         ]
         
-        # Create individual navigation buttons (not radio buttons)
-        # Using columns to ensure proper button layout
+        # Create individual navigation buttons using containers to prevent radio button grouping
         for nav_page in nav_pages:
             is_selected = st.session_state.current_page == nav_page
             button_type = "primary" if is_selected else "secondary"
             
-            # Use st.button() - this creates individual buttons, not radio buttons
-            # The key ensures each button is unique and not grouped as radio buttons
-            if st.button(nav_page, key=f"nav_{nav_page}", use_container_width=True, type=button_type):
-                st.session_state.current_page = nav_page
-                st.rerun()
-        
-        # Add JavaScript to ensure buttons are styled correctly (runs after page load)
-        st.markdown("""
-        <script>
-        setTimeout(function() {
-            // Find all navigation buttons and ensure they're styled as buttons
-            const sidebar = document.querySelector('section[data-testid="stSidebar"]');
-            if (sidebar) {
-                const buttons = sidebar.querySelectorAll('button[data-testid*="nav_"]');
-                buttons.forEach(button => {
-                    // Ensure button styling
-                    button.style.width = '100%';
-                    button.style.padding = '0.75rem 1rem';
-                    button.style.margin = '0.25rem 0';
-                    button.style.borderRadius = '6px';
-                    button.style.border = '1px solid';
-                    button.style.fontSize = '0.95rem';
-                    button.style.fontWeight = '500';
-                    button.style.textAlign = 'left';
-                    button.style.cursor = 'pointer';
-                    button.style.transition = 'all 0.2s ease';
-                });
-            }
-        }, 100);
-        </script>
-        """, unsafe_allow_html=True)
+            # Wrap each button in a container to prevent Streamlit from grouping them
+            with st.container():
+                # Use st.button() with unique key - this creates individual buttons, not radio buttons
+                if st.button(nav_page, key=f"nav_btn_{nav_page}", use_container_width=True, type=button_type):
+                    st.session_state.current_page = nav_page
+                    st.rerun()
         
         st.markdown("---")
         st.markdown("### Settings")
