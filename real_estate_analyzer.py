@@ -18,34 +18,99 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Check if Streamlit is available
+try:
+    import streamlit as st
+    STREAMLIT_AVAILABLE = True
+except ImportError:
+    STREAMLIT_AVAILABLE = False
+
 # Google Drive API helper functions
 def get_drive_service():
     """Get authenticated Google Drive service."""
     try:
         from googleapiclient.discovery import build
     except ImportError:
-        print("⚠️  google-api-python-client not installed. Run: pip install google-api-python-client")
+        error_msg = "⚠️  google-api-python-client not installed. Run: pip install google-api-python-client"
+        print(error_msg)
+        if STREAMLIT_AVAILABLE:
+            st.error(error_msg)
         return None
     
     try:
         # Use the same credentials from authenticate module
         creds = authenticate()
         if not creds:
+            error_msg = "❌ Could not authenticate. Please check your credentials."
+            print(error_msg)
+            if STREAMLIT_AVAILABLE:
+                st.error(error_msg)
             return None
+        
+        # Ensure credentials are valid and refreshed
+        if not creds.valid:
+            if creds.expired and creds.refresh_token:
+                try:
+                    from google.auth.transport.requests import Request
+                    if STREAMLIT_AVAILABLE:
+                        st.info("🔄 Refreshing expired token for Google Drive...")
+                    print("🔄 Refreshing expired token for Google Drive...")
+                    creds.refresh(Request())
+                    if STREAMLIT_AVAILABLE:
+                        st.success("✅ Token refreshed successfully")
+                except Exception as e:
+                    error_msg = f"❌ Failed to refresh token: {str(e)}"
+                    print(error_msg)
+                    if STREAMLIT_AVAILABLE:
+                        st.error(error_msg)
+                        if "invalid_grant" in str(e).lower():
+                            st.error("🔴 Refresh token expired or revoked. Please regenerate TOKEN_JSON.")
+                    return None
+            else:
+                error_msg = "❌ No valid credentials available for Google Drive"
+                print(error_msg)
+                if STREAMLIT_AVAILABLE:
+                    st.error(error_msg)
+                return None
         
         # Check if Drive scope is present
-        drive_scope = 'https://www.googleapis.com/auth/drive.file'
-        if drive_scope not in creds.scopes:
-            print("\n⚠️  Google Drive scope not found in credentials.")
-            print("   You need to re-authenticate to add Drive access.")
-            print("   Run: python authenticate.py")
-            print("   This will add Drive permissions to your token.\n")
+        required_scopes = [
+            'https://www.googleapis.com/auth/drive.file',
+            'https://www.googleapis.com/auth/drive'
+        ]
+        has_drive_scope = any(scope in creds.scopes for scope in required_scopes)
+        
+        if not has_drive_scope:
+            error_msg = "⚠️  Google Drive scope not found in credentials. You need to re-authenticate to add Drive access."
+            print(error_msg)
+            if STREAMLIT_AVAILABLE:
+                st.error(error_msg)
+                st.info("💡 Run `python authenticate.py` locally to regenerate token with Drive permissions.")
             return None
         
+        # Build Drive service
         service = build('drive', 'v3', credentials=creds)
+        
+        # Test the service by making a simple API call
+        try:
+            service.files().list(pageSize=1).execute()
+        except Exception as test_error:
+            error_msg = f"❌ Google Drive API test failed: {str(test_error)}"
+            print(error_msg)
+            if STREAMLIT_AVAILABLE:
+                st.error(error_msg)
+                if "insufficient authentication" in str(test_error).lower() or "invalid credentials" in str(test_error).lower():
+                    st.error("🔴 Authentication issue. Please regenerate TOKEN_JSON with Drive permissions.")
+            return None
+        
         return service
     except Exception as e:
-        print(f"Error getting Drive service: {e}")
+        error_msg = f"❌ Error getting Drive service: {str(e)}"
+        print(error_msg)
+        if STREAMLIT_AVAILABLE:
+            st.error(error_msg)
+            import traceback
+            st.code(traceback.format_exc())
         return None
 
 def find_drive_folder(service, folder_name):
@@ -225,12 +290,37 @@ def upload_to_drive(service, file_path, file_name, folder_id=None):
         
     except HttpError as error:
         error_details = error.error_details if hasattr(error, 'error_details') else str(error)
-        print(f"   ❌ Error uploading to Drive: {error_details}")
+        error_str = str(error)
+        error_msg = f"❌ Google Drive API error: {error_str}"
+        print(error_msg)
+        print(f"   Error details: {error_details}")
+        
+        # Check for specific error types
+        if "insufficient authentication" in error_str.lower() or "invalid credentials" in error_str.lower():
+            detailed_msg = "🔴 Authentication failed. Your refresh token may be expired or revoked."
+            print(f"   {detailed_msg}")
+            if STREAMLIT_AVAILABLE:
+                st.error(detailed_msg)
+                st.info("💡 Please regenerate TOKEN_JSON by running `python authenticate.py` locally.")
+        elif "forbidden" in error_str.lower() or "permission denied" in error_str.lower():
+            detailed_msg = "🔴 Permission denied. Check folder ID and ensure you have access to the folder."
+            print(f"   {detailed_msg}")
+            if STREAMLIT_AVAILABLE:
+                st.error(detailed_msg)
+        elif "not found" in error_str.lower():
+            detailed_msg = "🔴 Folder not found. The folder ID may be incorrect or the folder was deleted."
+            print(f"   {detailed_msg}")
+            if STREAMLIT_AVAILABLE:
+                st.error(detailed_msg)
+        
         import traceback
         traceback.print_exc()
         return None, None
     except Exception as e:
-        print(f"   ❌ Error uploading to Drive: {e}")
+        error_msg = f"❌ Error uploading to Drive: {str(e)}"
+        print(error_msg)
+        if STREAMLIT_AVAILABLE:
+            st.error(error_msg)
         import traceback
         traceback.print_exc()
         return None, None

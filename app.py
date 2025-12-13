@@ -733,6 +733,8 @@ def _upload_analysis_to_drive():
         drive_service = get_drive_service()
         if not drive_service:
             st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            st.info("💡 If you see 'Refreshing expired token' but upload fails, your refresh token may be expired.")
+            st.info("💡 Try regenerating TOKEN_JSON by running `python authenticate.py` locally.")
             os.unlink(temp_filepath)
             return
         
@@ -751,6 +753,8 @@ def _upload_analysis_to_drive():
             st.markdown(f"📁 [View file in Google Drive]({file_link})")
         else:
             st.error("❌ Failed to upload to Google Drive")
+            st.info("💡 Check the console/logs for detailed error messages.")
+            st.info("💡 Common issues: expired refresh token, invalid folder ID, or missing Drive permissions.")
     except Exception as e:
         st.error(f"❌ Error uploading to Google Drive: {str(e)}")
         import traceback
@@ -928,6 +932,8 @@ def _upload_ad_copy_to_drive():
         drive_service = get_drive_service()
         if not drive_service:
             st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            st.info("💡 If you see 'Refreshing expired token' but upload fails, your refresh token may be expired.")
+            st.info("💡 Try regenerating TOKEN_JSON by running `python authenticate.py` locally.")
             os.unlink(temp_filepath)
             return
         
@@ -946,6 +952,8 @@ def _upload_ad_copy_to_drive():
             st.markdown(f"📁 [View file in Google Drive]({file_link})")
         else:
             st.error("❌ Failed to upload to Google Drive")
+            st.info("💡 Check the console/logs for detailed error messages.")
+            st.info("💡 Common issues: expired refresh token, invalid folder ID, or missing Drive permissions.")
     except Exception as e:
         st.error(f"❌ Error uploading to Google Drive: {str(e)}")
         import traceback
@@ -1194,6 +1202,8 @@ def _upload_biweekly_to_drive():
         drive_service = get_drive_service()
         if not drive_service:
             st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            st.info("💡 If you see 'Refreshing expired token' but upload fails, your refresh token may be expired.")
+            st.info("💡 Try regenerating TOKEN_JSON by running `python authenticate.py` locally.")
             os.unlink(temp_filepath)
             return
         
@@ -1212,6 +1222,8 @@ def _upload_biweekly_to_drive():
             st.markdown(f"📁 [View file in Google Drive]({file_link})")
         else:
             st.error("❌ Failed to upload to Google Drive")
+            st.info("💡 Check the console/logs for detailed error messages.")
+            st.info("💡 Common issues: expired refresh token, invalid folder ID, or missing Drive permissions.")
     except Exception as e:
         st.error(f"❌ Error uploading to Google Drive: {str(e)}")
         import traceback
@@ -1338,6 +1350,8 @@ def _upload_qa_to_drive():
         drive_service = get_drive_service()
         if not drive_service:
             st.error("❌ Could not authenticate with Google Drive. Please check your credentials.")
+            st.info("💡 If you see 'Refreshing expired token' but upload fails, your refresh token may be expired.")
+            st.info("💡 Try regenerating TOKEN_JSON by running `python authenticate.py` locally.")
             os.unlink(temp_filepath)
             return
         
@@ -1356,6 +1370,8 @@ def _upload_qa_to_drive():
             st.markdown(f"📁 [View file in Google Drive]({file_link})")
         else:
             st.error("❌ Failed to upload to Google Drive")
+            st.info("💡 Check the console/logs for detailed error messages.")
+            st.info("💡 Common issues: expired refresh token, invalid folder ID, or missing Drive permissions.")
     except Exception as e:
         st.error(f"❌ Error uploading to Google Drive: {str(e)}")
         import traceback
