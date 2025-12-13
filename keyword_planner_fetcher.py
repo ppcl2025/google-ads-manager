@@ -37,7 +37,17 @@ def fetch_keyword_planner_data(client, customer_id, keywords_list, geo_targets=N
         request = client.get_type("GenerateKeywordIdeasRequest")
         request.customer_id = customer_id_numeric
         request.keyword_seed = keyword_seed
-        request.language_code = language_code
+        
+        # Set language code if the field exists (API version dependent)
+        try:
+            if hasattr(request, 'language_code'):
+                request.language_code = language_code
+            elif hasattr(request, 'language'):
+                request.language = language_code
+            # If neither field exists, language defaults to account/campaign settings
+        except (AttributeError, ValueError) as lang_error:
+            # Language code is optional - continue without it
+            pass
         
         # Handle geo target constants if provided
         # Note: Geo targeting in Keyword Planner API v22+ may have different requirements
