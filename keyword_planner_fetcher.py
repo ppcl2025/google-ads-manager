@@ -187,15 +187,30 @@ def _fetch_keyword_planner_batch(client, customer_id_numeric, keywords_list, geo
         for result in response.results:
             keyword_metrics = result.keyword_idea_metrics
             
+            # Handle bid micros - API v22+ may return integers directly instead of objects with .value
+            def get_micros_value(micros_obj):
+                """Extract micros value, handling both object.value and direct integer formats."""
+                if micros_obj is None:
+                    return None
+                if isinstance(micros_obj, int):
+                    return micros_obj
+                elif hasattr(micros_obj, 'value'):
+                    return micros_obj.value
+                else:
+                    return None
+            
+            low_bid_micros = get_micros_value(keyword_metrics.low_top_of_page_bid_micros)
+            high_bid_micros = get_micros_value(keyword_metrics.high_top_of_page_bid_micros)
+            
             keyword_info = {
                 'keyword_text': result.text,
                 'avg_monthly_searches': keyword_metrics.avg_monthly_searches if keyword_metrics.avg_monthly_searches else 0,
                 'competition': _map_competition_index(keyword_metrics.competition_index) if keyword_metrics.competition_index else 'UNKNOWN',
                 'competition_index': keyword_metrics.competition_index if keyword_metrics.competition_index else None,
-                'low_top_of_page_bid_micros': keyword_metrics.low_top_of_page_bid_micros.value if keyword_metrics.low_top_of_page_bid_micros else None,
-                'high_top_of_page_bid_micros': keyword_metrics.high_top_of_page_bid_micros.value if keyword_metrics.high_top_of_page_bid_micros else None,
-                'low_top_of_page_bid': (keyword_metrics.low_top_of_page_bid_micros.value / 1_000_000) if keyword_metrics.low_top_of_page_bid_micros else None,
-                'high_top_of_page_bid': (keyword_metrics.high_top_of_page_bid_micros.value / 1_000_000) if keyword_metrics.high_top_of_page_bid_micros else None,
+                'low_top_of_page_bid_micros': low_bid_micros,
+                'high_top_of_page_bid_micros': high_bid_micros,
+                'low_top_of_page_bid': (low_bid_micros / 1_000_000) if low_bid_micros else None,
+                'high_top_of_page_bid': (high_bid_micros / 1_000_000) if high_bid_micros else None,
             }
             
             # Check if this is one of the original keywords or a related keyword
