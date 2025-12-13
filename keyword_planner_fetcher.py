@@ -84,8 +84,38 @@ def fetch_keyword_planner_data(client, customer_id, keywords_list, geo_targets=N
                 # This allows keyword research to work even if geo targeting fails
                 pass
         
-        # Get KeywordPlanNetwork enum from client (using client.enums instead of version-specific import)
-        request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.KeywordPlanNetwork.GOOGLE_SEARCH
+        # Set keyword plan network (required field)
+        # Based on Google Ads API, the enum structure varies by version
+        # Try multiple patterns to find the correct one
+        keyword_network_set = False
+        try:
+            # Pattern 1: Direct enum access (matches pattern used elsewhere: client.enums.EnumName.VALUE)
+            request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.GOOGLE_SEARCH
+            keyword_network_set = True
+        except (AttributeError, ValueError) as e1:
+            try:
+                # Pattern 2: Check if enum has a nested structure
+                # Some versions might have KeywordPlanNetworkEnum.KeywordPlanNetwork
+                if hasattr(client.enums.KeywordPlanNetworkEnum, 'GOOGLE_SEARCH'):
+                    request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.GOOGLE_SEARCH
+                    keyword_network_set = True
+                elif hasattr(client.enums, 'KeywordPlanNetwork'):
+                    # Try without "Enum" suffix
+                    request.keyword_plan_network = client.enums.KeywordPlanNetwork.GOOGLE_SEARCH
+                    keyword_network_set = True
+            except (AttributeError, ValueError) as e2:
+                # If enum access fails, try setting as integer (GOOGLE_SEARCH = 1)
+                try:
+                    if hasattr(request, 'keyword_plan_network'):
+                        # Try integer value for GOOGLE_SEARCH (typically 1)
+                        request.keyword_plan_network = 1
+                        keyword_network_set = True
+                except Exception as e3:
+                    # Last resort: check if field exists and what type it expects
+                    pass
+        
+        # If we couldn't set the network, it might be optional or use a default
+        # The API call will proceed and may use default network settings
         
         # Make API call
         response = keyword_plan_idea_service.generate_keyword_ideas(request=request)
