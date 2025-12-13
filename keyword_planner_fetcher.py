@@ -6,7 +6,6 @@ Fetches keyword competition, search volume, and suggested bid data from Google A
 
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
-from google.ads.googleads.v16.enums.types.keyword_plan_network import KeywordPlanNetworkEnum
 from datetime import datetime
 import os
 
@@ -51,7 +50,9 @@ def fetch_keyword_planner_data(client, customer_id, keywords_list, geo_targets=N
         request.language_code = language_code
         if geo_target_constants_list:
             request.geo_target_constants = geo_target_constants_list
-        request.keyword_plan_network = KeywordPlanNetworkEnum.KeywordPlanNetwork.GOOGLE_SEARCH
+        
+        # Get KeywordPlanNetwork enum from client (using client.enums instead of version-specific import)
+        request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.KeywordPlanNetwork.GOOGLE_SEARCH
         
         # Make API call
         response = keyword_plan_idea_service.generate_keyword_ideas(request=request)
