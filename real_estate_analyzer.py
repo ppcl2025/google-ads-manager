@@ -741,7 +741,7 @@ def create_biweekly_report_pdf(report_content, account_name, campaign_name, date
             for i, line in enumerate(lines):
                 line_stripped = line.strip()
                 # Look for common metric patterns
-                if any(x in line_stripped for x in ['Total Leads:', 'Cost Per Lead:', 'Ad Spend:', 'Conversion Rate:', 'Return on Ad Spend:', 'ROAS:']):
+                if any(x in line_stripped for x in ['Total Leads:', 'Cost Per Lead:', 'Ad Spend:', 'Conversion Rate:']):
                     # Try to parse it
                     for pattern in [
                         r'[-•]?\s*(.+?):\s*([^🟢🟡🔴]+?)([🟢🟡🔴])\s*(?:\((.+?)\))?',
@@ -1237,6 +1237,30 @@ You are an elite Google Ads Senior Account Manager and Strategist with 10+ years
 - Efficiency improvements (better CPA with same budget)
 
 **Focus on EFFICIENCY (better CPA) not SCALE (more budget)**
+
+### Metric Exclusions (MANDATORY)
+
+**DO NOT include Return on Ad Spend (ROAS) in any analysis or reports.**
+
+❌ **NEVER include:**
+- Return on Ad Spend (ROAS)
+- ROAS calculations
+- ROAS trends
+- ROAS comparisons
+- Any ROAS-related metrics
+
+✅ **Focus on these metrics instead:**
+- Cost per acquisition (CPA)
+- Cost per lead
+- Conversion rate
+- Total conversions
+- Ad spend and budget utilization
+
+**This applies to:**
+- Campaign analysis responses
+- Biweekly client reports
+- Optimization recommendations
+- All metric displays
 
 ### Data Accuracy Requirements (MANDATORY)
 
@@ -2518,7 +2542,6 @@ When analyzing campaign data, systematically evaluate:
 ### 2. Campaign Performance
 
 - Cost per acquisition (CPA) vs. target
-- Return on ad spend (ROAS) trends
 - Conversion rate by campaign/ad group
 - Click-through rate (CTR) performance
 - Impression share and lost impression share analysis
@@ -2531,7 +2554,7 @@ When analyzing campaign data, systematically evaluate:
 **CRITICAL: First identify if campaign uses Smart Bidding or Manual Bidding before making recommendations**
 
 For EACH keyword, analyze:
-- Top performing keywords by conversion and ROAS
+- Top performing keywords by conversion and CPA
 - Underperforming keywords consuming budget with zero conversions
 - Search term report insights and negative keyword opportunities
 - Keyword match type performance comparison (exact vs. phrase vs. broad)
@@ -2847,7 +2870,7 @@ The algorithm uses machine learning to optimize all bid factors automatically. M
 - Conversion volume maintenance (watch for drops)
 - Lead quality metrics (motivated seller qualification rate)
 - Impression share (ensure not losing volume due to aggressive targets)
-- Return on ad spend based on closed deals
+- Cost per acquisition based on closed deals
 
 **IMPORTANT**: Target CPA (TARGET_CPA) is Google's most advanced smart bidding strategy. The algorithm uses historical conversion data and real-time signals to automatically set bids that achieve your target. **NEVER recommend manual bid adjustments, device modifiers, location modifiers, or ad schedule modifiers** - these interfere with the algorithm's optimization and can harm performance.
 
@@ -3303,7 +3326,7 @@ For each recommendation, provide:
 - Immediate savings: $924/month in wasted spend
 - Budget reallocation: Additional 3-4 conversions/month for converting ad groups
 - Overall efficiency: 25-40% improvement in campaign conversion rate
-- ROAS improvement: From 3.33 to 4.2-4.5 (26-35% increase)
+- Efficiency improvement: 25-35% improvement in cost per conversion
 
 **Action**: 
 1. Navigate to Campaigns → PPCL - Central NC - v3
@@ -4072,9 +4095,9 @@ When analyzing campaigns with offline conversion tracking, always report:
 
 **ROI Metrics** (if deal values available):
 - Revenue per Initial Lead
-- Return on Ad Spend (ROAS)
 - Profit per Lead
 - CAC (Customer Acquisition Cost) vs. LTV
+- Cost per acquisition based on closed deals
 
 **Time Metrics**:
 - Average days: Lead → Engaged
@@ -5581,7 +5604,7 @@ Unless otherwise specified, structure your analysis as:
 **CRITICAL: Before providing recommendations, analyze in this order:**
 
 <scratchpad>
-1. Calculate key metrics: Overall ROAS, average CPA, average CTR, average conversion rate
+1. Calculate key metrics: Average CPA, average CTR, average conversion rate
 2. Identify bidding strategy type for each campaign (Smart Bidding vs. Manual Bidding)
 3. Assess bidding strategy progression readiness for each campaign
 4. Identify top 5 issues: List the biggest problems limiting performance
@@ -5615,7 +5638,7 @@ Provide your recommendations in this exact structure. You MUST include ALL secti
 **PRIORITY RECOMMENDATIONS (Top 5)**
 For each recommendation, include:
 - Specific action (e.g., "Pause Ad Group 'XYZ' - spending $500/month with 0 conversions")
-- Expected impact (e.g., "Will save $500/month and improve overall campaign ROAS by 15%")
+- Expected impact (e.g., "Will save $500/month and improve overall campaign efficiency by 15%")
 - Implementation priority (Critical/High/Medium/Low)
 - Reference specific data points (ad group names, keyword text, metrics, campaign names)
 
@@ -5707,7 +5730,7 @@ Based on implementing all recommendations:
 - Expected improvement in CTR (current → projected)
 - Expected improvement in conversion rate (current → projected)
 - Expected improvement in cost per conversion (current → projected)
-- Expected improvement in ROAS (current → projected)
+- Expected improvement in cost per conversion (current → projected)
 - Expected monthly cost savings or revenue increase
 
 </recommendations>
@@ -6225,7 +6248,6 @@ Provide your report in this exact structure:
 - Cost Per Lead: $[amount] 🟡 ([description or change])
 - Ad Spend: $[amount] 🟢 ([X%] of budget)
 - Conversion Rate: [X]% 🟢 ([description])
-- Return on Ad Spend: [X]x 🟡 ([description])
 - [Other relevant metrics if available]
 
 **IMPORTANT**: Each metric MUST include an emoji indicator:
@@ -6378,7 +6400,7 @@ class RealEstateAnalyzer:
         print("1. Improve CTR (Click-Through Rate)")
         print("2. Reduce cost per conversion")
         print("3. Increase conversion rate")
-        print("4. Improve ROAS (Return on Ad Spend)")
+        print("4. Improve cost per conversion")
         print("5. Optimize budget allocation")
         
         custom = input("\nEnter custom optimization goals (or press Enter for defaults): ").strip()
@@ -6389,7 +6411,7 @@ class RealEstateAnalyzer:
             return """1. Improve CTR (Click-Through Rate)
 2. Reduce cost per conversion
 3. Increase conversion rate
-4. Improve ROAS (Return on Ad Spend)
+4. Improve cost per conversion
 5. Optimize budget allocation"""
     
     def analyze(self, customer_id, campaign_id=None, date_range_days=30, optimization_goals=None, prompt_type='full', pre_fetched_data=None, changelog_context=None):
@@ -6446,7 +6468,7 @@ class RealEstateAnalyzer:
                 optimization_goals = """1. Improve CTR (Click-Through Rate)
 2. Reduce cost per conversion
 3. Increase conversion rate
-4. Improve ROAS (Return on Ad Spend)
+4. Improve cost per conversion
 5. Optimize budget allocation"""
         
         # Select prompt template based on prompt_type
@@ -7072,7 +7094,7 @@ def main():
                 optimization_goals = """1. Improve CTR (Click-Through Rate)
 2. Reduce cost per conversion
 3. Increase conversion rate
-4. Improve ROAS (Return on Ad Spend)
+4. Improve cost per conversion
 5. Optimize budget allocation"""
         else:
             print("\nEnter your optimization goals (press Enter twice when done):")
