@@ -213,7 +213,9 @@ def main():
         
         # Create navigation buttons
         for page_name, icon in nav_items:
-            is_active = st.session_state.current_page == page_name
+            # Use .get() with default to avoid KeyError if not initialized yet
+            current_page = st.session_state.get('current_page', "📊 Campaign Analysis")
+            is_active = current_page == page_name
             button_label = page_name
             
             # Use button with custom styling
@@ -312,7 +314,8 @@ def main():
         st.session_state.analyzer.model = st.session_state.selected_model
     
     # Route to appropriate page
-    page = st.session_state.current_page
+    # Use .get() with default to avoid KeyError if not initialized yet
+    page = st.session_state.get('current_page', "📊 Campaign Analysis")
     if page == "📊 Campaign Analysis":
         show_comprehensive_analysis()
     elif page == "📝 Ad Copy Optimization":
