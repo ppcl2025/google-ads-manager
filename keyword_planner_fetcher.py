@@ -135,6 +135,50 @@ def get_geo_target_for_campaign(client, customer_id, campaign_id):
         return None
 
 
+def fetch_campaign_keywords(client, customer_id, campaign_id):
+    """
+    Fetch all keywords from a specific campaign.
+    
+    Args:
+        client: Google Ads API client
+        customer_id: Customer account ID (format: 123-456-7890)
+        campaign_id: Campaign ID to fetch keywords from
+    
+    Returns:
+        List of keyword text strings (unique, no duplicates)
+    """
+    customer_id_numeric = customer_id.replace("-", "")
+    
+    try:
+        ga_service = client.get_service("GoogleAdsService")
+        query = f"""
+            SELECT
+                ad_group_criterion.keyword.text,
+                ad_group_criterion.keyword.match_type
+            FROM keyword_view
+            WHERE campaign.id = {campaign_id}
+                AND ad_group_criterion.status != 'REMOVED'
+        """
+        
+        keywords_set = set()  # Use set to avoid duplicates
+        response = ga_service.search(customer_id=customer_id_numeric, query=query)
+        
+        for row in response:
+            if hasattr(row.ad_group_criterion, 'keyword') and row.ad_group_criterion.keyword.text:
+                keyword_text = row.ad_group_criterion.keyword.text.strip()
+                if keyword_text:
+                    keywords_set.add(keyword_text)
+        
+        return sorted(list(keywords_set))  # Return sorted list
+    except GoogleAdsException as ex:
+        error_message = ""
+        for error in ex.failure.errors:
+            error_message += f"{error.error_code.error_code}: {error.message}\n"
+        raise Exception(f"Google Ads API error fetching campaign keywords: {error_message}")
+    except Exception as e:
+        raise Exception(f"Error fetching campaign keywords: {str(e)}")
+
+
 def format_keyword_planner_for_prompt(planner_data, current_keyword_performance=None):
     """Format Keyword Planner data for Claude prompt."""
     output = []

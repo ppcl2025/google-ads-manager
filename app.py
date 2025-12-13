@@ -18,7 +18,7 @@ from account_manager import select_account_interactive, select_campaign_interact
 from account_campaign_manager import get_sub_accounts, create_sub_account, create_campaign, US_TIMEZONES
 from real_estate_analyzer import RealEstateAnalyzer
 from comprehensive_data_fetcher import fetch_comprehensive_campaign_data, format_campaign_data_for_prompt
-from keyword_planner_fetcher import fetch_keyword_planner_data, format_keyword_planner_for_prompt, get_geo_target_for_campaign
+from keyword_planner_fetcher import fetch_keyword_planner_data, format_keyword_planner_for_prompt, get_geo_target_for_campaign, fetch_campaign_keywords
 
 # Load environment variables (works with .env file locally or Streamlit Cloud secrets)
 load_dotenv()
@@ -1394,7 +1394,7 @@ def show_keyword_research():
             st.error(f"Error loading accounts: {str(e)}")
             selected_account_id = None
     
-    # Campaign selection (optional - for geo targeting)
+    # Campaign selection (for loading keywords and geo targeting)
     campaign_id = None
     geo_targets = None
     with col2:
@@ -1422,28 +1422,81 @@ def show_keyword_research():
                 if campaigns:
                     campaign_options = {f"{c['name']} (ID: {c['id']})": c['id'] for c in campaigns}
                     selected_campaign_display = st.selectbox(
-                        "Select Campaign (for geo targeting)",
+                        "Select Campaign",
                         ["None"] + list(campaign_options.keys()),
                         key="kw_research_campaign"
                     )
                     if selected_campaign_display != "None":
                         campaign_id = campaign_options[selected_campaign_display]
-                        # Get geo targets from campaign
+                        # Get geo targets from campaign (will be overridden if manual locations specified)
                         geo_targets = get_geo_target_for_campaign(st.session_state.client, selected_account_id, campaign_id)
             except Exception as e:
                 st.warning(f"Could not load campaigns: {str(e)}")
     
     st.markdown("---")
     
-    # Keyword input
-    st.markdown("### Step 2: Enter Seed Keywords")
-    st.markdown("Enter keywords to research (one per line or comma-separated):")
+    # Geographic Locations Override
+    st.markdown("### Step 2: Geographic Locations (Optional)")
+    specify_geo_locations = st.checkbox(
+        "Specifying Geographic Locations",
+        key="kw_specify_geo",
+        help="Check this to manually specify geographic locations that will override campaign geo targeting"
+    )
+    
+    manual_geo_targets = None
+    if specify_geo_locations:
+        geo_input = st.text_area(
+            "Enter Geographic Locations",
+            placeholder="Enter location names or geo target constants (one per line)\nExample:\nUnited States\ngeoTargetConstants/2840\nNew York",
+            height=100,
+            key="kw_manual_geo"
+        )
+        if geo_input.strip():
+            # Parse geo targets - can be location names or geo target constants
+            geo_lines = [line.strip() for line in geo_input.split('\n') if line.strip()]
+            manual_geo_targets = []
+            for geo_line in geo_lines:
+                if geo_line.startswith("geoTargetConstants/"):
+                    manual_geo_targets.append(geo_line)
+                else:
+                    # For location names, we'd need to look them up, but for now just store as-is
+                    # The API will handle validation
+                    manual_geo_targets.append(geo_line)
+            if manual_geo_targets:
+                geo_targets = manual_geo_targets  # Override campaign geo targets
+    
+    st.markdown("---")
+    
+    # Keyword input - with option to load from campaign
+    st.markdown("### Step 3: Keywords to Research")
+    
+    load_from_campaign = st.checkbox(
+        "Load Keywords from Selected Campaign",
+        key="kw_load_from_campaign",
+        help="Check this to automatically load all keywords from the selected campaign"
+    )
+    
+    campaign_keywords_loaded = False
+    if load_from_campaign and campaign_id and selected_account_id:
+        try:
+            with st.spinner("Loading keywords from campaign..."):
+                campaign_keywords = fetch_campaign_keywords(st.session_state.client, selected_account_id, campaign_id)
+                if campaign_keywords:
+                    keyword_input = "\n".join(campaign_keywords)
+                    st.session_state.kw_research_input = keyword_input
+                    campaign_keywords_loaded = True
+                    st.success(f"✅ Loaded {len(campaign_keywords)} keywords from campaign")
+                else:
+                    st.warning("No keywords found in the selected campaign.")
+        except Exception as e:
+            st.error(f"❌ Error loading campaign keywords: {str(e)}")
     
     keyword_input = st.text_area(
-        "Seed Keywords",
-        placeholder="sell house fast\ncash for houses\nwe buy houses",
-        height=100,
-        key="kw_research_input"
+        "Keywords to Research",
+        placeholder="sell house fast\ncash for houses\nwe buy houses\n\nOr check 'Load Keywords from Selected Campaign' to load from a campaign",
+        height=150,
+        key="kw_research_input",
+        value=st.session_state.get('kw_research_input', '')
     )
     
     # Research options
@@ -1502,26 +1555,55 @@ def show_keyword_research():
                                         # Format data for Claude
                                         planner_text = format_keyword_planner_for_prompt(planner_data)
                                         
-                                        # Create prompt for Claude
+                                        # Create prompt for Claude with focus on search volume and competition
                                         keyword_prompt = f"""You are a Google Ads keyword research expert specializing in real estate investor campaigns targeting motivated and distressed home sellers.
 
 Analyze the following Keyword Planner data and provide strategic recommendations:
 
 {planner_text}
 
-**Your Task:**
-1. **Competition Analysis**: Identify which keywords have favorable competition levels for our campaigns
-2. **Search Volume Assessment**: Recommend which keywords have optimal search volume (not too low, not too broad)
-3. **Bid Strategy**: Suggest bid ranges based on the suggested bids and competition
-4. **Keyword Expansion**: Recommend the top 10 related keywords we should add to campaigns, prioritizing:
-   - Medium search volume (1K-10K/month)
-   - Low to medium competition
-   - Suggested bids within $1-5 range
-   - High relevance to motivated seller intent
-5. **Quality Score Indicators**: Flag any keywords where suggested bids seem unusually high/low
-6. **Action Items**: Provide 3-5 specific, actionable recommendations
+**Your Task - Focus on Search Volume and Competition Analysis:**
 
-Format your response clearly with sections for each analysis area."""
+1. **Low Search Volume Keywords** (< 1,000 searches/month):
+   - Identify all keywords with low search volume
+   - Assess if they're still valuable (high intent, low competition)
+   - Recommend whether to keep, pause, or expand these keywords
+   - Note: Low volume keywords often have higher conversion rates but limited reach
+
+2. **High Search Volume Keywords** (> 10,000 searches/month):
+   - Identify all keywords with high search volume
+   - Assess competition levels and bid requirements
+   - Determine if they're too broad for motivated seller intent
+   - Recommend match type strategy (exact vs phrase vs broad)
+
+3. **Low Competition Keywords**:
+   - Identify keywords with LOW competition
+   - Highlight opportunities for lower CPCs and easier ranking
+   - Recommend bid adjustments and budget allocation
+   - These are prime opportunities for expansion
+
+4. **High Competition Keywords**:
+   - Identify keywords with HIGH competition
+   - Assess if the suggested bids are within budget
+   - Determine if Quality Score improvements could help
+   - Recommend whether to continue bidding or pause
+
+5. **Optimal Keywords** (Medium volume + Low-Medium competition):
+   - Identify the "sweet spot" keywords (1K-10K searches/month, LOW-MEDIUM competition)
+   - These are your best opportunities for scaling
+   - Recommend bid ranges and expected performance
+
+6. **Keyword Categorization Summary**:
+   - Create a clear summary table categorizing keywords by:
+     * Low Search Volume + Low Competition (Keep/Expand)
+     * Low Search Volume + High Competition (Consider pausing)
+     * High Search Volume + Low Competition (Scale aggressively)
+     * High Search Volume + High Competition (Monitor closely)
+     * Medium Search Volume + Low Competition (Best opportunities)
+
+7. **Action Items**: Provide 3-5 specific, actionable recommendations based on your analysis
+
+Format your response clearly with sections for each analysis area. Be specific about which keywords fall into each category."""
                                         
                                         # Get Claude analysis
                                         if 'analyzer' in st.session_state and st.session_state.analyzer:
